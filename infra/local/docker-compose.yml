@@ -1,20 +1,22 @@
 services:
-  postgres:
-    image: postgis/postgis:17-3.5
-    environment:
-      POSTGRES_DB: irespond
-      POSTGRES_USER: irespond
-      POSTGRES_PASSWORD: irespond-local-only
+  yugabytedb:
+    image: yugabytedb/yugabyte:2026.1.1.1-b2
+    command:
+      - bin/yugabyted
+      - start
+      - --base_dir=/home/yugabyte/yb_data
+      - --background=false
     ports:
-      - "5432:5432"
+      - "5433:5433"
+      - "7000:7000"
+      - "15433:15433"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U irespond -d irespond"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      test: ["CMD-SHELL", "/home/yugabyte/bin/ysqlsh --host $$(hostname) -U yugabyte -d yugabyte -c 'SELECT 1' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
     volumes:
-      - irespond-postgres:/var/lib/postgresql/data
-      - ../../services/api/migrations:/docker-entrypoint-initdb.d:ro
+      - irespond-yugabyte:/home/yugabyte/yb_data
 
 volumes:
-  irespond-postgres:
+  irespond-yugabyte:
