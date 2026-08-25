@@ -35,7 +35,6 @@ type UploadGrant struct {
 }
 
 type Manager struct { pool *pgxpool.Pool; client *minio.Client; bucket string }
-
 type Config struct { DatabaseURL, Endpoint, AccessKey, SecretKey, Bucket, Region string; Secure bool }
 
 func New(ctx context.Context, cfg Config) (*Manager,error) {
@@ -58,12 +57,20 @@ func (m *Manager) Begin(ctx context.Context,id,needID,uploaderID,contentType,fil
   return UploadGrant{Evidence:item,UploadURL:signed.String(),ExpiresAt:time.Now().UTC().Add(expiry)},nil
 }
 
+// Complete never makes user-supplied evidence public. It only moves the item to
+// pending_review. A separate, authorized moderation workflow must approve it.
 func (m *Manager) Complete(ctx context.Context,id,uploaderID string)(Item,error){
   var i Item
-  err:=m.pool.QueryRow(ctx,`UPDATE need_evidence SET status='available',available_at=now() WHERE id=$1 AND uploader_id=$2 AND status='pending_upload' RETURNING id,need_id,uploader_id,object_key,content_type,size_bytes,status,created_at,available_at`,id,uploaderID).Scan(&i.ID,&i.NeedID,&i.UploaderID,&i.ObjectKey,&i.ContentType,&i.SizeBytes,&i.Status,&i.CreatedAt,&i.AvailableAt)
+  err:=m.pool.QueryRow(ctx,`UPDATE need_evidence SET status='pending_review' WHERE id=$1 AND uploader_id=$2 AND status='pending_upload' RETURNING id,need_id,uploader_id,object_key,content_type,size_bytes,status,created_at,available_at`,id,uploaderID).Scan(&i.ID,&i.NeedID,&i.UploaderID,&i.ObjectKey,&i.ContentType,&i.SizeBytes,&i.Status,&i.CreatedAt,&i.AvailableAt)
   if err!=nil{return Item{},ErrNotFound};return i,nil
 }
-func (m *Manager) List(ctx context.Context,needID string)([]Item,error){
+func (m *Manager) Review(ctx context.Context,id,status string)(Item,error){
+  if status!="available"&&status!="quarantined"&&status!="rejected"{return Item{},fmt.Errorf("invalid review status")}
+  var i Item
+  err:=m.pool.QueryRow(ctx,`UPDATE need_evidence SET status=$2,available_at=CASE WHEN $2='available' THEN now() ELSE NULL END WHERE id=$1 AND status='pending_review' RETURNING id,need_id,uploader_id,object_key,content_type,size_bytes,status,created_at,available_at`,id,status).Scan(&i.ID,&i.NeedID,&i.UploaderID,&i.ObjectKey,&i.ContentType,&i.SizeBytes,&i.Status,&i.CreatedAt,&i.AvailableAt)
+  if err!=nil{return Item{},ErrNotFound};return i,nil
+}
+func (m *Manager) ListAvailable(ctx context.Context,needID string)([]Item,error){
   rows,err:=m.pool.Query(ctx,`SELECT id,need_id,uploader_id,object_key,content_type,size_bytes,status,created_at,available_at FROM need_evidence WHERE need_id=$1 AND status='available' ORDER BY created_at`,needID);if err!=nil{return nil,err};defer rows.Close()
   out:=[]Item{};for rows.Next(){var i Item;if err:=rows.Scan(&i.ID,&i.NeedID,&i.UploaderID,&i.ObjectKey,&i.ContentType,&i.SizeBytes,&i.Status,&i.CreatedAt,&i.AvailableAt);err!=nil{return nil,err};out=append(out,i)};return out,rows.Err()
 }
