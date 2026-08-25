@@ -1,0 +1,12 @@
+{
+  "name": "irespond",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "mobile:start": "pnpm --filter @irespond/mobile start",
+    "mobile:android": "pnpm --filter @irespond/mobile android",
+    "mobile:ios": "pnpm --filter @irespond/mobile ios",
+    "mobile:typecheck": "pnpm --filter @irespond/mobile typecheck"
+  }
+}
