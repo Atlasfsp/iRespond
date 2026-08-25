@@ -13,7 +13,7 @@ func TestContributionCommitmentLifecycle(t *testing.T){
 	dbURL:=os.Getenv("TEST_DATABASE_URL");if dbURL==""{t.Skip("database integration service not configured")};ctx:=context.Background();pool,err:=pgxpool.New(ctx,dbURL);if err!=nil{t.Fatal(err)};defer pool.Close()
 	for _,name:=range []string{"0001_core.sql","0003_projects.sql","0004_contribution_offers.sql"}{b,err:=os.ReadFile(filepath.Join("..","..","migrations",name));if err!=nil{t.Fatal(err)};if _,err:=pool.Exec(ctx,string(b));err!=nil{t.Fatalf("apply %s: %v",name,err)}}
 	if _,err:=pool.Exec(ctx,`TRUNCATE contribution_offers,contribution_needs,project_roles,project_milestones,action_projects,outbox_events,needs CASCADE`);err!=nil{t.Fatal(err)}
-	if _,err:=pool.Exec(ctx,`INSERT INTO needs(id,title,description,category,reporter_id,verification_state,sdg_tags,location) VALUES('need-contrib','Community library','x','education','reporter','community_confirmed','{4}',ST_SetSRID(ST_MakePoint(3.38,6.53),4326)::geography)`);err!=nil{t.Fatal(err)}
+	if _,err:=pool.Exec(ctx,`INSERT INTO needs(id,title,description,category,reporter_id,verification_state,sdg_tags,latitude,longitude) VALUES('need-contrib','Community library','x','education','reporter','community_confirmed','{4}',6.53,3.38)`);err!=nil{t.Fatal(err)}
 	m,err:=New(ctx,dbURL);if err!=nil{t.Fatal(err)};defer m.Close();p,err:=m.Convert(ctx,"project-contrib","need-contrib","","","community-1","steward-1");if err!=nil{t.Fatal(err)}
 	need,err:=m.AddContributionNeed(ctx,"need-skill",p.ID,"skill","Electrical inspection","One licensed electrician");if err!=nil{t.Fatal(err)}
 	o1,err:=m.OfferContribution(ctx,"offer-1",p.ID,need.ID,"person-1","I am a licensed electrician","Saturday morning");if err!=nil{t.Fatal(err)}

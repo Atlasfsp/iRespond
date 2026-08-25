@@ -1,5 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS postgis;
-
 CREATE TABLE IF NOT EXISTS needs (
   id text PRIMARY KEY,
   title text NOT NULL,
@@ -8,16 +6,21 @@ CREATE TABLE IF NOT EXISTS needs (
   reporter_id text NOT NULL DEFAULT '',
   verification_state text NOT NULL,
   sdg_tags integer[] NOT NULL DEFAULT '{}',
-  location geography(Point, 4326),
+  latitude double precision,
+  longitude double precision,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT needs_latitude_check CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90),
+  CONSTRAINT needs_longitude_check CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180),
   CONSTRAINT needs_verification_state_check CHECK (verification_state IN (
     'observed','verification_requested','community_confirmed','institution_confirmed',
     'expert_confirmed','independently_audited','government_confirmed','disputed','rejected'
   ))
 );
 
-CREATE INDEX IF NOT EXISTS needs_location_gix ON needs USING gist(location);
+-- YugabyteDB is the relational system of record. Advanced proximity/routing/geocoding
+-- belongs behind Shared Services SS-44 Geospatial rather than a PostGIS dependency.
+CREATE INDEX IF NOT EXISTS needs_lat_lng_idx ON needs(latitude, longitude);
 CREATE INDEX IF NOT EXISTS needs_verification_state_idx ON needs(verification_state);
 CREATE INDEX IF NOT EXISTS needs_updated_at_idx ON needs(updated_at DESC);
 

@@ -15,9 +15,9 @@ func TestNeedToProjectConversion(t *testing.T) {
 	ctx:=context.Background();pool,err:=pgxpool.New(ctx,databaseURL);if err!=nil{t.Fatal(err)};defer pool.Close()
 	for _,name:=range []string{"0001_core.sql","0002_evidence.sql","0003_projects.sql"}{b,err:=os.ReadFile(filepath.Join("..","..","migrations",name));if err!=nil{t.Fatal(err)};if _,err:=pool.Exec(ctx,string(b));err!=nil{t.Fatalf("apply %s: %v",name,err)}}
 	if _,err:=pool.Exec(ctx,`TRUNCATE contribution_needs, project_roles, project_milestones, action_projects, need_evidence, need_verifications, idempotency_keys, outbox_events, needs CASCADE`);err!=nil{t.Fatal(err)}
-	_,err=pool.Exec(ctx,`INSERT INTO needs(id,title,description,category,reporter_id,verification_state,sdg_tags,location) VALUES
-('unverified','Broken drainage','Drainage blocks road','sanitation','r1','observed','{6,11}',ST_SetSRID(ST_MakePoint(3.37,6.52),4326)::geography),
-('verified','Repair water point','Pump has failed','water','r2','community_confirmed','{6}',ST_SetSRID(ST_MakePoint(3.38,6.53),4326)::geography)`);if err!=nil{t.Fatal(err)}
+	_,err=pool.Exec(ctx,`INSERT INTO needs(id,title,description,category,reporter_id,verification_state,sdg_tags,latitude,longitude) VALUES
+('unverified','Broken drainage','Drainage blocks road','sanitation','r1','observed','{6,11}',6.52,3.37),
+('verified','Repair water point','Pump has failed','water','r2','community_confirmed','{6}',6.53,3.38)`);if err!=nil{t.Fatal(err)}
 	manager,err:=New(ctx,databaseURL);if err!=nil{t.Fatal(err)};defer manager.Close()
 	if _,err:=manager.Convert(ctx,"p-unverified","unverified","","","community-1","steward-1");!errors.Is(err,ErrNeedNotVerified){t.Fatalf("expected ErrNeedNotVerified, got %v",err)}
 	created,err:=manager.Convert(ctx,"p-1","verified","","","community-1","steward-1");if err!=nil{t.Fatal(err)}
