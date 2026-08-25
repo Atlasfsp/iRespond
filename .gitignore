@@ -1,0 +1,28 @@
+# Node / JS
+node_modules/
+.pnpm-store/
+.next/
+dist/
+build/
+coverage/
+
+# Mobile
+.expo/
+android/.gradle/
+android/app/build/
+ios/Pods/
+ios/build/
+
+# Go
+bin/
+*.test
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.DS_Store
+.vscode/
+.idea/
