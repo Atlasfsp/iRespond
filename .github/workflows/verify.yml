@@ -37,11 +37,12 @@ jobs:
       - name: Start YugabyteDB
         working-directory: .
         run: |
-          docker run -d --name irespond-yugabyte -p 5433:5433 -p 7000:7000 \
-            yugabytedb/yugabyte:latest bin/yugabyted start \
-            --background=false --daemon=false
+          docker run -d --name irespond-yugabyte --hostname irespond-yugabyte \
+            -p 5433:5433 -p 7000:7000 -p 15433:15433 \
+            yugabytedb/yugabyte:2026.1.1.1-b2 bin/yugabyted start \
+            --base_dir=/home/yugabyte/yb_data --background=false
           for i in {1..90}; do
-            if docker exec irespond-yugabyte /home/yugabyte/bin/ysqlsh -h 127.0.0.1 -p 5433 -U yugabyte -d yugabyte -c 'SELECT 1' >/dev/null 2>&1; then exit 0; fi
+            if docker exec irespond-yugabyte bash -c '/home/yugabyte/bin/ysqlsh --host $(hostname) -U yugabyte -d yugabyte -c "SELECT 1"' >/dev/null 2>&1; then exit 0; fi
             sleep 2
           done
           docker logs irespond-yugabyte
