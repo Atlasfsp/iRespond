@@ -3,6 +3,7 @@ package evidence
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -30,7 +31,9 @@ func TestSignedUploadLifecycle(t *testing.T) {
 	upload,err:=svc.Initiate(ctx,"evidence-need","person-1","image/jpeg",int64(len(payload)),"");if err!=nil{t.Fatal(err)}
 	req,err:=http.NewRequest(http.MethodPut,upload.UploadURL,bytes.NewReader(payload));if err!=nil{t.Fatal(err)};req.Header.Set("Content-Type","image/jpeg")
 	resp,err:=http.DefaultClient.Do(req);if err!=nil{t.Fatal(err)};resp.Body.Close();if resp.StatusCode<200||resp.StatusCode>=300{t.Fatalf("upload status=%d",resp.StatusCode)}
-	record,err:=svc.Complete(ctx,"evidence-need",upload.EvidenceID,"person-1");if err!=nil{t.Fatal(err)};if record.Status!="available"{t.Fatalf("status=%s",record.Status)}
+	record,err:=svc.Complete(ctx,"evidence-need",upload.EvidenceID,"person-1");if err!=nil{t.Fatal(err)};if record.Status!="pending_review"{t.Fatalf("status=%s",record.Status)}
+	if _,err:=svc.AccessURL(ctx,"evidence-need",upload.EvidenceID);!errors.Is(err,ErrEvidenceNotFound){t.Fatalf("evidence became accessible before moderation: %v",err)}
+	record,err=svc.Review(ctx,upload.EvidenceID,"available");if err!=nil{t.Fatal(err)};if record.Status!="available"{t.Fatalf("review status=%s",record.Status)}
 	access,err:=svc.AccessURL(ctx,"evidence-need",upload.EvidenceID);if err!=nil{t.Fatal(err)}
 	get,err:=http.Get(access);if err!=nil{t.Fatal(err)};defer get.Body.Close();body,_:=io.ReadAll(get.Body);if !bytes.Equal(body,payload){t.Fatalf("download mismatch: %q",body)}
 }
