@@ -76,3 +76,18 @@ jobs:
       - name: Build production image
         working-directory: .
         run: docker build -f services/api/Dockerfile -t irespond-api:verify services/api
+
+  deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.18.4
+      - run: helm lint deploy/helm/irespond
+      - run: >-
+          helm template irespond deploy/helm/irespond
+          --set image.repository=example.invalid/irespond-api
+          --set image.tag=verify
+          > /tmp/irespond-rendered.yaml
+      - run: test -s /tmp/irespond-rendered.yaml
