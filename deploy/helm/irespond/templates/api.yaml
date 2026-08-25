@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-api
+  labels: {app.kubernetes.io/name: irespond, app.kubernetes.io/component: api}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {app.kubernetes.io/name: irespond, app.kubernetes.io/component: api}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: irespond, app.kubernetes.io/component: api}
+    spec:
+      securityContext:
+        runAsNonRoot: {{ .Values.podSecurityContext.runAsNonRoot }}
+        seccompProfile: {type: {{ .Values.podSecurityContext.seccompProfile.type }}}
+      containers:
+        - name: api
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports: [{name: http, containerPort: 8080}]
+          securityContext:
+            allowPrivilegeEscalation: {{ .Values.containerSecurityContext.allowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .Values.containerSecurityContext.readOnlyRootFilesystem }}
+            capabilities: {drop: ["ALL"]}
+          env:
+            - {name: HTTP_ADDR, value: {{ .Values.config.httpAddr | quote }}}
+            - {name: OIDC_ISSUER, value: {{ .Values.config.oidcIssuer | quote }}}
+            - {name: OIDC_AUDIENCE, value: {{ .Values.config.oidcAudience | quote }}}
+            - {name: OIDC_JWKS_URL, value: {{ .Values.config.oidcJwksUrl | quote }}}
+            - name: DATABASE_URL
+              valueFrom: {secretKeyRef: {name: {{ .Values.secretRefs.database.name }}, key: {{ .Values.secretRefs.database.key }}}}
+            - {name: OBJECT_STORAGE_ENDPOINT, value: {{ .Values.objectStorage.endpoint | quote }}}
+            - {name: OBJECT_STORAGE_BUCKET, value: {{ .Values.objectStorage.bucket | quote }}}
+            - {name: OBJECT_STORAGE_REGION, value: {{ .Values.objectStorage.region | quote }}}
+            - {name: OBJECT_STORAGE_SECURE, value: {{ .Values.objectStorage.secure | quote }}}
+            - name: OBJECT_STORAGE_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: {{ .Values.secretRefs.objectStorageAccessKey.name }}, key: {{ .Values.secretRefs.objectStorageAccessKey.key }}}}
+            - name: OBJECT_STORAGE_SECRET_KEY
+              valueFrom: {secretKeyRef: {name: {{ .Values.secretRefs.objectStorageSecretKey.name }}, key: {{ .Values.secretRefs.objectStorageSecretKey.key }}}}
+          resources: {{ toYaml .Values.resources | nindent 12 }}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-api
+spec:
+  selector: {app.kubernetes.io/name: irespond, app.kubernetes.io/component: api}
+  ports:
+    - {name: http, port: {{ .Values.service.port }}, targetPort: http}
