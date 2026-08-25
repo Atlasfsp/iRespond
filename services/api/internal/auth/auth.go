@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -53,24 +54,24 @@ type tokenHeader struct {
 }
 
 type claims struct {
-	Sub   string      `json:"sub"`
-	Iss   string      `json:"iss"`
-	Aud   any         `json:"aud"`
-	Exp   int64       `json:"exp"`
-	Nbf   int64       `json:"nbf"`
-	Roles []string    `json:"roles"`
-	Scope string      `json:"scope"`
-	Groups []string   `json:"groups"`
+	Sub    string   `json:"sub"`
+	Iss    string   `json:"iss"`
+	Aud    any      `json:"aud"`
+	Exp    int64    `json:"exp"`
+	Nbf    int64    `json:"nbf"`
+	Roles  []string `json:"roles"`
+	Scope  string   `json:"scope"`
+	Groups []string `json:"groups"`
 }
 
 type jwks struct {
 	Keys []struct {
-		Kty string `json:"kty"`
-		Kid string `json:"kid"`
-		Use string `json:"use"`
-		Alg string `json:"alg"`
-		N   string `json:"n"`
-		E   string `json:"e"`
+		Kty string   `json:"kty"`
+		Kid string   `json:"kid"`
+		Use string   `json:"use"`
+		Alg string   `json:"alg"`
+		N   string   `json:"n"`
+		E   string   `json:"e"`
 		X5C []string `json:"x5c"`
 	} `json:"keys"`
 }
@@ -92,7 +93,7 @@ func (v *JWTVerifier) Verify(ctx context.Context, token string) (Principal, erro
 	if err != nil { return Principal{}, ErrInvalidToken }
 	digest := sha256.Sum256([]byte(parts[0] + "." + parts[1]))
 	sig, err := base64.RawURLEncoding.DecodeString(parts[2])
-	if err != nil || rsa.VerifyPKCS1v15(key, cryptoHashSHA256, digest[:], sig) != nil { return Principal{}, ErrInvalidToken }
+	if err != nil || rsa.VerifyPKCS1v15(key, crypto.SHA256, digest[:], sig) != nil { return Principal{}, ErrInvalidToken }
 
 	roles := map[string]struct{}{}
 	for _, role := range c.Roles { if role = strings.TrimSpace(role); role != "" { roles[role] = struct{}{} } }
@@ -100,9 +101,6 @@ func (v *JWTVerifier) Verify(ctx context.Context, token string) (Principal, erro
 	for _, scope := range strings.Fields(c.Scope) { roles["scope:"+scope] = struct{}{} }
 	return Principal{Subject:c.Sub, Roles:roles}, nil
 }
-
-// cryptoHashSHA256 is crypto.SHA256 without importing callers into crypto internals.
-const cryptoHashSHA256 = 5
 
 func (v *JWTVerifier) key(ctx context.Context, kid string) (*rsa.PublicKey, error) {
 	v.mu.RLock(); key := v.keys[kid]; fresh := time.Now().Before(v.keysUntil); v.mu.RUnlock()
