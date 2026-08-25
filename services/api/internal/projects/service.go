@@ -9,6 +9,7 @@ import (
   "time"
 
   "github.com/jackc/pgx/v5"
+  "github.com/jackc/pgx/v5/pgconn"
   "github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -58,9 +59,9 @@ func (s *Service) CreateFromNeed(ctx context.Context,in CreateInput)(Project,err
   title:=strings.TrimSpace(in.Title);if title==""{title=needTitle};summary:=strings.TrimSpace(in.Summary);if summary==""{summary="Action project created from verified community need."}
   id:=newID();var p Project
   err=tx.QueryRow(ctx,`INSERT INTO action_projects(id,source_need_id,created_by,title,summary,currency,estimated_budget_minor,target_days,sdg_tags) VALUES($1,$2,$3,$4,$5,NULLIF($6,''),$7,$8,$9) RETURNING id,source_need_id,created_by,title,summary,status,COALESCE(currency,''),estimated_budget_minor,target_days,sdg_tags,created_at,updated_at`,id,in.NeedID,in.CreatedBy,title,summary,strings.ToUpper(strings.TrimSpace(in.Currency)),in.EstimatedBudgetMinor,in.TargetDays,sdgs).Scan(&p.ID,&p.SourceNeedID,&p.CreatedBy,&p.Title,&p.Summary,&p.Status,&p.Currency,&p.EstimatedBudgetMinor,&p.TargetDays,&p.SDGTags,&p.CreatedAt,&p.UpdatedAt)
-  if err!=nil{if strings.Contains(strings.ToLower(err.Error()),"source_need_id"){return Project{},ErrProjectExists};return Project{},err}
+  if err!=nil{var pgErr *pgconn.PgError;if errors.As(err,&pgErr)&&pgErr.Code=="23505"{return Project{},ErrProjectExists};return Project{},err}
   _,err=tx.Exec(ctx,`INSERT INTO project_roles(project_id,principal_id,role) VALUES($1,$2,'project_manager') ON CONFLICT DO NOTHING`,id,in.CreatedBy);if err!=nil{return Project{},err}
-  _,err=tx.Exec(ctx,`INSERT INTO outbox_events(id,aggregate_type,aggregate_id,event_type,payload) VALUES($1,'action_project',$2,'project.created',jsonb_build_object('projectId',$2,'sourceNeedId',$3,'createdBy',$4))`,newID(),id,in.NeedID,in.CreatedBy);if err!=nil{return Project{},err}
+  _,err=tx.Exec(ctx,`INSERT INTO outbox_events(id,aggregate_type,aggregate_id,event_type,payload) VALUES($1,'action_project',$2::text,'project.created',jsonb_build_object('projectId',$2::text,'sourceNeedId',$3::text,'createdBy',$4::text))`,newID(),id,in.NeedID,in.CreatedBy);if err!=nil{return Project{},err}
   if err:=tx.Commit(ctx);err!=nil{return Project{},err};return p,nil
 }
 
