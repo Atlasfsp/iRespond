@@ -40,11 +40,25 @@ jobs:
           --health-retries=5
     env:
       TEST_DATABASE_URL: postgres://irespond:irespond@localhost:5432/irespond_test?sslmode=disable
+      TEST_OBJECT_STORAGE_ENDPOINT: localhost:9000
     defaults:
       run:
         working-directory: services/api
     steps:
       - uses: actions/checkout@v4
+      - name: Start S3-compatible evidence storage
+        working-directory: .
+        run: |
+          docker run -d --name irespond-minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=irespond \
+            -e MINIO_ROOT_PASSWORD=irespond-secret \
+            minio/minio:latest server /data
+          for i in {1..30}; do
+            if curl -fsS http://localhost:9000/minio/health/live >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          docker logs irespond-minio
+          exit 1
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24.x'
