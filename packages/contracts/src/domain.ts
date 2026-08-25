@@ -1,4 +1,4 @@
-export type VerificationState = 'observed' | 'community_confirmed' | 'institution_confirmed' | 'expert_confirmed' | 'independently_audited' | 'government_confirmed';
+export type VerificationState = 'observed' | 'verification_requested' | 'community_confirmed' | 'institution_confirmed' | 'expert_confirmed' | 'independently_audited' | 'government_confirmed' | 'disputed' | 'rejected';
 
 export type ContributionKind =
   | 'money'
@@ -21,6 +21,25 @@ export interface GeoPoint {
   accuracyMeters?: number;
 }
 
+export interface EvidenceItem {
+  id: string;
+  kind: 'image' | 'video' | 'document' | 'audio';
+  uri: string;
+  capturedAt: string;
+  location?: GeoPoint;
+  consentClassification: 'public_space' | 'beneficiary_consented' | 'redacted' | 'restricted';
+}
+
+export interface VerificationRecord {
+  id: string;
+  needId: string;
+  verifierId: string;
+  state: VerificationState;
+  note?: string;
+  evidenceIds: string[];
+  createdAt: string;
+}
+
 export interface NeedReport {
   id: string;
   title: string;
@@ -30,8 +49,18 @@ export interface NeedReport {
   communityId?: string;
   reporterId: string;
   verificationState: VerificationState;
+  evidence: EvidenceItem[];
   createdAt: string;
+  updatedAt: string;
   sdgTags: number[];
+}
+
+export interface AbilityProfile {
+  userId: string;
+  place?: string;
+  position?: string;
+  abilities: ContributionKind[];
+  availabilityNote?: string;
 }
 
 export interface ContributionOffer {
