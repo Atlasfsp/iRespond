@@ -24,28 +24,27 @@ jobs:
 
   api:
     runs-on: ubuntu-latest
-    services:
-      postgis:
-        image: postgis/postgis:17-3.5
-        env:
-          POSTGRES_DB: irespond_test
-          POSTGRES_USER: irespond
-          POSTGRES_PASSWORD: irespond
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U irespond -d irespond_test"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
     env:
-      TEST_DATABASE_URL: postgres://irespond:irespond@localhost:5432/irespond_test?sslmode=disable
+      # YugabyteDB/YSQL is the canonical relational test target.
+      TEST_DATABASE_URL: postgres://yugabyte:yugabyte@localhost:5433/yugabyte?sslmode=disable
       TEST_OBJECT_STORAGE_ENDPOINT: localhost:9000
     defaults:
       run:
         working-directory: services/api
     steps:
       - uses: actions/checkout@v4
+      - name: Start YugabyteDB
+        working-directory: .
+        run: |
+          docker run -d --name irespond-yugabyte -p 5433:5433 -p 7000:7000 \
+            yugabytedb/yugabyte:latest bin/yugabyted start \
+            --background=false --daemon=false
+          for i in {1..60}; do
+            if docker exec irespond-yugabyte ysqlsh -h 127.0.0.1 -p 5433 -U yugabyte -d yugabyte -c 'SELECT 1' >/dev/null 2>&1; then exit 0; fi
+            sleep 2
+          done
+          docker logs irespond-yugabyte
+          exit 1
       - name: Start S3-compatible evidence storage
         working-directory: .
         run: |
