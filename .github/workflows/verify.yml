@@ -24,6 +24,13 @@ jobs:
       - name: Repository metrics
         run: bash tools/repo_metrics.sh
 
+  security-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repository security boundary
+        run: bash tools/security_boundary.sh
+
   api:
     runs-on: ubuntu-latest
     env:
