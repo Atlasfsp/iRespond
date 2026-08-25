@@ -25,6 +25,9 @@ func registerProjectRoutes(mux *http.ServeMux, identity auth.Verifier, manager *
 		p,err:=manager.Convert(r.Context(),newID(),r.PathValue("id"),strings.TrimSpace(req.Title),strings.TrimSpace(req.Description),strings.TrimSpace(req.OwnerCommunityID),principal.Subject)
 		switch{case errors.Is(err,projects.ErrNeedNotFound):writeJSON(w,http.StatusNotFound,map[string]string{"error":"need not found"});case errors.Is(err,projects.ErrNeedNotVerified):writeJSON(w,http.StatusConflict,map[string]string{"error":"need must be verified before project conversion"});case errors.Is(err,projects.ErrAlreadyConverted):writeJSON(w,http.StatusConflict,map[string]string{"error":"need already has an action project"});case err!=nil:writeJSON(w,http.StatusInternalServerError,map[string]string{"error":"unable to create action project"});default:writeJSON(w,http.StatusCreated,p)}
 	})
+	mux.HandleFunc("GET /v1/needs/{id}/project",func(w http.ResponseWriter,r *http.Request){
+		if unavailable(w){return};p,err:=manager.FindByNeed(r.Context(),r.PathValue("id"));if errors.Is(err,projects.ErrProjectNotFound){writeJSON(w,http.StatusNotFound,map[string]string{"error":"action project not found"});return};if err!=nil{writeJSON(w,http.StatusInternalServerError,map[string]string{"error":"unable to load action project"});return};writeJSON(w,http.StatusOK,p)
+	})
 	mux.HandleFunc("GET /v1/projects/{id}",func(w http.ResponseWriter,r *http.Request){
 		if unavailable(w){return};detail,err:=manager.Get(r.Context(),r.PathValue("id"));if errors.Is(err,projects.ErrProjectNotFound){writeJSON(w,http.StatusNotFound,map[string]string{"error":"project not found"});return};if err!=nil{writeJSON(w,http.StatusInternalServerError,map[string]string{"error":"unable to load project"});return};writeJSON(w,http.StatusOK,detail)
 	})
