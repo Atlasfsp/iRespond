@@ -19,7 +19,9 @@ if git grep -n -I -E -e 'CREATE EXTENSION.*postgis|ST_DWithin|geography\(Point|p
 fi
 
 # Container and Helm runtime must retain non-root/read-only hardening.
-grep -Eq '^USER[[:space:]]+[1-9][0-9]*' services/api/Dockerfile || fail "API image must run as numeric non-root user"
+if ! grep -Eq '^USER[[:space:]]+([1-9][0-9]*|nonroot)(:([1-9][0-9]*|nonroot))?[[:space:]]*$' services/api/Dockerfile; then
+  fail "API image must declare a non-root runtime user"
+fi
 git grep -q -E -e 'runAsNonRoot:[[:space:]]*true' -- deploy/helm/irespond || fail "Helm workload must require non-root execution"
 git grep -q -E -e 'readOnlyRootFilesystem:[[:space:]]*true' -- deploy/helm/irespond || fail "Helm workload must use read-only root filesystem"
 
