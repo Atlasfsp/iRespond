@@ -1,0 +1,60 @@
+image:
+  repository: registry.example.invalid/irespond/api
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+service:
+  port: 8080
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+config:
+  httpAddr: ":8080"
+  oidcIssuer: ""
+  oidcAudience: ""
+  oidcJwksUrl: ""
+  natsSubjectPrefix: "irespond.events"
+
+secretRefs:
+  database:
+    name: irespond-runtime
+    key: DATABASE_URL
+  nats:
+    name: irespond-runtime
+    key: NATS_URL
+  objectStorageAccessKey:
+    name: irespond-runtime
+    key: OBJECT_STORAGE_ACCESS_KEY
+  objectStorageSecretKey:
+    name: irespond-runtime
+    key: OBJECT_STORAGE_SECRET_KEY
+
+objectStorage:
+  endpoint: ""
+  bucket: ""
+  region: ""
+  secure: true
+
+outbox:
+  enabled: true
+  replicas: 1
+  pollIntervalMs: 1000
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
