@@ -67,3 +67,12 @@ jobs:
       - run: go mod tidy
       - run: go test -p 1 ./...
       - run: go vet ./...
+      - name: Verify migration command
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+        run: |
+          go run ./cmd/migrate
+          go run ./cmd/migrate
+      - name: Build production image
+        working-directory: .
+        run: docker build -f services/api/Dockerfile -t irespond-api:verify services/api
