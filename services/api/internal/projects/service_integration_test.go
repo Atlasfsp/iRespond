@@ -22,5 +22,11 @@ func TestVerifiedNeedProjectConversion(t *testing.T){
   if p.Status!="draft"||p.Title!="Verified library need"||len(p.SDGTags)!=2{t.Fatalf("unexpected project: %+v",p)}
   if _,err:=svc.CreateFromNeed(ctx,CreateInput{NeedID:"verified",CreatedBy:"person-2"});!errors.Is(err,ErrProjectExists){t.Fatalf("duplicate conversion err=%v",err)}
   got,err:=svc.Get(ctx,p.ID);if err!=nil{t.Fatal(err)};if got.SourceNeedID!="verified"{t.Fatalf("source need=%s",got.SourceNeedID)}
-  var roles,events int;if err:=pool.QueryRow(ctx,"SELECT count(*) FROM project_roles WHERE project_id=$1",p.ID).Scan(&roles);err!=nil{t.Fatal(err)};if err:=pool.QueryRow(ctx,"SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type='project.created'",p.ID).Scan(&events);err!=nil{t.Fatal(err)};if roles!=1||events!=1{t.Fatalf("roles=%d events=%d",roles,events)}
+  var roles,events int
+  if err:=pool.QueryRow(ctx,"SELECT count(*) FROM project_roles WHERE project_id=$1",p.ID).Scan(&roles);err!=nil{t.Fatal(err)}
+  if err:=pool.QueryRow(ctx,"SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type='project.created'",p.ID).Scan(&events);err!=nil{t.Fatal(err)}
+  if roles!=1||events!=1{t.Fatalf("roles=%d events=%d",roles,events)}
+  var projectID,sourceNeedID,createdBy string
+  if err:=pool.QueryRow(ctx,`SELECT payload->>'projectId',payload->>'sourceNeedId',payload->>'createdBy' FROM outbox_events WHERE aggregate_id=$1 AND event_type='project.created'`,p.ID).Scan(&projectID,&sourceNeedID,&createdBy);err!=nil{t.Fatal(err)}
+  if projectID!=p.ID||sourceNeedID!="verified"||createdBy!="person-1"{t.Fatalf("unexpected outbox lineage project=%s source=%s actor=%s",projectID,sourceNeedID,createdBy)}
 }
