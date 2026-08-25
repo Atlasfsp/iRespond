@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/minio/minio-go/v7"
 )
 
 func TestSignedUploadLifecycle(t *testing.T) {
@@ -23,7 +24,7 @@ func TestSignedUploadLifecycle(t *testing.T) {
 
 	cfg:=Config{DatabaseURL:dbURL,Endpoint:endpoint,AccessKey:"irespond",SecretKey:"irespond-secret",Bucket:"irespond-evidence",Secure:false}
 	svc,err:=New(ctx,cfg);if err!=nil{t.Fatal(err)};defer svc.Close()
-	exists,err:=svc.objects.BucketExists(ctx,cfg.Bucket);if err!=nil{t.Fatal(err)};if !exists{if err:=svc.objects.MakeBucket(ctx,cfg.Bucket,struct{ Region string }{}.Region);err!=nil{t.Fatal(err)}}
+	exists,err:=svc.objects.BucketExists(ctx,cfg.Bucket);if err!=nil{t.Fatal(err)};if !exists{if err:=svc.objects.MakeBucket(ctx,cfg.Bucket,minio.MakeBucketOptions{});err!=nil{t.Fatal(err)}}
 
 	payload:=[]byte("evidence-bytes")
 	upload,err:=svc.Initiate(ctx,"evidence-need","person-1","image/jpeg",int64(len(payload)),"");if err!=nil{t.Fatal(err)}
