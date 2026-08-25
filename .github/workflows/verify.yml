@@ -41,10 +41,11 @@ jobs:
             -p 5433:5433 -p 7000:7000 -p 15433:15433 \
             yugabytedb/yugabyte:2026.1.1.1-b2 bin/yugabyted start \
             --base_dir=/home/yugabyte/yb_data --background=false
-          for i in {1..90}; do
-            if docker exec irespond-yugabyte bash -c '/home/yugabyte/bin/ysqlsh --host $(hostname) -U yugabyte -d yugabyte -c "SELECT 1"' >/dev/null 2>&1; then exit 0; fi
+          for i in {1..120}; do
+            if (echo > /dev/tcp/127.0.0.1/5433) >/dev/null 2>&1; then exit 0; fi
             sleep 2
           done
+          docker ps -a
           docker logs irespond-yugabyte
           exit 1
       - name: Start S3-compatible evidence storage
