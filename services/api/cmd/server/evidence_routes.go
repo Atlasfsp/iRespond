@@ -1,9 +1,13 @@
 package main
 
 import (
+  "context"
   "encoding/json"
   "errors"
+  "log"
   "net/http"
+  "os"
+  "strings"
 
   "github.com/Atlasfsp/iRespond/services/api/internal/auth"
   "github.com/Atlasfsp/iRespond/services/api/internal/evidence"
@@ -16,6 +20,12 @@ type beginEvidenceRequest struct {
   SizeBytes int64 `json:"sizeBytes"`
 }
 type reviewEvidenceRequest struct { Status string `json:"status"` }
+
+func evidenceManagerFromEnvironment(ctx context.Context)(*evidence.Manager,string){
+  cfg:=evidence.Config{DatabaseURL:strings.TrimSpace(os.Getenv("DATABASE_URL")),Endpoint:strings.TrimSpace(os.Getenv("S3_ENDPOINT")),AccessKey:os.Getenv("S3_ACCESS_KEY"),SecretKey:os.Getenv("S3_SECRET_KEY"),Bucket:strings.TrimSpace(os.Getenv("S3_EVIDENCE_BUCKET")),Region:strings.TrimSpace(os.Getenv("S3_REGION")),Secure:!strings.EqualFold(os.Getenv("S3_SECURE"),"false")}
+  if cfg.DatabaseURL==""||cfg.Endpoint==""||cfg.Bucket==""{return nil,"unconfigured-fail-closed"}
+  manager,err:=evidence.New(ctx,cfg);if err!=nil{log.Printf("evidence manager unavailable: %v",err);return nil,"unavailable-fail-closed"};return manager,"s3-compatible-signed"
+}
 
 func registerEvidenceRoutes(mux *http.ServeMux, identity auth.Verifier, needRepo needs.Repository, manager *evidence.Manager) {
   unavailable:=func(w http.ResponseWriter) bool { if manager==nil { writeJSON(w,http.StatusServiceUnavailable,map[string]string{"error":"evidence storage is not configured"}); return true }; return false }
