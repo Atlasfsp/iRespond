@@ -1,0 +1,44 @@
+package impact
+
+import (
+	"context"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+type Service struct{ db *pgxpool.Pool }
+
+type ContributionSummary struct {
+	Kind string `json:"kind"`
+	Fulfilled int `json:"fulfilled"`
+	Accepted int `json:"accepted"`
+}
+
+type RoleSummary struct { Role string `json:"role"`; Projects int `json:"projects"` }
+
+type Passport struct {
+	Subject string `json:"subject"`
+	ProjectsLed int `json:"projectsLed"`
+	ProjectsCompleted int `json:"projectsCompleted"`
+	Verifications int `json:"verifications"`
+	FulfilledContributions int `json:"fulfilledContributions"`
+	AcceptedCommitments int `json:"acceptedCommitments"`
+	SDGs []int `json:"sdgs"`
+	Contributions []ContributionSummary `json:"contributions"`
+	Roles []RoleSummary `json:"roles"`
+	GeneratedAt time.Time `json:"generatedAt"`
+}
+
+func New(ctx context.Context,databaseURL string)(*Service,error){pool,err:=pgxpool.New(ctx,databaseURL);if err!=nil{return nil,err};if err=pool.Ping(ctx);err!=nil{pool.Close();return nil,err};return &Service{db:pool},nil}
+func(s *Service)Close(){if s!=nil&&s.db!=nil{s.db.Close()}}
+
+func(s *Service)Passport(ctx context.Context,subject string)(Passport,error){
+	p:=Passport{Subject:subject,Contributions:[]ContributionSummary{},Roles:[]RoleSummary{},SDGs:[]int{},GeneratedAt:time.Now().UTC()}
+	if err:=s.db.QueryRow(ctx,`SELECT COUNT(*) FILTER (WHERE project_manager_id=$1 OR created_by=$1), COUNT(*) FILTER (WHERE status='completed' AND (project_manager_id=$1 OR created_by=$1)) FROM action_projects`,subject).Scan(&p.ProjectsLed,&p.ProjectsCompleted);err!=nil{return Passport{},err}
+	if err:=s.db.QueryRow(ctx,`SELECT COUNT(*) FROM need_verifications WHERE verifier_id=$1`,subject).Scan(&p.Verifications);err!=nil{return Passport{},err}
+	if err:=s.db.QueryRow(ctx,`SELECT COUNT(*) FILTER (WHERE status='fulfilled'), COUNT(*) FILTER (WHERE status='accepted') FROM contribution_offers WHERE contributor_id=$1`,subject).Scan(&p.FulfilledContributions,&p.AcceptedCommitments);err!=nil{return Passport{},err}
+	rows,err:=s.db.Query(ctx,`SELECT kind,COUNT(*) FILTER (WHERE status='fulfilled'),COUNT(*) FILTER (WHERE status='accepted') FROM contribution_offers WHERE contributor_id=$1 AND status IN ('fulfilled','accepted') GROUP BY kind ORDER BY kind`,subject);if err!=nil{return Passport{},err};for rows.Next(){var v ContributionSummary;if err:=rows.Scan(&v.Kind,&v.Fulfilled,&v.Accepted);err!=nil{rows.Close();return Passport{},err};p.Contributions=append(p.Contributions,v)};if err:=rows.Err();err!=nil{rows.Close();return Passport{},err};rows.Close()
+	roleRows,err:=s.db.Query(ctx,`SELECT role,COUNT(DISTINCT project_id) FROM project_roles WHERE actor_id=$1 GROUP BY role ORDER BY role`,subject);if err!=nil{return Passport{},err};for roleRows.Next(){var v RoleSummary;if err:=roleRows.Scan(&v.Role,&v.Projects);err!=nil{roleRows.Close();return Passport{},err};p.Roles=append(p.Roles,v)};if err:=roleRows.Err();err!=nil{roleRows.Close();return Passport{},err};roleRows.Close()
+	sdgRows,err:=s.db.Query(ctx,`SELECT DISTINCT unnest(p.sdg_tags) FROM action_projects p WHERE p.created_by=$1 OR p.project_manager_id=$1 OR EXISTS(SELECT 1 FROM project_roles r WHERE r.project_id=p.id AND r.actor_id=$1) OR EXISTS(SELECT 1 FROM contribution_offers o WHERE o.project_id=p.id AND o.contributor_id=$1 AND o.status IN ('accepted','fulfilled')) ORDER BY 1`,subject);if err!=nil{return Passport{},err};for sdgRows.Next(){var n int;if err:=sdgRows.Scan(&n);err!=nil{sdgRows.Close();return Passport{},err};p.SDGs=append(p.SDGs,n)};if err:=sdgRows.Err();err!=nil{sdgRows.Close();return Passport{},err};sdgRows.Close();return p,nil
+}
