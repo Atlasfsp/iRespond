@@ -21,7 +21,7 @@ func TestSignedUploadLifecycle(t *testing.T) {
 	pool,err:=pgxpool.New(ctx,dbURL);if err!=nil{t.Fatal(err)};defer pool.Close()
 	for _,name:=range []string{"0001_core.sql","0002_evidence.sql"}{b,err:=os.ReadFile(filepath.Join("..","..","migrations",name));if err!=nil{t.Fatal(err)};if _,err:=pool.Exec(ctx,string(b));err!=nil{t.Fatalf("apply %s: %v",name,err)}}
 	if _,err:=pool.Exec(ctx,`TRUNCATE need_evidence, need_verifications, idempotency_keys, outbox_events, needs CASCADE`);err!=nil{t.Fatal(err)}
-	if _,err:=pool.Exec(ctx,`INSERT INTO needs(id,title,description,category,reporter_id,verification_state,sdg_tags,location) VALUES('evidence-need','Blocked drain','Drain is blocked','sanitation','reporter','observed','{6}',ST_SetSRID(ST_MakePoint(3.37,6.52),4326)::geography)`);err!=nil{t.Fatal(err)}
+	if _,err:=pool.Exec(ctx,`INSERT INTO needs(id,title,description,category,reporter_id,verification_state,sdg_tags,latitude,longitude) VALUES('evidence-need','Blocked drain','Drain is blocked','sanitation','reporter','observed','{6}',6.52,3.37)`);err!=nil{t.Fatal(err)}
 
 	cfg:=Config{DatabaseURL:dbURL,Endpoint:endpoint,AccessKey:"irespond",SecretKey:"irespond-secret",Bucket:"irespond-evidence",Secure:false}
 	svc,err:=New(ctx,cfg);if err!=nil{t.Fatal(err)};defer svc.Close()
