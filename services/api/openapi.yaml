@@ -1,0 +1,106 @@
+openapi: 3.1.0
+info:
+  title: iRespond API
+  version: 0.1.0
+  description: Mobile-first community action API. Reported needs are observations until verification.
+servers:
+  - url: https://api.irespond.example
+paths:
+  /healthz:
+    get:
+      operationId: health
+      responses:
+        '200': { description: Healthy }
+  /v1/needs:
+    post:
+      operationId: createNeed
+      summary: Create an observed community need
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateNeedRequest' }
+      responses:
+        '201':
+          description: Need created
+          content: { application/json: { schema: { $ref: '#/components/schemas/Need' } } }
+        '400': { description: Invalid report }
+    get:
+      operationId: nearbyNeeds
+      parameters:
+        - { name: lat, in: query, required: true, schema: { type: number } }
+        - { name: lng, in: query, required: true, schema: { type: number } }
+        - { name: radiusKm, in: query, required: true, schema: { type: number, exclusiveMinimum: 0, maximum: 200 } }
+      responses:
+        '200':
+          description: Nearby needs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Need' }
+  /v1/needs/{id}:
+    get:
+      operationId: getNeed
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Need
+          content: { application/json: { schema: { $ref: '#/components/schemas/Need' } } }
+        '404': { description: Not found }
+  /v1/needs/{id}/verification:
+    post:
+      operationId: transitionNeedVerification
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [state]
+              properties:
+                state: { $ref: '#/components/schemas/VerificationState' }
+      responses:
+        '200':
+          description: Transition accepted
+          content: { application/json: { schema: { $ref: '#/components/schemas/Need' } } }
+        '404': { description: Not found }
+        '409': { description: Invalid transition }
+components:
+  schemas:
+    VerificationState:
+      type: string
+      enum: [observed, verification_requested, community_confirmed, institution_confirmed, expert_confirmed, independently_audited, government_confirmed, disputed, rejected]
+    CreateNeedRequest:
+      type: object
+      required: [title, description, latitude, longitude]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        category: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        reporterId: { type: string }
+        sdgTags:
+          type: array
+          items: { type: integer, minimum: 1, maximum: 17 }
+    Need:
+      type: object
+      required: [id, title, description, verificationState, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        category: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        reporterId: { type: string }
+        verificationState: { $ref: '#/components/schemas/VerificationState' }
+        sdgTags:
+          type: array
+          items: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
