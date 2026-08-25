@@ -12,6 +12,10 @@ export default function ImpactFeed() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.topActions}>
+          <Pressable onPress={() => router.push('/profile')}><Text style={styles.topLink}>Ability Profile</Text></Pressable>
+          <Pressable onPress={() => router.push('/needmap')}><Text style={styles.topLink}>NeedMap</Text></Pressable>
+        </View>
         <View style={styles.hero}>
           <Text style={styles.eyebrow}>I RESPOND</Text>
           <Text style={styles.title}>What can you change where you are?</Text>
@@ -32,7 +36,7 @@ export default function ImpactFeed() {
 
         <View style={styles.headerRow}>
           <Text style={styles.sectionTitle}>Needs near you</Text>
-          <Text style={styles.link}>NeedMap →</Text>
+          <Pressable onPress={() => router.push('/needmap')}><Text style={styles.link}>Open NeedMap →</Text></Pressable>
         </View>
         {needs.map((need) => (
           <Pressable key={need.id} style={styles.card} accessibilityRole="button">
@@ -56,6 +60,8 @@ export default function ImpactFeed() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F6F8FB' },
   content: { padding: 18, gap: 16, paddingBottom: 40 },
+  topActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 18 },
+  topLink: { color: '#2D6E9F', fontWeight: '800' },
   hero: { backgroundColor: '#153B5B', borderRadius: 24, padding: 22, gap: 10 },
   eyebrow: { color: '#8ED1B2', fontWeight: '800', letterSpacing: 1.8, fontSize: 12 },
   title: { color: 'white', fontSize: 30, fontWeight: '800', lineHeight: 35 },
