@@ -34,6 +34,7 @@ func main() {
 	projectManager, projectName := projectManagerFromEnvironment(ctx); if projectManager != nil { defer projectManager.Close() }
 
 	mux := http.NewServeMux()
+	closeNotifications := registerNotificationRoutes(mux, identity); defer closeNotifications()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, http.StatusOK, healthResponse{Status:"ok", Service:"irespond-api", Store:storeName, Auth:authName, Evidence:evidenceName, Projects:projectName, Time:time.Now().UTC().Format(time.RFC3339)}) })
 	registerRuntimeRoutes(mux, runtimeStatus{Store:storeName, Auth:authName, Evidence:evidenceName, Projects:projectName})
 	mux.HandleFunc("GET /v1/platform", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, http.StatusOK, map[string]any{"name":"iRespond", "mobileFirst":true, "lifecycle":[]string{"see","report","verify","diagnose","project","mobilise","execute","measure","maintain","replicate"}}) })
