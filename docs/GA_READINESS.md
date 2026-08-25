@@ -1,67 +1,73 @@
 # iRespond GA Readiness Ledger
 
-Status: **NOT GA — repository-controlled hardening in progress**
+Status: **NOT GA — repository-controlled hardening substantially advanced; external certification remains**
 
-This ledger separates work that can be proven in-repository from evidence that requires real provider accounts, production infrastructure, app stores, legal review or human operational drills. A check is not marked complete without evidence.
+This ledger distinguishes implementation that is demonstrably green in repository CI from evidence that requires production infrastructure, provider accounts, app stores, legal review, security assessment, operational staffing or live drills. A capability is never called production-certified merely because an adapter exists.
 
 ## Repository-controlled gates
 
 | Gate | State | Evidence / remaining work |
 |---|---|---|
 | Mobile TypeScript gate | PASS | GitHub Actions `mobile:typecheck` |
-| YugabyteDB relational compatibility | PASS | CI boots YugabyteDB/YSQL and executes integration suites |
+| YugabyteDB relational compatibility | PASS | CI boots real YugabyteDB/YSQL and executes migrations/integration tests |
 | Need report + idempotency | PASS | YSQL integration tests |
-| Verification lifecycle | PASS | server-authoritative state transitions + history |
-| Evidence signed upload | PASS | MinIO/S3-compatible integration test |
+| Verification lifecycle | PASS | server-authoritative transitions + verification history |
+| Evidence signed upload | PASS | S3-compatible/MinIO integration test |
 | Evidence moderation before access | PASS | pending-review gate + role-protected review |
-| Need → Action Project | PASS | confirmed need required |
-| Project governance | PASS | roles, milestones, validation, maintenance owner |
+| Need → Action Project | PASS | confirmed need required; lineage retained |
+| Project governance | PASS | roles, milestones, validation, maintenance owner and guarded transitions |
 | Contribution commitments | PASS | offer/accept/decline/withdraw/fulfil lifecycle |
-| Mobile primary workflow | PARTIAL | 10 implemented screens; additional settings/notifications/impact surfaces remain |
+| Mobile primary workflow | PARTIAL | 10 implemented Expo Router screens; settings, notifications, impact passport and richer institutional surfaces remain |
 | Reproducible repository metrics | PASS | `tools/repo_metrics.sh` |
-| Production migration command | PASS | `cmd/migrate`, schema_migrations ledger |
-| Non-root API image | PASS | distroless runtime; CI build verification required |
-| Readiness/version endpoints | TODO | repository-controlled |
-| Graceful shutdown | TODO | repository-controlled |
-| Strict production configuration validation | TODO | repository-controlled |
-| Shared SS-44 Geospatial adapter | TODO | local Yugabyte-compatible Haversine remains transitional |
-| StratoID + SS-13 policy adapter | PARTIAL | OIDC/JWKS exists; shared authorization policy integration remains |
-| SS-42 media adapter | PARTIAL | direct S3-compatible dev adapter exists; shared media contract remains |
-| SS-43 Trust & Safety adapter | PARTIAL | local moderation state exists; shared review/enforcement integration remains |
-| SS-03 Redpanda/NATS outbox publisher | TODO | transactional outbox exists |
-| SS-18 notification adapter | TODO | notification intent/delivery integration remains |
+| Production migration command | PASS | `cmd/migrate`, idempotent migration ledger |
+| Production API image | PASS | non-root image builds in CI |
+| Runtime readiness/version endpoints | PASS | `/readyz` fails closed; `/version` exposes build evidence |
+| Graceful shutdown | PASS | bounded SIGINT/SIGTERM shutdown tested in code |
+| Strict production configuration | PASS | `IRESPOND_ENV=production` fails startup when relational/OIDC/evidence configuration is incomplete |
+| Shared SS-44 Geospatial adapter | PASS | projection broker + outbox-driven synchronization; production endpoint certification remains external |
+| StratoID/OIDC | PASS (adapter) | mobile PKCE + API OIDC/JWKS boundary; production tenant/key-rotation evidence remains external |
+| SS-13 authorization adapter | PASS | fail-closed external policy-decision seam; production policy service certification remains external |
+| SS-03 Redpanda/NATS event backbone | PASS | transactional outbox publisher, retry/claim behavior and projection events |
+| SkyForge deployment package | PASS | Helm chart, probes, security context, NetworkPolicy and CI rendering/linting |
+| SS-42 media adapter | PARTIAL | safe signed-object workflow exists; canonical Shared Media service contract/certification remains |
+| SS-43 Trust & Safety adapter | PARTIAL | local moderation workflow exists; canonical shared review/enforcement integration remains |
+| SS-18 notification adapter | TODO | shared notification intent/delivery integration remains |
 | SS-22 PayCore donations/counterpart funding | TODO | financial movement deliberately not implemented locally |
-| SS-24 consent/privacy adapter | TODO | DSAR/erasure/purpose ledger integration remains |
-| SS-05 Vault secret references | TODO | production secret-broker contract remains |
-| SS-06 OTLP observability | TODO | metrics/traces/logs integration remains |
-| SS-07 gateway contract/rate limits | TODO | edge policy remains |
-| API contract completeness | PARTIAL | OpenAPI exists; needs expansion for all current endpoints |
-| Security tests / dependency / secret scans | TODO | GA CI lane remains |
-| Load/performance tests | TODO | GA thresholds remain |
-| Backup/restore runbook | TODO | YugabyteDB/shared DBaaS operating evidence remains |
-| AppForge build/release handoff | TODO | signed mobile/store pipeline requires external signing/app-store setup |
-| Droplet independent release judgment | TODO | independent QA evidence remains |
-| SkyForge deployment manifests | TODO | runtime packaging and real deployment evidence remain |
+| SS-24 consent/privacy adapter | TODO | purpose/consent, DSAR and erasure orchestration remain |
+| SS-05 Vault secret integration | PARTIAL | Helm uses secret references; runtime Vault broker/rotation evidence remains |
+| SS-06 OTLP observability | TODO | production metrics/traces/logs export remains |
+| SS-07 gateway contract/rate limits | TODO | edge WAF/rate-limit policy contract remains |
+| API contract completeness | PARTIAL | OpenAPI exists but must cover every current route and error state |
+| Repository security boundary | PASS when CI green | secret/private-key, PostGIS regression, non-root/read-only and auth-bypass guard added in current GA hardening PR |
+| Dependency/SBOM/image vulnerability scanning | TODO | GA CI supply-chain lane remains |
+| Load/performance tests | TODO | thresholds, soak and saturation evidence remain |
+| Backup/restore runbook | TODO | repository procedure + external YugabyteDB restore evidence remain |
+| AppForge build/release handoff | TODO | pipeline contract, provenance and mobile signing/store delivery remain |
+| Droplet independent release judgment | TODO | independent final-candidate QA evidence remains |
+
+## Current measurable implementation baseline
+
+The metrics job is authoritative for repeatable counts. At the runtime-hardening candidate immediately before this ledger update it reported **2,874 authored source lines across 61 source files and 10 mobile screens**. Metrics are expected to increase as GA slices land; use the newest green workflow for the current number.
 
 ## External / human / provider gates
 
-These cannot be truthfully completed from repository CI alone:
+The following cannot be truthfully completed through repository CI alone:
 
-- production StratoID/OIDC tenant/client registration and key-rotation drill;
-- production Shared Services endpoints, credentials and service-to-service authorization;
-- production YugabyteDB topology, TLS, backups, restore drill and regional failure test;
-- production object/media storage buckets, malware/scan/transcode integration and retention controls;
-- PayCore/payment-provider merchant onboarding, regulated fund flows, refunds and reconciliation;
-- Apple Developer and Google Play signing/store accounts, privacy declarations and release approval;
-- safeguarding policy approval for minors/vulnerable people and trained operational reviewers;
-- legal/privacy review by launch jurisdictions, terms, community standards and donation rules;
-- penetration test and remediation evidence;
+- production StratoID tenant/client registration, signing-key rotation and outage behavior;
+- production Shared Services endpoints, workload identities, credentials and service-to-service authorization;
+- production YugabyteDB topology, TLS, multi-zone/regional policy, backups, point-in-time recovery and restore drill;
+- production media/object storage, malware scanning/transcoding, retention and deletion certification;
+- PayCore/payment-provider merchant onboarding, regulated fund flows, refunds, reconciliation and financial controls;
+- Apple Developer and Google Play accounts, signing, privacy declarations, review and store approval;
+- safeguarding policy approval and trained reviewers for minors/vulnerable people;
+- launch-jurisdiction legal/privacy review, terms, community standards and donation rules;
+- independent penetration test and remediation evidence;
 - real-device accessibility, low-bandwidth and device-matrix certification;
-- incident-response, disaster-recovery and abuse-response tabletop/live drills;
-- production DNS/TLS/CDN/gateway and observability credentials;
-- real SkyForge deployment and rollback evidence;
-- independent Droplet release verdict against the final candidate.
+- incident response, abuse response, backup/restore and disaster-recovery drills;
+- production DNS/TLS/CDN/gateway and OTLP/observability connectivity;
+- real SkyForge staging/production deployment, smoke test, canary and rollback evidence;
+- independent Droplet release verdict against the immutable final candidate.
 
 ## GA definition
 
-iRespond may be called GA only when all repository-controlled blocking gates are green and every launch-scope external gate has dated evidence, named ownership and an accepted residual-risk record. Missing external evidence is a blocker, not a documentation exception.
+iRespond may be called GA only when every launch-blocking repository-controlled gate is green and every launch-scope external gate has dated evidence, named ownership and an accepted residual-risk record. Missing external evidence is a blocker, not a documentation exception.
