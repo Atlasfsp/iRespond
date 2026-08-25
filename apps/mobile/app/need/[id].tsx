@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { getLocalActorId } from '../../lib/sync';
+import { getAccessToken } from '../../lib/session';
 
 type Need = {
   id: string;
@@ -44,14 +44,26 @@ export default function NeedDetail() {
     if (!need || need.verificationState !== 'observed') return;
     const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
     if (!baseUrl) return;
+    const token = await getAccessToken();
+    if (!token) {
+      router.push('/signin');
+      return;
+    }
     setRequesting(true);
     try {
-      const actorId = await getLocalActorId();
       const response = await fetch(`${baseUrl}/v1/needs/${encodeURIComponent(need.id)}/verification`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Actor-ID': actorId },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ state: 'verification_requested' })
       });
+      if (response.status === 401) {
+        router.push('/signin');
+        return;
+      }
+      if (response.status === 403) {
+        Alert.alert('Action not permitted', 'Your identity is valid, but your current role is not allowed to perform this verification action.');
+        return;
+      }
       if (!response.ok) throw new Error(`verification request failed: ${response.status}`);
       const updated = (await response.json()) as Need;
       setNeed(updated);
