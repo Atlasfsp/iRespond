@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -18,7 +19,7 @@ func registerNotificationRoutes(mux *http.ServeMux, identity auth.Verifier) func
 	var svc *inbox.Service
 	if databaseURL != "" {
 		var err error
-		svc, err = inbox.New(routingContext(), databaseURL)
+		svc, err = inbox.New(context.Background(), databaseURL)
 		if err != nil { log.Fatalf("initialize notification inbox: %v", err) }
 	}
 	ss18 := shared.New(os.Getenv("SS18_NOTIFICATIONS_URL"), valueOr(os.Getenv("SHARED_SERVICES_TENANT"), "irespond"), os.Getenv("SHARED_SERVICES_TOKEN"))
@@ -39,9 +40,9 @@ func registerNotificationRoutes(mux *http.ServeMux, identity auth.Verifier) func
 	// optionally ask SS-18 to deliver an external typed intent. SS-18 failure never
 	// destroys the durable in-app record; callers receive explicit delivery state.
 	mux.HandleFunc("POST /v1/internal/notifications", func(w http.ResponseWriter,r *http.Request){
-		if strings.TrimSpace(os.Getenv("INTERNAL_NOTIFICATION_TOKEN"))=="" || r.Header.Get("Authorization")!="Bearer "+os.Getenv("INTERNAL_NOTIFICATION_TOKEN"){writeJSON(w,http.StatusUnauthorized,map[string]string{"error":"internal notification token required"});return}
+		internalToken:=strings.TrimSpace(os.Getenv("INTERNAL_NOTIFICATION_TOKEN"));if internalToken==""||r.Header.Get("Authorization")!="Bearer "+internalToken{writeJSON(w,http.StatusUnauthorized,map[string]string{"error":"internal notification token required"});return}
 		if svc==nil{writeJSON(w,http.StatusServiceUnavailable,map[string]string{"error":"notification inbox is not configured"});return}
-		var in struct{UserID,Category,Title,Body,ResourceType,ResourceID,Template,Class string};if err:=json.NewDecoder(r.Body).Decode(&in);err!=nil||strings.TrimSpace(in.UserID)==""||strings.TrimSpace(in.Title)==""{writeJSON(w,http.StatusBadRequest,map[string]string{"error":"userId and title are required"});return}
+		var in struct{UserID string `json:"userId"`;Category string `json:"category"`;Title string `json:"title"`;Body string `json:"body"`;ResourceType string `json:"resourceType"`;ResourceID string `json:"resourceId"`;Template string `json:"template"`;Class string `json:"class"`};if err:=json.NewDecoder(r.Body).Decode(&in);err!=nil||strings.TrimSpace(in.UserID)==""||strings.TrimSpace(in.Title)==""{writeJSON(w,http.StatusBadRequest,map[string]string{"error":"userId and title are required"});return}
 		item,err:=svc.Create(r.Context(),in.UserID,in.Category,in.Title,in.Body,in.ResourceType,in.ResourceID);if err!=nil{writeJSON(w,http.StatusInternalServerError,map[string]string{"error":"unable to create notification"});return}
 		response:=map[string]any{"notification":item,"externalDelivery":"not_requested"}
 		if in.Template!="" && ss18.Configured(){delivery,sendErr:=ss18.SendIntent(r.Context(),shared.Intent{Recipient:in.UserID,Template:in.Template,Sender:"irespond",Class:valueOr(in.Class,"transactional"),Category:in.Category},r.Header.Get("Idempotency-Key"));if sendErr!=nil{response["externalDelivery"]="failed";response["deliveryError"]=sendErr.Error()}else{response["externalDelivery"]=delivery}}
@@ -49,5 +50,3 @@ func registerNotificationRoutes(mux *http.ServeMux, identity auth.Verifier) func
 	})
 	return func(){if svc!=nil{svc.Close()}}
 }
-
-func routingContext() context.Context { return context.Background() }
