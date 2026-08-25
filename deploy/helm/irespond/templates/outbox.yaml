@@ -1,0 +1,35 @@
+{{- if .Values.outbox.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-outbox
+  labels: {app.kubernetes.io/name: irespond, app.kubernetes.io/component: outbox}
+spec:
+  replicas: {{ .Values.outbox.replicas }}
+  selector:
+    matchLabels: {app.kubernetes.io/name: irespond, app.kubernetes.io/component: outbox}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: irespond, app.kubernetes.io/component: outbox}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: outbox
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/usr/local/bin/irespond-outbox-publisher"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: ["ALL"]}
+          env:
+            - name: DATABASE_URL
+              valueFrom: {secretKeyRef: {name: {{ .Values.secretRefs.database.name }}, key: {{ .Values.secretRefs.database.key }}}}
+            - name: NATS_URL
+              valueFrom: {secretKeyRef: {name: {{ .Values.secretRefs.nats.name }}, key: {{ .Values.secretRefs.nats.key }}}}
+            - {name: NATS_SUBJECT_PREFIX, value: {{ .Values.config.natsSubjectPrefix | quote }}}
+            - {name: OUTBOX_POLL_INTERVAL_MS, value: {{ .Values.outbox.pollIntervalMs | quote }}}
+          resources: {{ toYaml .Values.resources | nindent 12 }}
+{{- end }}
