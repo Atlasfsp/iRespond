@@ -15,9 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// PostgresRepository uses the PostgreSQL wire protocol/YSQL. YugabyteDB is the
-// canonical production relational database; the historical type name is retained
-// temporarily to avoid breaking callers while the shared DBaaS adapter is introduced.
 type PostgresRepository struct{ pool *pgxpool.Pool }
 
 func NewPostgresRepository(ctx context.Context, databaseURL string) (*PostgresRepository, error) {
@@ -56,8 +53,6 @@ func (p *PostgresRepository) Get(ctx context.Context, id string) (Need, error) {
 }
 
 func (p *PostgresRepository) Nearby(ctx context.Context, lat, lng, radiusKm float64) ([]Need, error) {
-	// Transitional YugabyteDB-compatible bounding-box query. SS-44 Geospatial is the
-	// target for precise proximity/routing; final distance is filtered in-process.
 	latDelta:=radiusKm/111.32
 	cosLat:=math.Cos(lat*math.Pi/180); if math.Abs(cosLat)<0.01 { cosLat=0.01 }
 	lngDelta:=radiusKm/(111.32*math.Abs(cosLat))
@@ -67,8 +62,6 @@ func (p *PostgresRepository) Nearby(ctx context.Context, lat, lng, radiusKm floa
 	for rows.Next(){n,err:=scanNeed(rows);if err!=nil{return nil,err};if haversineKm(lat,lng,n.Latitude,n.Longitude)<=radiusKm{out=append(out,n);if len(out)>=250{break}}}
 	return out,rows.Err()
 }
-
-func haversineKm(lat1,lng1,lat2,lng2 float64)float64{const earth=6371.0088;dLat:=(lat2-lat1)*math.Pi/180;dLng:=(lng2-lng1)*math.Pi/180;a:=math.Sin(dLat/2)*math.Sin(dLat/2)+math.Cos(lat1*math.Pi/180)*math.Cos(lat2*math.Pi/180)*math.Sin(dLng/2)*math.Sin(dLng/2);return 2*earth*math.Asin(math.Sqrt(a))}
 
 func (p *PostgresRepository) Transition(ctx context.Context, id string, next VerificationState, verifierID string) (Need, error) {
 	tx, err := p.pool.BeginTx(ctx, pgx.TxOptions{}); if err != nil { return Need{}, err }; defer tx.Rollback(ctx)
