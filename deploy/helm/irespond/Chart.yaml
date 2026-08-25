@@ -1,0 +1,6 @@
+apiVersion: v2
+name: irespond
+description: Mobile-first iRespond community-action platform runtime
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
