@@ -27,8 +27,7 @@ require 'name: REQUESTS_PER_MINUTE' 'gateway request limit must be deploy-time c
 require 'kind: HorizontalPodAutoscaler' 'API must have an autoscaling contract'
 require 'averageUtilization: 70' 'HPA CPU target must render from GA defaults'
 require 'kind: NetworkPolicy' 'API ingress must be isolated'
-require 'policyTypes:' 'network policy must declare policy types'
-require '^- Ingress$|[[:space:]]- Ingress' 'network policy must apply ingress isolation'
+require 'policyTypes:.*Ingress' 'network policy must apply ingress isolation'
 
 ready_count=$(grep -Ec 'path: /readyz' "$rendered")
 live_count=$(grep -Ec 'path: /livez' "$rendered")
