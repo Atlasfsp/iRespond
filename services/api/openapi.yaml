@@ -1,20 +1,103 @@
 openapi: 3.1.0
 info:
   title: iRespond API
-  version: 0.1.0
-  description: Mobile-first community action API. Reported needs are observations until verification.
+  version: 0.2.0
+  description: >-
+    Mobile-first community action API. Reported needs are observations until
+    verification. YugabyteDB is the relational system of record and RustFS is
+    the canonical S3 object store for evidence bytes.
 servers:
   - url: https://api.irespond.example
+
+tags:
+  - { name: Runtime }
+  - { name: Identity }
+  - { name: Needs }
+  - { name: Evidence }
+  - { name: Projects }
+  - { name: Contributions }
+  - { name: Funding }
+  - { name: Impact }
+  - { name: Notifications }
+  - { name: Privacy }
+  - { name: Safety }
+
 paths:
   /healthz:
     get:
+      tags: [Runtime]
       operationId: health
+      summary: Basic service health
       responses:
         '200': { description: Healthy }
+  /livez:
+    get:
+      tags: [Runtime]
+      operationId: liveness
+      summary: Process liveness
+      responses:
+        '200': { description: Process is alive }
+  /readyz:
+    get:
+      tags: [Runtime]
+      operationId: readiness
+      summary: Dependency-aware readiness
+      responses:
+        '200': { description: Required runtime dependencies are ready }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /metrics:
+    get:
+      tags: [Runtime]
+      operationId: prometheusMetrics
+      summary: Prometheus-compatible service metrics
+      responses:
+        '200':
+          description: Prometheus text exposition
+          content:
+            text/plain:
+              schema: { type: string }
+  /version:
+    get:
+      tags: [Runtime]
+      operationId: version
+      responses:
+        '200':
+          description: Build identity
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BuildInfo' }
+
+  /v1/platform:
+    get:
+      tags: [Runtime]
+      operationId: platformDescription
+      responses:
+        '200':
+          description: Product lifecycle metadata
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+  /v1/session:
+    get:
+      tags: [Identity]
+      operationId: getSession
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Authenticated principal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
   /v1/needs:
     post:
+      tags: [Needs]
       operationId: createNeed
       summary: Create an observed community need
+      parameters:
+        - { name: Idempotency-Key, in: header, required: false, schema: { type: string } }
       requestBody:
         required: true
         content:
@@ -23,13 +106,20 @@ paths:
       responses:
         '201':
           description: Need created
-          content: { application/json: { schema: { $ref: '#/components/schemas/Need' } } }
-        '400': { description: Invalid report }
+          headers:
+            Idempotent-Replay:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Need' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '500': { $ref: '#/components/responses/InternalError' }
     get:
+      tags: [Needs]
       operationId: nearbyNeeds
       parameters:
-        - { name: lat, in: query, required: true, schema: { type: number } }
-        - { name: lng, in: query, required: true, schema: { type: number } }
+        - { name: lat, in: query, required: true, schema: { type: number, minimum: -90, maximum: 90 } }
+        - { name: lng, in: query, required: true, schema: { type: number, minimum: -180, maximum: 180 } }
         - { name: radiusKm, in: query, required: true, schema: { type: number, exclusiveMinimum: 0, maximum: 200 } }
       responses:
         '200':
@@ -39,21 +129,29 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Need' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '500': { $ref: '#/components/responses/InternalError' }
   /v1/needs/{id}:
     get:
+      tags: [Needs]
       operationId: getNeed
       parameters:
-        - { name: id, in: path, required: true, schema: { type: string } }
+        - { $ref: '#/components/parameters/NeedId' }
       responses:
         '200':
           description: Need
-          content: { application/json: { schema: { $ref: '#/components/schemas/Need' } } }
-        '404': { description: Not found }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Need' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
   /v1/needs/{id}/verification:
     post:
+      tags: [Needs]
       operationId: transitionNeedVerification
+      security: [{ bearerAuth: [] }]
       parameters:
-        - { name: id, in: path, required: true, schema: { type: string } }
+        - { $ref: '#/components/parameters/NeedId' }
       requestBody:
         required: true
         content:
@@ -66,11 +164,658 @@ paths:
       responses:
         '200':
           description: Transition accepted
-          content: { application/json: { schema: { $ref: '#/components/schemas/Need' } } }
-        '404': { description: Not found }
-        '409': { description: Invalid transition }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Need' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /v1/needs/{id}/evidence/uploads:
+    post:
+      tags: [Evidence]
+      operationId: initiateEvidenceUpload
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/NeedId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InitiateEvidenceRequest' }
+      responses:
+        '201':
+          description: Create-only signed RustFS/S3 upload
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InitiatedEvidenceUpload' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /v1/needs/{id}/evidence/{evidenceId}/complete:
+    post:
+      tags: [Evidence]
+      operationId: completeEvidenceUpload
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/NeedId' }
+        - { $ref: '#/components/parameters/EvidenceId' }
+      responses:
+        '200':
+          description: Object verified and moved to pending review
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvidenceRecord' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /v1/evidence/{evidenceId}/review:
+    post:
+      tags: [Evidence]
+      operationId: reviewEvidence
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/EvidenceId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [available, quarantined, rejected] }
+      responses:
+        '200':
+          description: Review decision recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvidenceRecord' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/needs/{id}/evidence/{evidenceId}/access:
+    get:
+      tags: [Evidence]
+      operationId: authorizeEvidenceAccess
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/NeedId' }
+        - { $ref: '#/components/parameters/EvidenceId' }
+      responses:
+        '200':
+          description: Short-lived signed download URL for approved evidence
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url]
+                properties: { url: { type: string, format: uri } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /v1/needs/{id}/project:
+    post:
+      tags: [Projects]
+      operationId: convertNeedToProject
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/NeedId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConvertProjectRequest' }
+      responses:
+        '201': { description: Action project created, content: { application/json: { schema: { $ref: '#/components/schemas/Project' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    get:
+      tags: [Projects]
+      operationId: getProjectByNeed
+      parameters: [{ $ref: '#/components/parameters/NeedId' }]
+      responses:
+        '200': { description: Action project, content: { application/json: { schema: { $ref: '#/components/schemas/Project' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/projects/{id}:
+    get:
+      tags: [Projects]
+      operationId: getProject
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      responses:
+        '200': { description: Project detail, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/projects/{id}/contribution-needs:
+    post:
+      tags: [Projects, Contributions]
+      operationId: addContributionNeed
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContributionNeedRequest' }
+      responses:
+        '201': { description: Contribution need created, content: { application/json: { schema: { $ref: '#/components/schemas/ContributionNeed' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/projects/{id}/contribution-needs/{needId}/offers:
+    post:
+      tags: [Contributions]
+      operationId: offerContribution
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ProjectId' }
+        - { $ref: '#/components/parameters/ContributionNeedId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContributionOfferRequest' }
+      responses:
+        '201': { description: Offer created, content: { application/json: { schema: { $ref: '#/components/schemas/ContributionOffer' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/projects/{id}/milestones:
+    post:
+      tags: [Projects]
+      operationId: addProjectMilestone
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MilestoneRequest' }
+      responses:
+        '201': { description: Milestone created, content: { application/json: { schema: { $ref: '#/components/schemas/Milestone' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/projects/{id}/milestones/{milestoneId}/transition:
+    post:
+      tags: [Projects]
+      operationId: transitionProjectMilestone
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ProjectId' }
+        - { $ref: '#/components/parameters/MilestoneId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StateRequest' }
+      responses:
+        '200': { description: Milestone transitioned, content: { application/json: { schema: { $ref: '#/components/schemas/Milestone' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/projects/{id}/roles/invite:
+    post:
+      tags: [Projects]
+      operationId: inviteProjectRole
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoleInviteRequest' }
+      responses:
+        '201': { description: Role invitation created, content: { application/json: { schema: { $ref: '#/components/schemas/RoleInvite' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/project-role-invites/{inviteId}/accept:
+    post:
+      tags: [Projects]
+      operationId: acceptProjectRoleInvite
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/InviteId' }]
+      responses:
+        '200': { description: Role accepted, content: { application/json: { schema: { $ref: '#/components/schemas/RoleInvite' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/projects/{id}/transition:
+    post:
+      tags: [Projects]
+      operationId: transitionProject
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StateRequest' }
+      responses:
+        '200': { description: Project transitioned, content: { application/json: { schema: { $ref: '#/components/schemas/Project' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /v1/projects/{id}/contribution-offers:
+    get:
+      tags: [Contributions]
+      operationId: listProjectContributionOffers
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      responses:
+        '200': { description: Project offers, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ContributionOffer' } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/me/contribution-offers:
+    get:
+      tags: [Contributions]
+      operationId: listMyContributionOffers
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Contributor offers, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ContributionOffer' } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /v1/projects/{id}/contribution-offers/{offerId}/decision:
+    post:
+      tags: [Contributions]
+      operationId: decideContributionOffer
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ProjectId' }
+        - { $ref: '#/components/parameters/OfferId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContributionDecisionRequest' }
+      responses:
+        '200': { description: Offer decided, content: { application/json: { schema: { $ref: '#/components/schemas/ContributionOffer' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/contribution-offers/{offerId}/withdraw:
+    post:
+      tags: [Contributions]
+      operationId: withdrawContributionOffer
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OfferId' }]
+      responses:
+        '200': { description: Offer withdrawn, content: { application/json: { schema: { $ref: '#/components/schemas/ContributionOffer' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/projects/{id}/contribution-offers/{offerId}/fulfill:
+    post:
+      tags: [Contributions]
+      operationId: fulfillContributionOffer
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ProjectId' }
+        - { $ref: '#/components/parameters/OfferId' }
+      responses:
+        '200': { description: Offer fulfilled, content: { application/json: { schema: { $ref: '#/components/schemas/ContributionOffer' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /v1/projects/{id}/funding:
+    get:
+      tags: [Funding]
+      operationId: getFundingPlan
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      responses:
+        '200': { description: Funding plan, content: { application/json: { schema: { $ref: '#/components/schemas/FundingPlan' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Funding]
+      operationId: upsertFundingPlan
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FundingPlanRequest' }
+      responses:
+        '200': { description: Funding plan saved, content: { application/json: { schema: { $ref: '#/components/schemas/FundingPlan' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/projects/{id}/funding/pledges:
+    post:
+      tags: [Funding]
+      operationId: createFundingPledge
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FundingPledgeRequest' }
+      responses:
+        '201':
+          description: Pledge intent recorded; no money has moved
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    get:
+      tags: [Funding]
+      operationId: listProjectFundingPledges
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      responses:
+        '200': { description: Project pledges, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/FundingPledge' } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/me/funding/pledges:
+    get:
+      tags: [Funding]
+      operationId: listMyFundingPledges
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: My pledges, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/FundingPledge' } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /v1/funding/pledges/{pledgeId}/cancel:
+    post:
+      tags: [Funding]
+      operationId: cancelFundingPledge
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PledgeId' }]
+      responses:
+        '200': { description: Pledge cancelled, content: { application/json: { schema: { $ref: '#/components/schemas/FundingPledge' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /v1/me/impact-passport:
+    get:
+      tags: [Impact]
+      operationId: getImpactPassport
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Server-evidenced personal impact passport, content: { application/json: { schema: { $ref: '#/components/schemas/ImpactPassport' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /v1/me/notifications:
+    get:
+      tags: [Notifications]
+      operationId: listNotifications
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Notification inbox, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Notification' } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /v1/me/notifications/{id}/read:
+    post:
+      tags: [Notifications]
+      operationId: markNotificationRead
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/NotificationId' }]
+      responses:
+        '200': { description: Notification marked read, content: { application/json: { schema: { $ref: '#/components/schemas/Notification' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/me/notification-preferences:
+    get:
+      tags: [Notifications]
+      operationId: getNotificationPreferences
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Notification preferences, content: { application/json: { schema: { $ref: '#/components/schemas/NotificationPreferences' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    put:
+      tags: [Notifications]
+      operationId: setNotificationPreferences
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationPreferences' }
+      responses:
+        '200': { description: Preferences saved, content: { application/json: { schema: { $ref: '#/components/schemas/NotificationPreferences' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /v1/internal/notifications:
+    post:
+      tags: [Notifications]
+      operationId: createInternalNotification
+      security: [{ internalBearer: [] }]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: false, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InternalNotificationRequest' }
+      responses:
+        '201': { description: Inbox item created and optional SS-18 delivery requested, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /v1/me/privacy/consents:
+    get:
+      tags: [Privacy]
+      operationId: listPrivacyConsents
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Consent history, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/PrivacyConsent' } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /v1/me/privacy/consents/{purpose}:
+    put:
+      tags: [Privacy]
+      operationId: setPrivacyConsent
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/Purpose' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [granted, policyVersion]
+              properties:
+                granted: { type: boolean }
+                policyVersion: { type: string }
+      responses:
+        '200': { description: Consent recorded, content: { application/json: { schema: { $ref: '#/components/schemas/PrivacyConsent' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /v1/me/privacy/requests:
+    get:
+      tags: [Privacy]
+      operationId: listPrivacyRequests
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Data-subject requests, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/PrivacyRequest' } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    post:
+      tags: [Privacy]
+      operationId: createPrivacyRequest
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type: { type: string, enum: [access, export, correction, deletion] }
+      responses:
+        '202': { description: Data-subject request accepted, content: { application/json: { schema: { $ref: '#/components/schemas/PrivacyRequest' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /v1/safety/reports:
+    post:
+      tags: [Safety]
+      operationId: createSafetyReport
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SafetyReportRequest' }
+      responses:
+        '202': { description: Confidential report accepted, content: { application/json: { schema: { $ref: '#/components/schemas/SafetyReport' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /v1/me/safety/reports:
+    get:
+      tags: [Safety]
+      operationId: listMySafetyReports
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: My safety reports, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/SafetyReport' } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /v1/safety/reports/{id}/appeal:
+    post:
+      tags: [Safety]
+      operationId: appealSafetyReport
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/SafetyReportId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string } }
+      responses:
+        '202': { description: Appeal accepted, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/safety/review-queue:
+    get:
+      tags: [Safety]
+      operationId: getSafetyReviewQueue
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Reviewer queue, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/SafetyReport' } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/safety/reports/{id}/decision:
+    post:
+      tags: [Safety]
+      operationId: decideSafetyReport
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/SafetyReportId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [triage, action, dismiss, close] }
+                note: { type: string }
+      responses:
+        '200': { description: Reviewer decision recorded, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: StratoID/OIDC RS256 access token.
+    internalBearer:
+      type: http
+      scheme: bearer
+      description: Dedicated internal notification ingestion token.
+
+  parameters:
+    NeedId: { name: id, in: path, required: true, schema: { type: string } }
+    ProjectId: { name: id, in: path, required: true, schema: { type: string } }
+    EvidenceId: { name: evidenceId, in: path, required: true, schema: { type: string } }
+    ContributionNeedId: { name: needId, in: path, required: true, schema: { type: string } }
+    OfferId: { name: offerId, in: path, required: true, schema: { type: string } }
+    MilestoneId: { name: milestoneId, in: path, required: true, schema: { type: string } }
+    InviteId: { name: inviteId, in: path, required: true, schema: { type: string } }
+    PledgeId: { name: pledgeId, in: path, required: true, schema: { type: string } }
+    NotificationId: { name: id, in: path, required: true, schema: { type: string } }
+    Purpose: { name: purpose, in: path, required: true, schema: { type: string } }
+    SafetyReportId: { name: id, in: path, required: true, schema: { type: string } }
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unauthorized:
+      description: Authentication required or invalid
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: Authenticated identity lacks required authority
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: Resource not found
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Conflict:
+      description: State or integrity conflict
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    ServiceUnavailable:
+      description: Required configured service is unavailable
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    InternalError:
+      description: Internal service failure
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+
   schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+    BuildInfo:
+      type: object
+      required: [service, version, gitSha, buildTime]
+      properties:
+        service: { type: string }
+        version: { type: string }
+        gitSha: { type: string }
+        buildTime: { type: string }
+    Session:
+      type: object
+      required: [subject, roles]
+      properties:
+        subject: { type: string }
+        roles: { type: array, items: { type: string } }
     VerificationState:
       type: string
       enum: [observed, verification_requested, community_confirmed, institution_confirmed, expert_confirmed, independently_audited, government_confirmed, disputed, rejected]
@@ -84,9 +829,7 @@ components:
         latitude: { type: number }
         longitude: { type: number }
         reporterId: { type: string }
-        sdgTags:
-          type: array
-          items: { type: integer, minimum: 1, maximum: 17 }
+        sdgTags: { type: array, items: { type: integer, minimum: 1, maximum: 17 } }
     Need:
       type: object
       required: [id, title, description, verificationState, createdAt, updatedAt]
@@ -99,8 +842,206 @@ components:
         longitude: { type: number }
         reporterId: { type: string }
         verificationState: { $ref: '#/components/schemas/VerificationState' }
-        sdgTags:
-          type: array
-          items: { type: integer }
+        sdgTags: { type: array, items: { type: integer } }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    InitiateEvidenceRequest:
+      type: object
+      required: [contentType, sizeBytes]
+      properties:
+        contentType: { type: string, enum: [image/jpeg, image/png, image/webp, video/mp4, video/quicktime] }
+        sizeBytes: { type: integer, format: int64, minimum: 1, maximum: 52428800 }
+        sha256Hex: { type: string, pattern: '^[0-9a-fA-F]{64}$' }
+    InitiatedEvidenceUpload:
+      type: object
+      required: [evidenceId, uploadUrl, method, headers, expiresAt]
+      properties:
+        evidenceId: { type: string }
+        uploadUrl: { type: string, format: uri }
+        method: { type: string, const: PUT }
+        headers: { type: object, additionalProperties: { type: string } }
+        expiresAt: { type: string, format: date-time }
+    EvidenceRecord:
+      type: object
+      required: [id, needId, contentType, sizeBytes, sha256Hex, status, createdAt]
+      properties:
+        id: { type: string }
+        needId: { type: string }
+        contentType: { type: string }
+        sizeBytes: { type: integer, format: int64 }
+        sha256Hex: { type: string, pattern: '^[0-9a-f]{64}$' }
+        status: { type: string, enum: [pending_upload, pending_review, available, quarantined, rejected] }
+        createdAt: { type: string, format: date-time }
+        availableAt: { type: [string, 'null'], format: date-time }
+    ConvertProjectRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        ownerCommunityId: { type: string }
+    Project:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        needId: { type: string }
+        title: { type: string }
+        state: { type: string }
+    ContributionNeedRequest:
+      type: object
+      required: [kind, description]
+      properties:
+        kind: { type: string }
+        description: { type: string }
+        quantityNote: { type: string }
+    ContributionNeed:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        projectId: { type: string }
+        kind: { type: string }
+    ContributionOfferRequest:
+      type: object
+      properties:
+        note: { type: string }
+        availabilityNote: { type: string }
+    ContributionOffer:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        projectId: { type: string }
+        contributorId: { type: string }
+        state: { type: string }
+    ContributionDecisionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [accepted, declined] }
+        closeNeed: { type: boolean }
+    MilestoneRequest:
+      type: object
+      required: [title, sequence]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        sequence: { type: integer }
+        targetAt: { type: [string, 'null'], format: date-time }
+    Milestone:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        projectId: { type: string }
+        state: { type: string }
+    StateRequest:
+      type: object
+      required: [state]
+      properties: { state: { type: string } }
+    RoleInviteRequest:
+      type: object
+      required: [actorId, role]
+      properties:
+        actorId: { type: string }
+        role: { type: string }
+    RoleInvite:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        projectId: { type: string }
+        actorId: { type: string }
+        role: { type: string }
+    FundingPlanRequest:
+      type: object
+      required: [currency, targetMinor, communityCounterpartMinor]
+      properties:
+        currency: { type: string, pattern: '^[A-Za-z]{3}$' }
+        targetMinor: { type: integer, format: int64 }
+        communityCounterpartMinor: { type: integer, format: int64 }
+    FundingPlan:
+      type: object
+      additionalProperties: true
+      properties:
+        projectId: { type: string }
+        currency: { type: string }
+        targetMinor: { type: integer, format: int64 }
+        communityCounterpartMinor: { type: integer, format: int64 }
+    FundingPledgeRequest:
+      type: object
+      required: [contributionClass, amountMinor]
+      properties:
+        contributionClass: { type: string }
+        amountMinor: { type: integer, format: int64, minimum: 1 }
+    FundingPledge:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        projectId: { type: string }
+        contributorId: { type: string }
+        amountMinor: { type: integer, format: int64 }
+        status: { type: string }
+    ImpactPassport:
+      type: object
+      additionalProperties: true
+      properties:
+        subjectId: { type: string }
+        sdgTags: { type: array, items: { type: integer } }
+    Notification:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        category: { type: string }
+        title: { type: string }
+        body: { type: string }
+        readAt: { type: [string, 'null'], format: date-time }
+    NotificationPreferences:
+      type: object
+      additionalProperties: true
+    InternalNotificationRequest:
+      type: object
+      required: [userId, title]
+      properties:
+        userId: { type: string }
+        category: { type: string }
+        title: { type: string }
+        body: { type: string }
+        resourceType: { type: string }
+        resourceId: { type: string }
+        template: { type: string }
+        class: { type: string }
+    PrivacyConsent:
+      type: object
+      additionalProperties: true
+      properties:
+        purpose: { type: string }
+        granted: { type: boolean }
+        policyVersion: { type: string }
+    PrivacyRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        type: { type: string, enum: [access, export, correction, deletion] }
+        status: { type: string }
+    SafetyReportRequest:
+      type: object
+      required: [subjectType, subjectId, reason, details]
+      properties:
+        subjectType: { type: string }
+        subjectId: { type: string }
+        reason: { type: string }
+        details: { type: string }
+    SafetyReport:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        subjectType: { type: string }
+        subjectId: { type: string }
+        reason: { type: string }
+        status: { type: string }

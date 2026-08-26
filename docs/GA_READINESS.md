@@ -4,7 +4,7 @@ Status: **NOT GA — repository-controlled hardening is advanced; production/sha
 
 This ledger distinguishes implementation proven by repository CI from evidence that requires production infrastructure, provider accounts, app stores, legal/privacy review, independent security assessment, operational staffing or live drills. A capability is never called production-certified merely because an adapter or local implementation exists.
 
-Last reconciled against canonical `main` after the RustFS evidence-integrity migration.
+Last reconciled after the RustFS evidence-integrity and executable API route-contract hardening slices.
 
 ## Repository-controlled gates
 
@@ -28,7 +28,7 @@ Last reconciled against canonical `main` after the RustFS evidence-integrity mig
 | Transparent counterpart funding | PASS (domain) | Funding plans, counterpart amounts and auditable pledges are implemented; iRespond deliberately does not represent pledges as settled money. Licensed PayCore/payment movement remains external. |
 | Notifications experience | PASS (repository) | Notifications domain/mobile experience and tested SS-18 intent client exist. Production delivery endpoints/credentials and channel certification remain external. |
 | Mobile primary workflow | PARTIAL | **15 implemented Expo Router screens**. Core community/user journeys exist; richer institutional/admin, accessibility/device certification and app-store launch surfaces remain. |
-| Reproducible repository metrics | PASS | `tools/repo_metrics.sh`; latest RustFS candidate reported **4,228 authored source lines across 89 source files and 15 mobile screens**. |
+| Reproducible repository metrics | PASS | `tools/repo_metrics.sh`; latest API-contract candidate reported **5,169 authored source lines across 89 source files and 15 mobile screens**. |
 | Production migration command | PASS | `cmd/migrate` with idempotent migration ledger. |
 | Production API image | PASS | Non-root distroless production image builds in CI; both builder/runtime bases are digest pinned. |
 | Runtime readiness/liveness/version | PASS | Independent `/livez`, fail-closed `/readyz`, `/version` and dependency state. |
@@ -49,7 +49,8 @@ Last reconciled against canonical `main` after the RustFS evidence-integrity mig
 | Vulnerability scanning | PASS | `pnpm audit --prod --audit-level high` plus pinned official `govulncheck`; failures are remediated rather than ignored. |
 | Build/runtime supply-chain pinning | PASS | GitHub Actions pinned to immutable commit SHAs; YugabyteDB/RustFS CI images and production Docker bases pinned by digest. |
 | Release provenance evidence | PASS (repository) | CI builds all three Linux binaries, packages Helm, records source/toolchain/dependency/base-image metadata, creates checksums and uploads a supply-chain evidence artifact. |
-| API contract completeness | PARTIAL | `services/api/openapi.yaml` exists; exhaustive route/error/schema drift enforcement is the next repository-controlled contract gap. |
+| API route/operation contract | PASS | OpenAPI now covers all **51 registered method/path operations**. A permanent source-derived gate rejects missing/stale routes, missing responses, missing operation IDs and duplicate operation IDs. |
+| API payload schema conformance | PARTIAL | Core request/response/domain schemas and common errors are documented. Automatic field-by-field runtime/OpenAPI schema conformance remains a separate hardening target. |
 | Load/performance evidence | TODO | Repository-controlled latency/throughput/concurrency thresholds and saturation evidence remain. |
 | AppForge build/release handoff | TODO/PARTIAL | Repository produces deterministic binaries/Helm/provenance; AppForge mobile signing, distribution and production release integration remain. |
 | Droplet independent release judgment | TODO | Independent final-candidate quality verdict remains required before GA. |
@@ -64,9 +65,9 @@ Last reconciled against canonical `main` after the RustFS evidence-integrity mig
 
 ## Current measurable implementation baseline
 
-The repository metrics job is authoritative. The latest fully exercised RustFS candidate reported:
+The repository metrics job is authoritative. The latest API-contract candidate reported:
 
-- **SOURCE_LOC: 4,228**
+- **SOURCE_LOC: 5,169**
 - **SOURCE_FILES: 89**
 - **MOBILE_SCREENS: 15**
 

@@ -34,6 +34,8 @@ jobs:
         run: bash tools/security_boundary.sh
       - name: CI runtime dependency pinning
         run: bash tools/verify_ci_runtime_pins.sh
+      - name: OpenAPI route contract
+        run: python3 tools/verify_openapi_contract.py
 
   supply-chain:
     runs-on: ubuntu-latest
