@@ -36,9 +36,6 @@ func registerNotificationRoutes(mux *http.ServeMux, identity auth.Verifier) func
 	mux.HandleFunc("GET /v1/me/notification-preferences", func(w http.ResponseWriter,r *http.Request){principal,ok:=authenticate(w,r,identity);if !ok{return};if svc==nil{writeJSON(w,http.StatusServiceUnavailable,map[string]string{"error":"notification preferences are not configured"});return};p,err:=svc.Preferences(r.Context(),principal.Subject);if err!=nil{writeJSON(w,http.StatusInternalServerError,map[string]string{"error":"unable to load notification preferences"});return};writeJSON(w,http.StatusOK,p)})
 	mux.HandleFunc("PUT /v1/me/notification-preferences", func(w http.ResponseWriter,r *http.Request){principal,ok:=authenticate(w,r,identity);if !ok{return};if svc==nil{writeJSON(w,http.StatusServiceUnavailable,map[string]string{"error":"notification preferences are not configured"});return};var p inbox.Preferences;if err:=json.NewDecoder(r.Body).Decode(&p);err!=nil{writeJSON(w,http.StatusBadRequest,map[string]string{"error":"invalid notification preferences"});return};out,err:=svc.SetPreferences(r.Context(),principal.Subject,p);if err!=nil{writeJSON(w,http.StatusInternalServerError,map[string]string{"error":"unable to save notification preferences"});return};writeJSON(w,http.StatusOK,out)})
 
-	// Internal/event-consumer seam: persist the in-app notification first, then
-	// optionally ask SS-18 to deliver an external typed intent. SS-18 failure never
-	// destroys the durable in-app record; callers receive explicit delivery state.
 	mux.HandleFunc("POST /v1/internal/notifications", func(w http.ResponseWriter,r *http.Request){
 		internalToken:=strings.TrimSpace(os.Getenv("INTERNAL_NOTIFICATION_TOKEN"));if internalToken==""||r.Header.Get("Authorization")!="Bearer "+internalToken{writeJSON(w,http.StatusUnauthorized,map[string]string{"error":"internal notification token required"});return}
 		if svc==nil{writeJSON(w,http.StatusServiceUnavailable,map[string]string{"error":"notification inbox is not configured"});return}
@@ -48,5 +45,6 @@ func registerNotificationRoutes(mux *http.ServeMux, identity auth.Verifier) func
 		if in.Template!="" && ss18.Configured(){delivery,sendErr:=ss18.SendIntent(r.Context(),shared.Intent{Recipient:in.UserID,Template:in.Template,Sender:"irespond",Class:valueOr(in.Class,"transactional"),Category:in.Category},r.Header.Get("Idempotency-Key"));if sendErr!=nil{response["externalDelivery"]="failed";response["deliveryError"]=sendErr.Error()}else{response["externalDelivery"]=delivery}}
 		writeJSON(w,http.StatusCreated,response)
 	})
-	return func(){if svc!=nil{svc.Close()}}
+	closeImpact:=registerImpactRoutes(mux,identity)
+	return func(){closeImpact();if svc!=nil{svc.Close()}}
 }

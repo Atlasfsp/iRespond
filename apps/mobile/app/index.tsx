@@ -16,6 +16,7 @@ export default function ImpactFeed() {
   async function retrySync() { await flushNeedQueue(); setPendingSync(await pendingNeedCount()); }
   return <SafeAreaView style={styles.safe}><ScrollView contentContainerStyle={styles.content}>
     <View style={styles.topActions}>
+      <Pressable onPress={() => router.push('/impact')}><Text style={styles.topLink}>Impact Passport</Text></Pressable>
       <Pressable onPress={() => router.push('/notifications')}><Text style={styles.topLink}>Notifications</Text></Pressable>
       <Pressable onPress={() => router.push('/profile')}><Text style={styles.topLink}>Ability Profile</Text></Pressable>
       <Pressable onPress={() => router.push('/contributions')}><Text style={styles.topLink}>My Offers</Text></Pressable>
