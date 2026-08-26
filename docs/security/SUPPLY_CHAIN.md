@@ -11,6 +11,8 @@ A release candidate is not eligible for merge or promotion when any of the follo
 - the official `govulncheck` scan finds a reachable known vulnerability;
 - dependency inventory evidence cannot be generated.
 
+Every required vulnerability and dependency gate must execute against the exact candidate head SHA being considered for merge. Passing evidence from an earlier workflow snapshot is not reusable as approval for a later head.
+
 ## Evidence
 
 CI emits dependency evidence containing the resolved Go module graph, resolved pnpm workspace graph, tool versions, manifest SHA-256 values, source repository and candidate Git SHA. Evidence is retained with the workflow run and must be associated with the release candidate reviewed by Droplet/AppForge.
