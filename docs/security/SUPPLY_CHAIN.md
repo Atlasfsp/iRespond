@@ -15,7 +15,7 @@ Every required vulnerability and dependency gate must execute against the exact 
 
 ## Evidence
 
-CI emits dependency evidence containing the resolved Go module graph, resolved pnpm workspace graph, tool versions, manifest SHA-256 values, source repository and candidate Git SHA. Evidence is retained with the workflow run and must be associated with the release candidate reviewed by Droplet/AppForge.
+CI emits dependency evidence containing the resolved Go module graph, resolved pnpm workspace graph, tool versions, manifest SHA-256 values, source repository and candidate Git SHA. Evidence is retained with the workflow run and must be associated with the release candidate reviewed by Droplet/AppForge. The workflow head SHA recorded by GitHub and the candidate SHA recorded inside the dependency evidence must match before promotion.
 
 ## Exceptions
 
