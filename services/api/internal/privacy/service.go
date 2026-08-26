@@ -46,13 +46,13 @@ func (s *Service) Close(){if s!=nil&&s.pool!=nil{s.pool.Close()}}
 func (s *Service) SetConsent(ctx context.Context,userID,purpose string,granted bool,policyVersion string)(Consent,error){
 	purpose=strings.TrimSpace(strings.ToLower(purpose)); policyVersion=strings.TrimSpace(policyVersion)
 	if purpose==""||len(purpose)>80||policyVersion==""||len(policyVersion)>80{return Consent{},ErrInvalidPurpose}
-	now:=time.Now().UTC()
-	_,err:=s.pool.Exec(ctx,`INSERT INTO privacy_consents(user_id,purpose,granted,policy_version,updated_at) VALUES($1,$2,$3,$4,$5)
+	now:=time.Now().UTC();tx,err:=s.pool.BeginTx(ctx,pgx.TxOptions{});if err!=nil{return Consent{},err};defer tx.Rollback(ctx)
+	_,err=tx.Exec(ctx,`INSERT INTO privacy_consents(user_id,purpose,granted,policy_version,updated_at) VALUES($1,$2,$3,$4,$5)
 	ON CONFLICT(user_id,purpose) DO UPDATE SET granted=excluded.granted,policy_version=excluded.policy_version,updated_at=excluded.updated_at`,userID,purpose,granted,policyVersion,now)
 	if err!=nil{return Consent{},err}
 	payload,_:=json.Marshal(map[string]any{"userId":userID,"purpose":purpose,"granted":granted,"policyVersion":policyVersion,"updatedAt":now})
-	_,err=s.pool.Exec(ctx,`INSERT INTO outbox_events(id,aggregate_type,aggregate_id,event_type,payload) VALUES($1,'privacy_consent',$2,'privacy.consent_changed',$3)`,newID(),userID,payload)
-	if err!=nil{return Consent{},err}
+	_,err=tx.Exec(ctx,`INSERT INTO outbox_events(id,aggregate_type,aggregate_id,event_type,payload) VALUES($1,'privacy_consent',$2,'privacy.consent_changed',$3)`,newID(),userID,payload)
+	if err!=nil{return Consent{},err};if err:=tx.Commit(ctx);err!=nil{return Consent{},err}
 	return Consent{Purpose:purpose,Granted:granted,PolicyVersion:policyVersion,UpdatedAt:now},nil
 }
 
