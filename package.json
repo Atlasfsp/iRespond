@@ -8,5 +8,11 @@
     "mobile:android": "pnpm --filter @irespond/mobile android",
     "mobile:ios": "pnpm --filter @irespond/mobile ios",
     "mobile:typecheck": "pnpm --filter @irespond/mobile typecheck"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss@<=8.5.17": "8.5.18",
+      "image-size": "npm:image-size-next@2.1.0"
+    }
   }
 }
