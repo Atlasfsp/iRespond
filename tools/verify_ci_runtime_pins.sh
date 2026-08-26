@@ -2,6 +2,7 @@
 set -euo pipefail
 
 workflow=".github/workflows/verify.yml"
+dockerfile="services/api/Dockerfile"
 
 if grep -Eq '(^|[[:space:]])[^[:space:]]+:latest([[:space:]]|$)' "$workflow"; then
   echo "mutable :latest image tag is not allowed in verification workflow" >&2
@@ -28,4 +29,11 @@ while IFS= read -r action_ref; do
   fi
 done < <(sed -nE 's/^[[:space:]]*-[[:space:]]+uses:[[:space:]]+([^[:space:]#]+).*/\1/p' "$workflow")
 
-echo "CI runtime and GitHub Action pins verified"
+while IFS= read -r image_ref; do
+  if [[ ! "$image_ref" =~ @sha256:[0-9a-f]{64}$ ]]; then
+    echo "production Dockerfile base image is not digest pinned: $image_ref" >&2
+    exit 1
+  fi
+done < <(awk 'toupper($1)=="FROM" {print $2}' "$dockerfile")
+
+echo "CI runtime, GitHub Action, and production base-image pins verified"
