@@ -4,7 +4,7 @@ Status: **NOT GA — repository-controlled hardening is advanced; production/sha
 
 This ledger distinguishes implementation proven by repository CI from evidence that requires production infrastructure, provider accounts, app stores, legal/privacy review, independent security assessment, operational staffing or live drills. A capability is never called production-certified merely because an adapter or local implementation exists.
 
-Last reconciled against the API-contract hardening candidate after the RustFS evidence-integrity migration.
+Last reconciled after the RustFS evidence-integrity and executable API route-contract hardening slices.
 
 ## Repository-controlled gates
 
