@@ -48,5 +48,6 @@ func registerNotificationRoutes(mux *http.ServeMux, identity auth.Verifier) func
 	closeImpact:=registerImpactRoutes(mux,identity)
 	closePrivacy:=registerPrivacyRoutes(mux,identity)
 	closeFunding:=registerFundingRoutes(mux,identity)
-	return func(){closeFunding();closePrivacy();closeImpact();if svc!=nil{svc.Close()}}
+	closeSafety:=registerSafetyRoutes(mux,identity)
+	return func(){closeSafety();closeFunding();closePrivacy();closeImpact();if svc!=nil{svc.Close()}}
 }
