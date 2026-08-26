@@ -110,6 +110,7 @@ func registerRuntimeRoutes(mux *http.ServeMux, status runtimeStatus) {
 			}
 			_, _ = fmt.Fprintf(w, "irespond_runtime_dependency_configured{dependency=%s,implementation=%s} %d\n", prometheusQuote(name), prometheusQuote(value), configured)
 		}
+		gatewayRequestMetrics.writePrometheus(w)
 	})
 	mux.HandleFunc("GET /version", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{
