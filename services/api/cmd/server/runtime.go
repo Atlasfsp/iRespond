@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -19,6 +20,8 @@ type runtimeStatus struct {
 	Evidence string
 	Projects string
 }
+
+var processStartedAt = time.Now().UTC()
 
 var productionRequiredEnvironment = []string{
 	"DATABASE_URL",
@@ -67,6 +70,9 @@ func (s runtimeStatus) readiness() (bool, []string) {
 }
 
 func registerRuntimeRoutes(mux *http.ServeMux, status runtimeStatus) {
+	mux.HandleFunc("GET /livez", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]string{"status": "alive", "service": "irespond-api"})
+	})
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, _ *http.Request) {
 		ready, missing := status.readiness()
 		code := http.StatusOK
@@ -87,6 +93,24 @@ func registerRuntimeRoutes(mux *http.ServeMux, status runtimeStatus) {
 			"missing": missing,
 		})
 	})
+	mux.HandleFunc("GET /metrics", func(w http.ResponseWriter, _ *http.Request) {
+		ready, _ := status.readiness()
+		readyValue := 0
+		if ready {
+			readyValue = 1
+		}
+		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+		_, _ = fmt.Fprintf(w, "# HELP irespond_runtime_ready Whether required runtime dependencies are configured and ready.\n# TYPE irespond_runtime_ready gauge\nirespond_runtime_ready %d\n", readyValue)
+		_, _ = fmt.Fprintf(w, "# HELP irespond_process_uptime_seconds Process uptime in seconds.\n# TYPE irespond_process_uptime_seconds gauge\nirespond_process_uptime_seconds %.0f\n", time.Since(processStartedAt).Seconds())
+		_, _ = fmt.Fprintf(w, "# HELP irespond_build_info Build identity for the running API.\n# TYPE irespond_build_info gauge\nirespond_build_info{version=%s,git_sha=%s} 1\n", prometheusQuote(valueOr(os.Getenv("APP_VERSION"), "dev")), prometheusQuote(valueOr(os.Getenv("GIT_SHA"), "unknown")))
+		for name, value := range map[string]string{"store": status.Store, "identity": status.Auth, "evidence": status.Evidence, "projects": status.Projects} {
+			configured := 1
+			if value == "memory" || strings.Contains(value, "unconfigured") {
+				configured = 0
+			}
+			_, _ = fmt.Fprintf(w, "irespond_runtime_dependency_configured{dependency=%s,implementation=%s} %d\n", prometheusQuote(name), prometheusQuote(value), configured)
+		}
+	})
 	mux.HandleFunc("GET /version", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{
 			"service": "irespond-api",
@@ -95,6 +119,10 @@ func registerRuntimeRoutes(mux *http.ServeMux, status runtimeStatus) {
 			"buildTime": valueOr(os.Getenv("BUILD_TIME"), "unknown"),
 		})
 	})
+}
+
+func prometheusQuote(value string) string {
+	return strconv.Quote(strings.TrimSpace(value))
 }
 
 func valueOr(value, fallback string) string {
