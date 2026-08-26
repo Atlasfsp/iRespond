@@ -3,11 +3,16 @@
 
 This only packages repository evidence. It does not call providers, sign apps,
 deploy infrastructure, or fabricate external certification results.
+
+Pull-request executions are validation-only because GitHub normally checks out a
+synthetic merge commit. Only the successful `push` run on `main` is marked as the
+stable candidate that may be handed to AppForge, SkyForge and Droplet.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -55,8 +60,10 @@ def main() -> int:
         ROOT / "pnpm-lock.yaml",
         ROOT / "services/api/go.sum",
         ROOT / "docs/GA_READINESS.md",
+        ROOT / "docs/GA_EXTERNAL_CERTIFICATION_HANDOFF.md",
         EXTERNAL,
         RELEASE / "release-manifest.json",
+        RELEASE / "source.json",
     ]
     missing = [str(p) for p in required if not p.is_file() or p.stat().st_size == 0]
     if missing:
@@ -66,17 +73,35 @@ def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     external = json.loads(EXTERNAL.read_text(encoding="utf-8"))
     release_manifest = json.loads((RELEASE / "release-manifest.json").read_text(encoding="utf-8"))
+    release_source = json.loads((RELEASE / "source.json").read_text(encoding="utf-8"))
     source_sha = git("rev-parse", "HEAD")
+    source_tree = git("rev-parse", "HEAD^{tree}")
+    if release_source.get("commit") != source_sha or release_source.get("tree") != source_tree:
+        print("Release provenance and GA candidate source identity do not match", file=sys.stderr)
+        return 1
+
+    event_name = os.getenv("GITHUB_EVENT_NAME", "local")
+    git_ref = os.getenv("GITHUB_REF", "")
+    is_main_acceptance = event_name == "push" and git_ref == "refs/heads/main"
+    decision = "READY_FOR_EXTERNAL_CERTIFICATION" if is_main_acceptance else "VALIDATION_ONLY"
 
     candidate = {
         "schema": "irespond.ga-candidate/v1",
-        "decision": "READY_FOR_EXTERNAL_CERTIFICATION",
+        "decision": decision,
         "ga": False,
         "blockedByExternalEvidence": True,
         "repository": "Atlasfsp/iRespond",
+        "ci": {
+            "event": event_name,
+            "ref": git_ref,
+            "runId": os.getenv("GITHUB_RUN_ID", ""),
+            "runAttempt": os.getenv("GITHUB_RUN_ATTEMPT", ""),
+            "isMainAcceptance": is_main_acceptance,
+            "handoffEligible": is_main_acceptance,
+        },
         "source": {
             "commit": source_sha,
-            "tree": git("rev-parse", "HEAD^{tree}"),
+            "tree": source_tree,
             "commitTime": git("show", "-s", "--format=%cI", "HEAD"),
         },
         "canonicalDataPlane": {
@@ -94,6 +119,15 @@ def main() -> int:
                 "YugabyteDB dump/restore recovery",
                 "HTTP load regression baseline",
                 "production image build",
+            ],
+            "supplyChainIncludes": [
+                "frozen pnpm install",
+                "production JavaScript advisory audit",
+                "go mod checksum verification",
+                "govulncheck",
+                "dependency inventory",
+                "release provenance",
+                "GA candidate handoff bundle",
             ],
             "releaseManifestSha256": sha256(RELEASE / "release-manifest.json"),
             "releaseArtifactCount": len(release_manifest.get("artifacts", [])),
@@ -137,7 +171,7 @@ def main() -> int:
     target = OUT / "ga-candidate.json"
     target.write_text(payload, encoding="utf-8")
     (OUT / "SHA256SUMS").write_text(f"{sha256(target)}  ga-candidate.json\n", encoding="utf-8")
-    print(f"GA candidate evidence generated at {target}")
+    print(f"GA candidate evidence generated at {target} decision={decision}")
     return 0
 
 
