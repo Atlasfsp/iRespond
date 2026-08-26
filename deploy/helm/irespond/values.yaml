@@ -22,6 +22,33 @@ config:
   oidcAudience: ""
   oidcJwksUrl: ""
   natsSubjectPrefix: "irespond.events"
+  maxRequestBodyBytes: "1048576"
+  requestsPerMinute: "240"
+
+rollout:
+  minReadySeconds: 5
+  progressDeadlineSeconds: 600
+  terminationGracePeriodSeconds: 30
+  maxUnavailable: 0
+  maxSurge: 1
+
+probes:
+  startup:
+    failureThreshold: 30
+    periodSeconds: 2
+    timeoutSeconds: 1
+  readiness:
+    failureThreshold: 3
+    periodSeconds: 10
+    timeoutSeconds: 2
+  liveness:
+    failureThreshold: 3
+    periodSeconds: 20
+    timeoutSeconds: 2
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
 
 secretRefs:
   database:
