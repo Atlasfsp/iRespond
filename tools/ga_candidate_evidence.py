@@ -33,19 +33,19 @@ def git(*args: str) -> str:
 
 
 def source_metrics() -> dict[str, int]:
-    extensions = {".go", ".ts", ".tsx", ".js", ".jsx", ".sql", ".yaml", ".yml", ".sh", ".py"}
-    excluded = {"node_modules", ".git", "build", "dist", "vendor"}
-    files: list[pathlib.Path] = []
-    for path in ROOT.rglob("*"):
-        if not path.is_file() or path.suffix not in extensions:
-            continue
-        if any(part in excluded for part in path.parts):
-            continue
-        files.append(path)
-    loc = sum(len(path.read_text(encoding="utf-8", errors="ignore").splitlines()) for path in files)
-    screen_dir = ROOT / "apps/mobile/app"
-    screens = sum(1 for p in screen_dir.rglob("*.tsx") if not p.name.startswith("_") and p.name not in {"+not-found.tsx"})
-    return {"sourceLoc": loc, "sourceFiles": len(files), "mobileScreens": screens}
+    output = subprocess.check_output(["bash", str(ROOT / "tools/repo_metrics.sh")], cwd=ROOT, text=True)
+    names = {
+        "SOURCE_LOC": "sourceLoc",
+        "SOURCE_FILES": "sourceFiles",
+        "MOBILE_SCREENS": "mobileScreens",
+    }
+    metrics: dict[str, int] = {}
+    for source_name, target_name in names.items():
+        match = re.search(rf"^{re.escape(source_name)}=(\d+)\s*$", output, re.M)
+        if not match:
+            raise RuntimeError(f"authoritative repository metric missing: {source_name}")
+        metrics[target_name] = int(match.group(1))
+    return metrics
 
 
 def openapi_operation_count() -> int:
