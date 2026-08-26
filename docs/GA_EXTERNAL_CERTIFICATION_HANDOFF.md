@@ -4,11 +4,11 @@
 
 Repository CI can prove source-controlled behavior, but it cannot truthfully prove app-store signing, real production infrastructure, independent penetration testing, provider onboarding, human safeguarding operations or an independent release verdict. This handoff defines the evidence required after the repository reaches a green immutable candidate.
 
-The handoff must always use the exact source commit recorded in `build/evidence/ga/ga-candidate.json`. Do not silently rebuild from a later branch head.
+The handoff must always use the exact source commit recorded in the **successful `main` push** artifact at `build/evidence/ga/ga-candidate.json`. Do not hand external systems a pull-request artifact: PR executions are deliberately marked `VALIDATION_ONLY` because GitHub normally tests a synthetic merge commit. The accepted handoff artifact must have `ci.isMainAcceptance=true`, `ci.handoffEligible=true`, and `decision=READY_FOR_EXTERNAL_CERTIFICATION`.
 
 ## Candidate acceptance rule
 
-A candidate may leave repository CI only when the same GitHub Actions run is green for all five permanent jobs:
+A candidate may leave repository CI only when the same `main` push GitHub Actions run is green for all five permanent jobs:
 
 1. `mobile`
 2. `security-boundary`
@@ -16,9 +16,9 @@ A candidate may leave repository CI only when the same GitHub Actions run is gre
 4. `api`
 5. `deployment`
 
-The API job includes real YugabyteDB/YSQL integration, real RustFS S3 evidence integration, migration idempotency, YugabyteDB dump/restore verification, the HTTP load regression gate and a production Docker image build. The supply-chain job creates the release provenance bundle and GA candidate handoff bundle.
+The API job includes real YugabyteDB/YSQL integration, real RustFS S3 evidence integration, migration idempotency, YugabyteDB dump/restore verification, the HTTP load regression gate and a production Docker image build. The supply-chain job creates dependency evidence, release provenance and the GA candidate handoff bundle.
 
-A green repository candidate is **READY FOR EXTERNAL CERTIFICATION**, not GA.
+A green `main` repository candidate is **READY FOR EXTERNAL CERTIFICATION**, not GA. `ga` remains `false` in the candidate manifest until the external gates below are actually evidenced.
 
 ## Canonical production boundaries
 
@@ -42,7 +42,7 @@ Target repository: `Atlasfsp/NexoCloud_AppForge`.
 Input:
 
 - source repository: `Atlasfsp/iRespond`;
-- exact candidate commit from `ga-candidate.json`;
+- exact stable `main` candidate commit from `ga-candidate.json`;
 - `apps/mobile`;
 - `services/api`;
 - `deploy/helm/irespond`;
@@ -67,7 +67,7 @@ Target repository: `Atlasfsp/NexoCloud-SkyForge`.
 
 Deployment input:
 
-- exact candidate commit;
+- exact stable `main` candidate commit;
 - `deploy/helm/irespond`;
 - production image built from the candidate and identified by immutable digest;
 - externally provisioned secrets/identities for YugabyteDB, RustFS, StratoID and required Shared Services.
@@ -97,7 +97,7 @@ All `/api/v1` operations require tenant context, and mutations require `Idempote
 
 Required input:
 
-- exact source commit/tree;
+- exact stable `main` source commit/tree;
 - release and GA evidence bundles;
 - repository workflow results;
 - dependency/vulnerability evidence;
@@ -132,6 +132,7 @@ No one should convert a missing external result into PASS by editing the ledger.
 GA can be declared only when:
 
 - the immutable repository candidate remains green;
+- the accepted candidate bundle comes from a successful `main` push and says `handoffEligible=true`;
 - AppForge, SkyForge and Droplet evidence points to that same candidate;
 - every launch-scope external gate has dated evidence and named ownership;
 - any residual risk is explicitly accepted by the appropriate human owner;
