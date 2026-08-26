@@ -140,10 +140,6 @@ jobs:
       - name: CI YugabyteDB HTTP load baseline
         env:
           DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
-          OBJECT_STORAGE_ENDPOINT: ${{ env.TEST_OBJECT_STORAGE_ENDPOINT }}
-          OBJECT_STORAGE_ACCESS_KEY: IRESPONDTEST
-          OBJECT_STORAGE_SECRET_KEY: irespond-test-secret-2026
-          OBJECT_STORAGE_BUCKET: irespond-evidence
           HTTP_ADDR: 127.0.0.1:18080
           REQUESTS_PER_MINUTE: '100000'
           LOADCHECK_BASE_URL: http://127.0.0.1:18080
