@@ -11,7 +11,7 @@ iRespond owns community-action product domains. It must not duplicate mature Str
 | Relational system of record | Shared Services SS-02 DBaaS / YugabyteDB | YSQL-compatible repositories and migrations; YugabyteDB is the required relational production and CI target. |
 | Identity and SSO | Atlasfsp/StratoID + SS-01 identity | OIDC Authorization Code + PKCE for mobile/web; JWT/JWKS validation at APIs. |
 | Authorization | SS-13 AuthZ / StratoID governance | Project and institutional permissions should migrate from local role checks to policy decisions with local fail-closed enforcement. |
-| Object/media pipeline | SS-42 Media & Asset Pipeline + SS-02 object storage | iRespond owns evidence metadata and consent/business state; shared media owns storage/scan/transcode primitives. |
+| Object/media pipeline | SS-42 Media & Asset Pipeline + SS-02 RustFS object storage | RustFS is the canonical object store. iRespond uses the standard AWS S3 API/SDK, owns evidence metadata/checksums/consent/business state, and delegates shared scan/transcode/storage infrastructure through platform contracts. |
 | Trust & Safety | SS-43 | iRespond supplies community context, beneficiary consent and moderation policy inputs; shared service supplies review/enforcement infrastructure. |
 | Geospatial | SS-44 | Proximity, geocoding, routing and geofencing move behind the shared geospatial contract; YugabyteDB remains relational system of record. |
 | Notifications | SS-18 | Push/SMS/voice/OTT delivery; iRespond owns notification intent/preferences. |
@@ -29,6 +29,8 @@ iRespond owns community-action product domains. It must not duplicate mature Str
 ## Data boundary
 
 YugabyteDB is the relational system of record for iRespond-owned transactional domains such as needs, verification history, projects, milestones, roles, contribution needs/offers, idempotency records, outbox records and evidence metadata. Specialized shared services may own their own implementation stores, but iRespond must consume them through contracts rather than copying their internal tables.
+
+Evidence object bytes are stored in RustFS through the S3 contract. YugabyteDB stores the evidence business record and the SHA-256 digest bound to the completed object. Completion must verify actual object size and bytes before moderation, and generated evidence object keys are write-once from the application perspective.
 
 Geospatial business coordinates may be stored in YugabyteDB as relational data. Advanced spatial indexing/routing/geocoding is delegated to SS-44 instead of making PostGIS an iRespond production dependency.
 
