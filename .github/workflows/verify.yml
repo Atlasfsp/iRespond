@@ -72,12 +72,15 @@ jobs:
         run: bash tools/dependency_inventory.sh
       - name: Build release provenance evidence
         run: bash tools/release_evidence.sh
+      - name: Build GA candidate handoff evidence
+        run: python3 tools/ga_candidate_evidence.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: supply-chain-evidence
           path: |
             build/evidence/dependencies
             build/evidence/release
+            build/evidence/ga
           if-no-files-found: error
           retention-days: 30
 
