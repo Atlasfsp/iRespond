@@ -4,7 +4,7 @@ Status: **NOT GA — repository-controlled hardening is advanced; production/sha
 
 This ledger distinguishes implementation proven by repository CI from evidence that requires production infrastructure, provider accounts, app stores, legal/privacy review, independent security assessment, operational staffing or live drills. A capability is never called production-certified merely because an adapter or local implementation exists.
 
-Last reconciled after the RustFS evidence-integrity, executable API route-contract and CI load-regression hardening slices.
+Last reconciled after the RustFS evidence-integrity, executable API route-contract, CI load-regression and external-certification handoff slices.
 
 ## Repository-controlled gates
 
@@ -28,7 +28,7 @@ Last reconciled after the RustFS evidence-integrity, executable API route-contra
 | Transparent counterpart funding | PASS (domain) | Funding plans, counterpart amounts and auditable pledges are implemented; iRespond deliberately does not represent pledges as settled money. Licensed PayCore/payment movement remains external. |
 | Notifications experience | PASS (repository) | Notifications domain/mobile experience and tested SS-18 intent client exist. Production delivery endpoints/credentials and channel certification remain external. |
 | Mobile primary workflow | PARTIAL | **15 implemented Expo Router screens**. Core community/user journeys exist; richer institutional/admin, accessibility/device certification and app-store launch surfaces remain. |
-| Reproducible repository metrics | PASS | `tools/repo_metrics.sh`; latest fully green load candidate reported **5,409 authored source lines across 90 source files and 15 mobile screens**. |
+| Reproducible repository metrics | PASS | `tools/repo_metrics.sh`; latest fully green load candidate reported **5,409 authored source lines across 90 source files and 15 mobile screens**. The GA-candidate handoff slice will supersede these counts on its next green run. |
 | Production migration command | PASS | `cmd/migrate` with idempotent migration ledger. |
 | Production API image | PASS | Non-root distroless production image builds in CI; both builder/runtime bases are digest pinned. |
 | Runtime readiness/liveness/version | PASS | Independent `/livez`, fail-closed `/readyz`, `/version` and dependency state. |
@@ -51,9 +51,12 @@ Last reconciled after the RustFS evidence-integrity, executable API route-contra
 | Release provenance evidence | PASS (repository) | CI builds all three Linux binaries, packages Helm, records source/toolchain/dependency/base-image metadata, creates checksums and uploads a supply-chain evidence artifact. |
 | API route/operation contract | PASS | OpenAPI covers all **51 registered method/path operations**. A permanent source-derived gate rejects missing/stale routes, missing responses, missing operation IDs and duplicate operation IDs. |
 | API payload schema conformance | PARTIAL | Core request/response/domain schemas and common errors are documented. Automatic field-by-field runtime/OpenAPI schema conformance remains a separate hardening target. |
-| Load/performance evidence | PASS (CI regression baseline) | Real API process + YugabyteDB: 40 needs seeded through HTTP, then 300 nearby-read requests at concurrency 20. Latest green run: 300/300 success, 0 failures, 432.67 req/s, p50 28 ms, p95 131 ms, p99 148 ms. Permanent thresholds are 100% success, p95 ≤ 1 s and throughput ≥ 20 req/s. This is a hosted single-node CI regression baseline, **not** production capacity certification. |
-| AppForge build/release handoff | TODO/PARTIAL | Repository produces deterministic binaries/Helm/provenance; AppForge mobile signing, distribution and production release integration remain. |
-| Droplet independent release judgment | TODO | Independent final-candidate quality verdict remains required before GA. |
+| Load/performance evidence | PASS (CI regression baseline) | Real API process + YugabyteDB: 40 needs seeded through HTTP, then 300 nearby-read requests at concurrency 20. Latest merged clean run: **300/300 success, 0 failures, 535.10 req/s, p50 24 ms, p95 91 ms, p99 124 ms**. Permanent thresholds are 100% success, p95 ≤ 1 s and throughput ≥ 20 req/s. This is a hosted single-node CI regression baseline, **not** production capacity certification. |
+| External GA gate schema | PASS (repository) | `config/ga/external-gates.json` defines named owners and required evidence; missing external evidence is explicitly blocking and cannot be synthesized by CI. |
+| AppForge build/release handoff | PASS (repository handoff) / EXTERNAL | The exact-candidate input/evidence contract is documented for `Atlasfsp/NexoCloud_AppForge`; real Apple/Google signing, distribution and store evidence remain external blockers. |
+| SkyForge production handoff | PASS (repository handoff) / EXTERNAL | The exact Helm/image candidate and required staging/canary/rollback/DNS/TLS/observability evidence are documented; real deployment evidence remains external. |
+| Droplet evaluation handoff | PASS (repository handoff) / EXTERNAL | The documented `POST /api/v1/projects/{id}/releases/evaluate` flow, tenant/idempotency requirements and blocking-verdict semantics are captured; the independent verdict remains external. |
+| Droplet independent release judgment | TODO (external) | An independent final-candidate quality graph/verdict is still required; unresolved `MERGE BLOCKED` or `DO_NOT_SHIP` remains a GA blocker. |
 
 ## Canonical data/storage boundary
 
@@ -65,13 +68,25 @@ Last reconciled after the RustFS evidence-integrity, executable API route-contra
 
 ## Current measurable implementation baseline
 
-The repository metrics job is authoritative. The latest fully green load candidate reported:
+The repository metrics job is authoritative. The latest fully green merged load candidate reported:
 
 - **SOURCE_LOC: 5,409**
 - **SOURCE_FILES: 90**
 - **MOBILE_SCREENS: 15**
 
 Implemented mobile routes currently include Impact Feed, NeedMap, need reporting/details, evidence, project room/contributions/funding, My Offers/contribution commitments, notifications, Privacy & Data Rights, profile/Impact Passport, safety reporting and sign-in surfaces. Counts should always be taken from the newest green workflow after subsequent changes.
+
+## Candidate evidence acceptance
+
+Supply-chain CI emits `build/evidence/ga/ga-candidate.json`. Pull-request artifacts are validation-only. The external handoff is accepted only from a successful `push` run on `main` where the manifest contains:
+
+- `decision=READY_FOR_EXTERNAL_CERTIFICATION`;
+- `ga=false`;
+- `ci.isMainAcceptance=true`;
+- `ci.handoffEligible=true`;
+- source commit/tree identities matching the release provenance bundle.
+
+This prevents a synthetic pull-request merge commit from being mistaken for the externally certified release candidate.
 
 ## External / human / provider gates
 
