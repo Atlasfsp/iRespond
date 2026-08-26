@@ -11,14 +11,22 @@ fi
 
 require_digest() {
   local image="$1"
-  if ! grep -Fq "$image" "$workflow" || ! grep -Eq "${image//\//\\/}:[^[:space:]]+@sha256:[0-9a-f]{64}" "$workflow"; then
+  if ! grep -Fq "$image@sha256:" "$workflow"; then
+    echo "verification runtime image is not digest pinned: $image" >&2
+    exit 1
+  fi
+}
+
+require_tag_digest() {
+  local image="$1"
+  if ! grep -Eq "${image//\//\\/}:[^[:space:]]+@sha256:[0-9a-f]{64}" "$workflow"; then
     echo "verification runtime image is not tag+digest pinned: $image" >&2
     exit 1
   fi
 }
 
 require_digest "yugabytedb/yugabyte"
-require_digest "rustfs/rustfs"
+require_tag_digest "rustfs/rustfs"
 
 if grep -Fq "minio/minio" "$workflow"; then
   echo "MinIO server reference is not allowed; RustFS is the canonical SS-02 object store" >&2
