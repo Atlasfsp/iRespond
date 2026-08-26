@@ -17,8 +17,25 @@ require_digest() {
   fi
 }
 
+require_tag_digest() {
+  local image="$1"
+  if ! grep -Eq "${image//\//\\/}:[^[:space:]]+@sha256:[0-9a-f]{64}" "$workflow"; then
+    echo "verification runtime image is not tag+digest pinned: $image" >&2
+    exit 1
+  fi
+}
+
 require_digest "yugabytedb/yugabyte"
-require_digest "minio/minio"
+require_tag_digest "rustfs/rustfs"
+
+if grep -Fq "minio/minio" "$workflow"; then
+  echo "MinIO server reference is not allowed; RustFS is the canonical SS-02 object store" >&2
+  exit 1
+fi
+if grep -R -E 'github\.com/minio/minio-go' services/api/go.mod services/api/internal/evidence >/dev/null 2>&1; then
+  echo "MinIO-specific SDK dependency is not allowed in the evidence storage path" >&2
+  exit 1
+fi
 
 while IFS= read -r action_ref; do
   [[ "$action_ref" == ./* ]] && continue
@@ -36,4 +53,4 @@ while IFS= read -r image_ref; do
   fi
 done < <(awk 'toupper($1)=="FROM" {print $2}' "$dockerfile")
 
-echo "CI runtime, GitHub Action, and production base-image pins verified"
+echo "CI runtime, RustFS storage, GitHub Action, and production base-image pins verified"
