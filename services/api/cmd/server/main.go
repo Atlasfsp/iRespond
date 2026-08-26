@@ -51,7 +51,7 @@ func main() {
 	registerContributionCommitmentRoutes(mux,identity,projectManager)
 
 	addr:=os.Getenv("HTTP_ADDR"); if addr=="" { addr=":8080" }
-	server:=&http.Server{Addr:addr,Handler:requestIDMiddleware(mux),ReadHeaderTimeout:5*time.Second,ReadTimeout:15*time.Second,WriteTimeout:30*time.Second,IdleTimeout:60*time.Second}
+	server:=&http.Server{Addr:addr,Handler:gatewayMiddleware(mux),ReadHeaderTimeout:5*time.Second,ReadTimeout:15*time.Second,WriteTimeout:30*time.Second,IdleTimeout:60*time.Second}
 	log.Printf("iRespond API listening on %s with %s store, %s auth, %s evidence, %s projects",addr,storeName,authName,evidenceName,projectName)
 	if err:=runHTTPServer(server); err!=nil { log.Fatalf("serve iRespond API: %v",err) }
 }
