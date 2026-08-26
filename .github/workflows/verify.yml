@@ -51,7 +51,7 @@ jobs:
         run: pnpm audit --prod --audit-level high
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24.x'
+          go-version: '1.25.13'
           cache-dependency-path: services/api/go.sum
       - name: Verify Go module checksums
         working-directory: services/api
@@ -108,7 +108,7 @@ jobs:
           exit 1
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24.x'
+          go-version: '1.25.13'
           cache-dependency-path: services/api/go.sum
       - name: Verify tidy Go module metadata
         run: |
