@@ -1,0 +1,71 @@
+{
+  "schema": "irespond.external-ga-gates/v1",
+  "policy": "Missing production or independent evidence is a blocker; repository CI must not synthesize or waive it.",
+  "gates": [
+    {
+      "id": "stratoid-production",
+      "owner": "StratoID / identity operations",
+      "requiredEvidence": ["production OIDC client registration", "signing-key rotation drill", "issuer/JWKS outage behavior"]
+    },
+    {
+      "id": "shared-services-production",
+      "owner": "Nvuto Platform Services",
+      "requiredEvidence": ["workload identity", "production endpoints", "service-to-service authorization", "SS-18/SS-24/SS-43/SS-44 contract certification"]
+    },
+    {
+      "id": "yugabytedb-production",
+      "owner": "database/platform operations",
+      "requiredEvidence": ["TLS", "multi-zone topology", "backup/PITR policy", "dated restore drill on production-class infrastructure"]
+    },
+    {
+      "id": "rustfs-production",
+      "owner": "object-storage/platform operations",
+      "requiredEvidence": ["multi-node or erasure topology", "TLS", "durability/failure-domain drill", "lifecycle/retention", "upgrade and recovery drill"]
+    },
+    {
+      "id": "media-safety-production",
+      "owner": "SS-42 / Trust & Safety",
+      "requiredEvidence": ["malware scanning", "media validation/transcoding", "retention/deletion enforcement", "moderation escalation operations"]
+    },
+    {
+      "id": "paycore-production",
+      "owner": "PayCore / regulated payment providers",
+      "requiredEvidence": ["merchant/provider onboarding", "regulated money movement", "refund/reconciliation controls", "launch-jurisdiction approval"]
+    },
+    {
+      "id": "mobile-stores",
+      "owner": "AppForge / mobile release operations",
+      "requiredEvidence": ["Apple signing and archive", "Google Play signing and bundle", "store privacy declarations", "store review/approval"]
+    },
+    {
+      "id": "security-independent",
+      "owner": "independent security assessor",
+      "requiredEvidence": ["penetration test", "remediation evidence", "accepted residual-risk record"]
+    },
+    {
+      "id": "device-accessibility",
+      "owner": "QA / accessibility",
+      "requiredEvidence": ["representative iOS/Android devices", "accessibility checks", "low-bandwidth/offline behavior", "device-matrix sign-off"]
+    },
+    {
+      "id": "skyforge-production",
+      "owner": "SkyForge / platform engineering",
+      "requiredEvidence": ["real staging deployment", "production-class smoke test", "canary rollout", "rollback drill", "DNS/TLS/observability connectivity"]
+    },
+    {
+      "id": "appforge-release",
+      "owner": "AppForge / release engineering",
+      "requiredEvidence": ["mobile build/signing", "artifact distribution", "release traceability", "store or enterprise distribution evidence"]
+    },
+    {
+      "id": "droplet-independent-verdict",
+      "owner": "Droplet",
+      "requiredEvidence": ["immutable candidate evaluation", "quality graph/evidence", "release verdict", "no unresolved MERGE BLOCKED or DO_NOT_SHIP policy decision"]
+    },
+    {
+      "id": "operational-readiness",
+      "owner": "SRE / support / Trust & Safety",
+      "requiredEvidence": ["incident-response exercise", "abuse-response exercise", "multi-service disaster-recovery exercise", "launch support ownership"]
+    }
+  ]
+}
