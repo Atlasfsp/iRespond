@@ -13,7 +13,11 @@ mkdir -p "${OUT}"
 
 (
   cd "${ROOT}"
-  pnpm list -r --depth Infinity --json > "${OUT}/pnpm-dependencies.json"
+  # The lockfile is the authoritative complete resolved JavaScript graph. Keep
+  # the human/tool-readable workspace inventory bounded so evidence generation
+  # cannot exhaust runner memory on highly connected React Native graphs.
+  pnpm list -r --depth 0 --json > "${OUT}/pnpm-workspaces.json"
+  cp pnpm-lock.yaml "${OUT}/pnpm-lock.yaml"
   pnpm --version > "${OUT}/pnpm-version.txt"
 )
 
@@ -22,6 +26,9 @@ sha256sum "${ROOT}/pnpm-lock.yaml" "${ROOT}/services/api/go.mod" "${ROOT}/servic
   echo "generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "git_sha=${GITHUB_SHA:-unknown}"
   echo "source=Atlasfsp/iRespond"
+  echo "javascript_resolution=pnpm-lock.yaml"
+  echo "workspace_inventory=pnpm-workspaces.json"
+  echo "go_resolution=go-modules.jsonl"
 } > "${OUT}/provenance.txt"
 
 echo "Dependency inventory written to ${OUT}"
