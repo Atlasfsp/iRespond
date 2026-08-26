@@ -17,7 +17,7 @@ if [[ "$source_tables" -lt 1 || "$source_migrations" -lt 1 ]]; then
   exit 1
 fi
 
-exec_yb "/home/yugabyte/bin/ysql_dump --host \$(hostname) -U yugabyte -d '$source_db' --no-owner --no-privileges --file=/tmp/irespond-restore-verify.sql"
+exec_yb "/home/yugabyte/postgres/bin/ysql_dump --host \$(hostname) -U yugabyte -d '$source_db' --no-owner --no-privileges --file=/tmp/irespond-restore-verify.sql"
 exec_yb "/home/yugabyte/bin/ysqlsh --host \$(hostname) -U yugabyte -d yugabyte -v ON_ERROR_STOP=1 -c \"DROP DATABASE IF EXISTS $restore_db\""
 exec_yb "/home/yugabyte/bin/ysqlsh --host \$(hostname) -U yugabyte -d yugabyte -v ON_ERROR_STOP=1 -c \"CREATE DATABASE $restore_db\""
 exec_yb "/home/yugabyte/bin/ysqlsh --host \$(hostname) -U yugabyte -d '$restore_db' -v ON_ERROR_STOP=1 --file=/tmp/irespond-restore-verify.sql >/tmp/irespond-restore.log"
