@@ -129,6 +129,9 @@ jobs:
         run: |
           go run ./cmd/migrate
           go run ./cmd/migrate
+      - name: Verify YugabyteDB backup and restore
+        working-directory: .
+        run: bash tools/verify_yugabyte_backup_restore.sh
       - name: Build production image
         working-directory: .
         run: docker build -f services/api/Dockerfile -t irespond-api:verify services/api
