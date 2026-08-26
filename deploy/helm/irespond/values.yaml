@@ -16,6 +16,19 @@ resources:
     cpu: "1"
     memory: 512Mi
 
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  scaleDownStabilizationSeconds: 300
+  scaleUpStabilizationSeconds: 30
+
+networkPolicy:
+  enabled: true
+  allowSameNamespace: true
+  additionalIngressNamespaces: []
+
 config:
   httpAddr: ":8080"
   oidcIssuer: ""
