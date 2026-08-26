@@ -19,4 +19,13 @@ require_digest() {
 require_digest "yugabytedb/yugabyte"
 require_digest "minio/minio"
 
-echo "CI runtime image pins verified"
+while IFS= read -r action_ref; do
+  [[ "$action_ref" == ./* ]] && continue
+  ref="${action_ref##*@}"
+  if [[ ! "$ref" =~ ^[0-9a-f]{40}$ ]]; then
+    echo "GitHub Action is not pinned to a full commit SHA: $action_ref" >&2
+    exit 1
+  fi
+done < <(sed -nE 's/^[[:space:]]*-[[:space:]]+uses:[[:space:]]+([^[:space:]#]+).*/\1/p' "$workflow")
+
+echo "CI runtime and GitHub Action pins verified"
