@@ -19,7 +19,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: pnpm install --no-frozen-lockfile
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
       - run: pnpm mobile:typecheck
       - name: Repository metrics
         run: bash tools/repo_metrics.sh
@@ -70,8 +72,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24.x'
-          cache-dependency-path: services/api/go.mod
-      - run: go mod tidy
+          cache-dependency-path: services/api/go.sum
+      - name: Verify tidy Go module metadata
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
       - run: go test -p 1 ./...
       - run: go vet ./...
       - name: Verify migration command
