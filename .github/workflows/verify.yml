@@ -140,3 +140,5 @@ jobs:
           --set image.tag=verify
           > /tmp/irespond-rendered.yaml
       - run: test -s /tmp/irespond-rendered.yaml
+      - name: Verify rollout safety contract
+        run: bash tools/verify_deployment.sh /tmp/irespond-rendered.yaml
