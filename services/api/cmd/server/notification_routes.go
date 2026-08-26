@@ -46,5 +46,6 @@ func registerNotificationRoutes(mux *http.ServeMux, identity auth.Verifier) func
 		writeJSON(w,http.StatusCreated,response)
 	})
 	closeImpact:=registerImpactRoutes(mux,identity)
-	return func(){closeImpact();if svc!=nil{svc.Close()}}
+	closePrivacy:=registerPrivacyRoutes(mux,identity)
+	return func(){closePrivacy();closeImpact();if svc!=nil{svc.Close()}}
 }
