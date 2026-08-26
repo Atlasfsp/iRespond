@@ -32,6 +32,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Repository security boundary
         run: bash tools/security_boundary.sh
+      - name: CI runtime dependency pinning
+        run: bash tools/verify_ci_runtime_pins.sh
 
   supply-chain:
     runs-on: ubuntu-latest
@@ -92,7 +94,7 @@ jobs:
         run: |
           docker run -d --name irespond-yugabyte --hostname irespond-yugabyte \
             -p 5433:5433 -p 7000:7000 -p 15433:15433 \
-            yugabytedb/yugabyte:2026.1.1.1-b2 bin/yugabyted start \
+            yugabytedb/yugabyte@sha256:3926eedf0ff4b99426fbff533128ff16635ed5697a5cf086dde4fafec28e6f75 bin/yugabyted start \
             --base_dir=/home/yugabyte/yb_data --background=false
           for i in {1..90}; do
             if docker exec irespond-yugabyte bash -c '/home/yugabyte/bin/ysqlsh --host $(hostname) -U yugabyte -d yugabyte -c "SELECT 1"' >/dev/null 2>&1; then exit 0; fi
@@ -106,7 +108,7 @@ jobs:
           docker run -d --name irespond-minio -p 9000:9000 \
             -e MINIO_ROOT_USER=irespond \
             -e MINIO_ROOT_PASSWORD=irespond-secret \
-            minio/minio:latest server /data
+            minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data
           for i in {1..30}; do
             if curl -fsS http://localhost:9000/minio/health/live >/dev/null; then exit 0; fi
             sleep 1
