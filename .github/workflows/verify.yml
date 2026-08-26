@@ -137,6 +137,36 @@ jobs:
       - name: Verify YugabyteDB backup and restore
         working-directory: .
         run: bash tools/verify_yugabyte_backup_restore.sh
+      - name: CI YugabyteDB HTTP load baseline
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          OBJECT_STORAGE_ENDPOINT: ${{ env.TEST_OBJECT_STORAGE_ENDPOINT }}
+          OBJECT_STORAGE_ACCESS_KEY: IRESPONDTEST
+          OBJECT_STORAGE_SECRET_KEY: irespond-test-secret-2026
+          OBJECT_STORAGE_BUCKET: irespond-evidence
+          HTTP_ADDR: 127.0.0.1:18080
+          REQUESTS_PER_MINUTE: '100000'
+          LOADCHECK_BASE_URL: http://127.0.0.1:18080
+          LOADCHECK_REQUESTS: '300'
+          LOADCHECK_CONCURRENCY: '20'
+          LOADCHECK_SEED_NEEDS: '40'
+          LOADCHECK_MAX_P95_MS: '1000'
+          LOADCHECK_MIN_RPS: '20'
+        run: |
+          set -euo pipefail
+          go build -o /tmp/irespond-api ./cmd/server
+          /tmp/irespond-api >/tmp/irespond-load-server.log 2>&1 &
+          server_pid=$!
+          cleanup() {
+            kill "$server_pid" >/dev/null 2>&1 || true
+            wait "$server_pid" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          if ! go run ./cmd/loadcheck; then
+            echo "--- iRespond load-test server log ---"
+            cat /tmp/irespond-load-server.log
+            exit 1
+          fi
       - name: Build production image
         working-directory: .
         run: docker build -f services/api/Dockerfile -t irespond-api:verify services/api
