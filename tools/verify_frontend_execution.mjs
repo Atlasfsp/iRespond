@@ -61,7 +61,7 @@ function parseOperations(source) {
 }
 function endpointRegex(endpoint) {
   const pieces = endpoint.split(/\{[^}]+\}/g).map(escapeRegex);
-  const dynamic = '(?:\\$\\{[^}]+\\}|[^`\\"\\'\\s/]+)';
+  const dynamic = "(?:\\$\\{[^}]+\\}|[^`\"'\\s/]+)";
   return new RegExp(pieces.join(dynamic), 'g');
 }
 function hasInvocation(source, op) {
