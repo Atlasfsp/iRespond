@@ -1,8 +1,8 @@
 # Google Stitch frontend adoption
 
-Status: ACTIVE IMPLEMENTATION on `feature/stitch-unified-role-ui`.
+Status: **CANONICAL FRONTEND CANDIDATE** on `feature/stitch-unified-role-ui`.
 
-The uploaded `iRespond_stitch_unified_role_based_interface` package is the visual design authority for the new iRespond mobile and responsive web frontends. Its `Impact Trust Architecture` design system defines the canonical palette, typography, spacing, card language and trust-state semantics.
+The uploaded `iRespond_stitch_unified_role_based_interface` package, SHA-256 `aeb72a9e78cae84999a31b41d61375fd4d9629e90fa766999c2921ccb09a9b82`, is the visual design authority for iRespond mobile and responsive web. It contains 77 supplied screen contracts. `docs/frontend/STITCH_SOURCE_MANIFEST.json` is the machine-readable inventory and records which designs are currently backend-backed and which remain design-only.
 
 ## Canonical design tokens
 
@@ -12,33 +12,25 @@ The uploaded `iRespond_stitch_unified_role_based_interface` package is the visua
 - Canvas: Slate Ice `#F7F9FC`; lowest surface `#FFFFFF`.
 - Standard border: outline variant `#C3C7CE`.
 - Error/safeguarding: `#BA1A1A` / `#FFDAD6`.
-- Inter typography, heavy 800/900 headings, 11px uppercase spaced eyebrows, 15px base body.
-- Mobile screen padding 20px; 14px gutters; 16px card padding; minimum controls 44px.
-- Standard surfaces prefer tonal layering and hairline outlines over heavy shadows.
+- Inter typography; 800/900 headings; 11px uppercase spaced eyebrows; 15px body.
+- Mobile screen padding 20px; 14px gutters; 16px card padding; minimum controls 44px and primary controls 52px.
+- Prefer tonal layering and hairline outlines over heavy shadows.
 
-The mobile implementation centralizes these values in `apps/mobile/lib/stitch-theme.ts` and shared navigation chrome in `apps/mobile/components/StitchChrome.tsx`. Web styles use the same token family.
+Mobile centralizes these values in `apps/mobile/lib/stitch-theme.ts`; web uses the same token family through `DESIGN_TOKENS.css`, `stitch.css` and `catalog.css`.
 
-## Design package surface inventory
+## Functional adoption policy
 
-The supplied package contains more screens than the current backend contract. Examples include Home Discovery, Report a Need, Verification Queue, Impact Passport, Project Room Overview/Coordination, Funding & Resources, Ability Profile, Notifications, Privacy, Safeguarding, Trust & Safety, Institutional Partner/Audit hubs, donor transparency, logistics, maintenance, emergency response, credentials, command centers, SDG analytics and strategic portfolio views.
+1. If an API/domain capability exists, expose it through the relevant Stitch or extended screen and let the server determine authorization.
+2. If a Stitch design depicts a capability with no current backend contract, keep it canonical as a design surface but disable production actions.
+3. If the backend exposes a real capability absent from the Stitch package, extend the detailed design system rather than inventing a second visual language.
+4. Public observations remain distinct from verified facts.
+5. Pledges remain distinct from regulated money movement and settlement.
+6. Frontend visibility is never authorization; APIs remain deny-by-default.
 
-A Stitch screen is **not** treated as proof that a backend capability exists. Frontend adoption follows this rule:
+## Enforced coverage
 
-1. If an API/domain capability exists, expose it to the correct authenticated/public/resource role and make the Stitch surface functional.
-2. If the design depicts a future capability with no current backend contract, preserve it as design/product backlog; do not wire fake data as if it were operational.
-3. Public observations remain distinct from verified facts.
-4. Pledges remain distinct from regulated money movement/settlement.
-5. Frontend visibility is never authorization; APIs remain deny-by-default.
-
-## Current functional coverage being adopted
-
-- public/community: platform doctrine, nearby needs, reporting, offline sync, evidence capture/upload, public need/project detail;
-- authenticated community: contribution offers, own pledge management, notifications/preferences, privacy rights, Impact Passport, safety reports/appeals, role-invite acceptance;
-- verifier/evidence roles: scoped verification transitions, evidence review/access, need-to-project conversion where authorized;
-- project resource roles: project lifecycle, milestones, validation, contribution plans/offers, role invitations and funding-plan controls through a server-returned project permission envelope;
-- safety roles: confidential review queue and decisions;
-- responsive web: the same API/role boundaries through OIDC Authorization Code + PKCE and explicit origin allowlisting.
+`frontend-api-map.json` maps all 45 current user-facing OpenAPI operations to frontend owners. Runtime probes/build metadata and the internal service notification endpoint are intentionally not exposed to untrusted frontends. `verify_frontend_api_coverage.mjs` and `verify_web_frontend.mjs` make screen count, archive digest, API coverage, canonical browser runtime and no-fake-functionality rules permanent CI gates.
 
 ## GA branch rule
 
-The frontend redesign is intentionally isolated from the currently frozen `main` candidate. The feature PR must not be merged into `main` while external certification is still bound to the exact frozen candidate SHA. After that constraint is lifted, the frontend becomes a new candidate and the documentation screenshot synchronizer should refresh the training manuals against the new interface.
+The frontend redesign remains isolated from the frozen `main` candidate. It must not merge while external certification is bound to exact SHA `6484873c8a0c3306a5972247bcc9981da4051bc6`.

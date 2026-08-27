@@ -1,6 +1,6 @@
 # Supplied Stitch screen inventory
 
-The uploaded Google Stitch package contains the following named design surfaces. This list is a design inventory, not a statement that every future-domain capability already has an implemented backend.
+The adopted Google Stitch archive is pinned by SHA-256 `aeb72a9e78cae84999a31b41d61375fd4d9629e90fa766999c2921ccb09a9b82` and contains **77** screen folders with both `code.html` and `screen.png`. `STITCH_SOURCE_MANIFEST.json` is authoritative for exact identifiers, roles, domains, live routes and truth status.
 
 ## Community and personal surfaces
 
@@ -26,6 +26,12 @@ Institutional Partner Hub; Institutional Audit Dashboard; Institutional Audit De
 
 Global SDG Impact Dashboard; SDG Impact Explorer; SDG Impact Modeler & Forecast; SDG Milestone Celebration; Impact Forecasting; Strategic Impact Analytics; Impact Story — Completed Project; AI-Assisted Dispatch.
 
+## Backend-driven extensions
+
+The current API exposes concrete workflows that the supplied package does not always isolate as standalone screens. The canonical frontend therefore extends the Stitch system with: Secure Sign In; Need Detail & Verification State; Contribution Offer Center; My Funding Commitments; Project Steward Console; Project Role Invitation; Evidence Review Detail; My Safety Cases; Safety Review Operations; Notification Preferences; Privacy & Data Rights Center; Project Milestone Control; Project Contribution Plan; Project Funding Control.
+
+These are not a new design language. They are explicit Stitch-system extensions tied to real API contracts.
+
 ## Adoption rule
 
-The design language is adopted across the implemented frontend. A screen whose supporting backend contract does not yet exist remains a backlog/product-design surface until its domain, authorization, persistence, audit and API contracts are implemented. Fake production functionality must not be introduced merely to make the visual design clickable.
+A screen whose supporting backend contract does not yet exist remains a design-only surface. It is not placed in ordinary functional navigation and its production actions are disabled. Fake data or fake mutations must not be introduced merely to make the visual design clickable.

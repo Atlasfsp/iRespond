@@ -5,9 +5,12 @@ on:
     paths:
       - 'apps/web/**'
       - 'apps/mobile/**'
+      - 'docs/frontend/**'
+      - 'services/api/openapi.yaml'
       - 'services/api/cmd/server/**'
       - 'deploy/helm/irespond/**'
       - 'tools/verify_web_frontend.mjs'
+      - 'tools/verify_frontend_api_coverage.mjs'
       - '.github/workflows/web-verify.yml'
 
 permissions:
@@ -21,7 +24,11 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-      - name: JavaScript syntax
+      - name: Canonical browser runtime syntax
         run: node --check apps/web/app.js
-      - name: Frontend/API boundary contract
+      - name: Stitch catalog runtime syntax
+        run: node --check apps/web/stitch-catalog.js
+      - name: Frontend/API coverage
+        run: node tools/verify_frontend_api_coverage.mjs
+      - name: Frontend design and trust boundary contract
         run: node tools/verify_web_frontend.mjs
