@@ -14,11 +14,16 @@ const files = [...new Set([
   'apps/mobile/package.json'
 ])].sort();
 
+function gitBlobId(bytes) {
+  const header = Buffer.from(`blob ${bytes.length}\0`);
+  return createHash('sha1').update(header).update(bytes).digest('hex');
+}
+
 const sourceHashes = {};
 const aggregate = createHash('sha256');
 for (const rel of files) {
   const bytes = await readFile(path.join(root, rel));
-  const digest = createHash('sha256').update(bytes).digest('hex');
+  const digest = gitBlobId(bytes);
   sourceHashes[rel] = digest;
   aggregate.update(rel).update('\0').update(digest).update('\0');
 }
@@ -26,6 +31,7 @@ for (const rel of files) {
 const out = {
   schema: 'irespond.documentation-ui-fingerprint.v1',
   sourceRevision: process.env.GITHUB_SHA || 'local',
+  hashModel: 'git-blob-sha1-per-source + sha256-aggregate',
   aggregate: aggregate.digest('hex'),
   sources: sourceHashes
 };
