@@ -5,12 +5,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import { APIError, getSession, type Session } from '../lib/api';
 import { capabilitiesForRoles } from '../lib/capabilities';
 
-type WorkspaceItem = {
-  title: string;
-  description: string;
-  route: string;
-  tone?: 'default' | 'safety';
-};
+type WorkspaceItem = { title: string; description: string; route: string; tone?: 'default' | 'safety' };
 
 export default function Workspace() {
   const [session, setSession] = useState<Session | null>(null);
@@ -20,47 +15,37 @@ export default function Workspace() {
 
   const load = useCallback(async () => {
     setError('');
-    try {
-      setSession(await getSession());
-    } catch (err) {
+    try { setSession(await getSession()); }
+    catch (err) {
       if (err instanceof APIError && err.status === 401) setSession(null);
       else setError(err instanceof Error ? err.message : 'Unable to load your workspace.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    } finally { setLoading(false); setRefreshing(false); }
   }, []);
-
   useEffect(() => { void load(); }, [load]);
   const caps = useMemo(() => capabilitiesForRoles(session?.roles ?? []), [session?.roles]);
 
   const items = useMemo(() => {
     const list: WorkspaceItem[] = [
       { title: 'Impact Passport', description: 'See verified roles, fulfilled contributions and SDGs touched.', route: '/impact' },
-      { title: 'My contribution offers', description: 'Track, withdraw and follow your offers of time, skills and resources.', route: '/contributions' },
+      { title: 'My contribution offers', description: 'Track, withdraw and follow offers of time, skills and resources.', route: '/contributions' },
+      { title: 'My funding commitments', description: 'Track and cancel open project pledges without confusing them with settled money.', route: '/pledges' },
+      { title: 'Project role invitation', description: 'Explicitly accept an invitation issued to your trusted identity.', route: '/role-invite' },
       { title: 'Notifications', description: 'Review updates and choose how iRespond should reach you.', route: '/notifications' },
       { title: 'Privacy & data rights', description: 'Manage optional data uses and auditable privacy requests.', route: '/privacy' },
-      { title: 'Safety & appeals', description: 'Report confidential concerns and follow reports you submitted.', route: '/report-safety', tone: 'safety' }
+      { title: 'Safety & appeals', description: 'Report confidential concerns and follow reports you submitted.', route: '/safety', tone: 'safety' }
     ];
-    if ([...caps].some((v) => v.startsWith('verification.')) || caps.has('project.convert') || caps.has('evidence.review')) {
-      list.unshift({ title: 'Verification workspace', description: 'Use only the verification, project-conversion and evidence-review powers granted to your role.', route: '/verify' });
-    }
-    if (caps.has('project.steward')) {
-      list.unshift({ title: 'Project stewardship', description: 'Manage project delivery, contribution needs, milestones, roles and funding plans.', route: '/project-admin' });
-    }
-    if (caps.has('safety.review')) {
-      list.unshift({ title: 'Trust & safety operations', description: 'Work the confidential safety queue and record review decisions.', route: '/safety-ops', tone: 'safety' });
-    }
+    if ([...caps].some((v) => v.startsWith('verification.')) || caps.has('project.convert') || caps.has('evidence.review')) list.unshift({ title: 'Verification workspace', description: 'Use only the verification, project-conversion and evidence-review powers granted to your role.', route: '/verify' });
+    if (caps.has('project.steward')) list.unshift({ title: 'Project stewardship', description: 'Manage project delivery, contribution needs, milestones, roles and funding plans.', route: '/project-admin' });
+    if (caps.has('safety.review')) list.unshift({ title: 'Trust & safety operations', description: 'Work the confidential safety queue and record review decisions.', route: '/safety-ops', tone: 'safety' });
     return list;
   }, [caps]);
 
   if (loading) return <SafeAreaView style={styles.safe}><View style={styles.center}><ActivityIndicator /><Text style={styles.muted}>Loading your iRespond workspace…</Text></View></SafeAreaView>;
-
   if (!session) return <SafeAreaView style={styles.safe}><View style={styles.auth}><Text style={styles.kicker}>YOUR WORKSPACE</Text><Text style={styles.title}>Sign in to see the tools your role can use.</Text><Text style={styles.muted}>iRespond reads role claims from the trusted identity boundary. Restricted controls remain server-authorized even when a screen is visible.</Text>{!!error && <Text style={styles.error}>{error}</Text>}<Pressable style={styles.primary} onPress={() => router.push('/signin')}><Text style={styles.primaryText}>Sign in</Text></Pressable><Pressable onPress={() => router.back()}><Text style={styles.link}>Back to community action</Text></Pressable></View></SafeAreaView>;
 
   return <SafeAreaView style={styles.safe}><ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} />}>
     <View style={styles.top}><Pressable onPress={() => router.back()}><Text style={styles.link}>← Home</Text></Pressable><Pressable onPress={() => router.push('/profile')}><Text style={styles.link}>Ability profile</Text></Pressable></View>
-    <View style={styles.hero}><Text style={styles.kickerLight}>ROLE-AWARE WORKSPACE</Text><Text style={styles.heroTitle}>Act with the authority you actually have.</Text><Text style={styles.heroBody}>Signed in as {session.subject}. Your navigation is derived from trusted role claims; every consequential action is re-checked by the API.</Text></View>
+    <View style={styles.hero}><Text style={styles.kickerLight}>ROLE-AWARE WORKSPACE</Text><Text style={styles.heroTitle}>Act with the authority you actually have.</Text><Text style={styles.heroBody}>Signed in as {session.subject}. Navigation is derived from trusted role claims; every consequential action is re-checked by the API.</Text></View>
     {!!error && <View style={styles.errorCard}><Text style={styles.error}>{error}</Text></View>}
     <View style={styles.roles}><Text style={styles.section}>Identity roles</Text><View style={styles.chips}>{session.roles.length ? session.roles.map((role) => <View key={role} style={styles.chip}><Text style={styles.chipText}>{human(role)}</Text></View>) : <Text style={styles.muted}>Standard authenticated community member</Text>}</View></View>
     <Text style={styles.section}>Your tools</Text>
@@ -68,38 +53,5 @@ export default function Workspace() {
     <View style={styles.truth}><Text style={styles.truthTitle}>Front-end visibility is not authorization</Text><Text style={styles.truthBody}>The API remains deny-by-default for protected operations. This workspace removes irrelevant controls for usability; it never weakens server policy.</Text></View>
   </ScrollView></SafeAreaView>;
 }
-
 function human(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()); }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F7F8F5' },
-  content: { padding: 20, gap: 14, paddingBottom: 48 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 24 },
-  auth: { flex: 1, justifyContent: 'center', gap: 16, padding: 24 },
-  top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  link: { color: '#244D3A', fontWeight: '800' },
-  hero: { backgroundColor: '#173F2F', borderRadius: 24, padding: 22, gap: 8 },
-  kicker: { color: '#397355', fontWeight: '900', letterSpacing: 1.6, fontSize: 12 },
-  kickerLight: { color: '#A7D8BE', fontWeight: '900', letterSpacing: 1.6, fontSize: 12 },
-  title: { color: '#17352B', fontSize: 30, lineHeight: 36, fontWeight: '900' },
-  heroTitle: { color: 'white', fontSize: 28, lineHeight: 34, fontWeight: '900' },
-  heroBody: { color: '#DCEAE3', lineHeight: 21 },
-  section: { color: '#17352B', fontSize: 19, fontWeight: '900' },
-  roles: { backgroundColor: 'white', borderRadius: 18, padding: 16, gap: 10 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { backgroundColor: '#E7F1EB', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 7 },
-  chipText: { color: '#285741', fontWeight: '800', fontSize: 12 },
-  card: { backgroundColor: 'white', borderRadius: 18, padding: 17, flexDirection: 'row', gap: 12, alignItems: 'center' },
-  safetyCard: { backgroundColor: '#FFF5F2' },
-  cardTitle: { color: '#17352B', fontSize: 17, fontWeight: '900', marginBottom: 4 },
-  safetyTitle: { color: '#813E34' },
-  muted: { color: '#67766F', lineHeight: 20 },
-  chevron: { color: '#6C8276', fontSize: 30 },
-  primary: { backgroundColor: '#173F2F', padding: 15, borderRadius: 14 },
-  primaryText: { color: 'white', textAlign: 'center', fontWeight: '900', fontSize: 16 },
-  errorCard: { backgroundColor: '#FFF0ED', borderRadius: 14, padding: 13 },
-  error: { color: '#913F34', fontWeight: '700' },
-  truth: { backgroundColor: '#F4EEDC', borderRadius: 16, padding: 15, gap: 4 },
-  truthTitle: { color: '#665322', fontWeight: '900' },
-  truthBody: { color: '#776B4C', lineHeight: 20 }
-});
+const styles = StyleSheet.create({safe:{flex:1,backgroundColor:'#F7F8F5'},content:{padding:20,gap:14,paddingBottom:48},center:{flex:1,alignItems:'center',justifyContent:'center',gap:10,padding:24},auth:{flex:1,justifyContent:'center',gap:16,padding:24},top:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},link:{color:'#244D3A',fontWeight:'800'},hero:{backgroundColor:'#173F2F',borderRadius:24,padding:22,gap:8},kicker:{color:'#397355',fontWeight:'900',letterSpacing:1.6,fontSize:12},kickerLight:{color:'#A7D8BE',fontWeight:'900',letterSpacing:1.6,fontSize:12},title:{color:'#17352B',fontSize:30,lineHeight:36,fontWeight:'900'},heroTitle:{color:'white',fontSize:28,lineHeight:34,fontWeight:'900'},heroBody:{color:'#DCEAE3',lineHeight:21},section:{color:'#17352B',fontSize:19,fontWeight:'900'},roles:{backgroundColor:'white',borderRadius:18,padding:16,gap:10},chips:{flexDirection:'row',flexWrap:'wrap',gap:8},chip:{backgroundColor:'#E7F1EB',borderRadius:999,paddingHorizontal:11,paddingVertical:7},chipText:{color:'#285741',fontWeight:'800',fontSize:12},card:{backgroundColor:'white',borderRadius:18,padding:17,flexDirection:'row',gap:12,alignItems:'center'},safetyCard:{backgroundColor:'#FFF5F2'},cardTitle:{color:'#17352B',fontSize:17,fontWeight:'900',marginBottom:4},safetyTitle:{color:'#813E34'},muted:{color:'#67766F',lineHeight:20},chevron:{color:'#6C8276',fontSize:30},primary:{backgroundColor:'#173F2F',padding:15,borderRadius:14},primaryText:{color:'white',textAlign:'center',fontWeight:'900',fontSize:16},errorCard:{backgroundColor:'#FFF0ED',borderRadius:14,padding:13},error:{color:'#913F34',fontWeight:'700'},truth:{backgroundColor:'#F4EEDC',borderRadius:16,padding:15,gap:4},truthTitle:{color:'#665322',fontWeight:'900'},truthBody:{color:'#776B4C',lineHeight:20}});
