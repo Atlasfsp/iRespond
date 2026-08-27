@@ -41,7 +41,7 @@ export async function flushNeedQueue():Promise<SyncResult>{
   const baseUrl=process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/,'');const queue=await loadQueue();if(!baseUrl||queue.length===0)return{synced:0,remaining:queue.length,offline:!baseUrl};
   const actorId=await getLocalActorId();const token=await getAccessToken();const remaining:QueuedNeed[]=[];let synced=0;
   for(const original of queue){let item={...original,uploadedEvidenceUris:[...(original.uploadedEvidenceUris??[])]};try{
-      if(!item.serverNeedId){const response=await fetch(`${baseUrl}/v1/needs`,{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':item.idempotencyKey},body:JSON.stringify({title:item.draft.title,description:item.draft.description,category:'community',latitude:item.draft.latitude??0,longitude:item.draft.longitude??0,reporterId:actorId,sdgTags:[]})});if(!response.ok)throw new Error(`need sync ${response.status}`);const created=(await response.json()) as CreatedNeed;item.serverNeedId=created.id;}
+      if(!item.serverNeedId){const response=await fetch(`${baseUrl}/v1/needs`,{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':item.idempotencyKey},body:JSON.stringify({title:item.draft.title,description:item.draft.description,category:item.draft.category??'community',latitude:item.draft.latitude??0,longitude:item.draft.longitude??0,reporterId:actorId,sdgTags:[]})});if(!response.ok)throw new Error(`need sync ${response.status}`);const created=(await response.json()) as CreatedNeed;item.serverNeedId=created.id;}
       const pendingEvidence=item.draft.evidenceUris.filter((uri)=>!item.uploadedEvidenceUris?.includes(uri));
       if(pendingEvidence.length>0&&!token){remaining.push(item);continue;}
       for(const uri of pendingEvidence){if(!token)break;await uploadEvidence(baseUrl,item.serverNeedId!,uri,token);item.uploadedEvidenceUris=[...(item.uploadedEvidenceUris??[]),uri];}
@@ -59,4 +59,5 @@ async function uploadEvidence(baseUrl:string,needId:string,uri:string,token:stri
 
 function allowedType(value:string){const v=value.toLowerCase();return['image/jpeg','image/png','image/webp','video/mp4','video/quicktime'].includes(v)?v:'';}
 function inferType(uri:string){const path=uri.toLowerCase().split('?')[0];if(path.endsWith('.jpg')||path.endsWith('.jpeg'))return'image/jpeg';if(path.endsWith('.png'))return'image/png';if(path.endsWith('.webp'))return'image/webp';if(path.endsWith('.mp4'))return'video/mp4';if(path.endsWith('.mov'))return'video/quicktime';return'';}
-export async function pendingNeedCount(){return(await loadQueue()).length;}
+export async function pendingNeedCount(){return(await loadQueue()).length;
+}
