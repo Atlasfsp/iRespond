@@ -11,6 +11,8 @@ on:
       - 'deploy/helm/irespond/**'
       - 'tools/verify_web_frontend.mjs'
       - 'tools/verify_frontend_api_coverage.mjs'
+      - 'tools/verify_frontend_execution.mjs'
+      - 'tools/verify_frontend_reachability.mjs'
       - '.github/workflows/web-verify.yml'
 
 permissions:
@@ -28,7 +30,11 @@ jobs:
         run: node --check apps/web/app.js
       - name: Stitch catalog runtime syntax
         run: node --check apps/web/stitch-catalog.js
-      - name: Frontend/API coverage
+      - name: Frontend/API ownership coverage
         run: node tools/verify_frontend_api_coverage.mjs
+      - name: Frontend/API execution coverage
+        run: node tools/verify_frontend_execution.mjs
+      - name: Frontend route and screen reachability
+        run: node tools/verify_frontend_reachability.mjs
       - name: Frontend design and trust boundary contract
         run: node tools/verify_web_frontend.mjs
