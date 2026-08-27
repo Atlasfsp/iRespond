@@ -6,8 +6,8 @@ import { apiFetch, getSession, postJSON, type Session } from '../lib/api';
 import { capabilitiesForRoles, verificationTransitionsForRoles } from '../lib/capabilities';
 
 type Need = { id: string; title: string; description: string; verificationState: string; category?: string; sdgTags?: number[] };
-
 type CreatedProject = { id: string; title: string };
+type EvidenceDecision = 'available' | 'quarantined' | 'rejected';
 
 export default function VerificationWorkspace() {
   const [session, setSession] = useState<Session | null>(null);
@@ -26,31 +26,24 @@ export default function VerificationWorkspace() {
   async function loadNeed() {
     if (!needId.trim()) return;
     setBusy('need'); setError('');
-    try {
-      const value = await apiFetch<Need>(`/v1/needs/${encodeURIComponent(needId.trim())}`, {}, false);
-      setNeed(value); setProjectTitle(value.title);
-    } catch (err) { setNeed(null); setError(err instanceof Error ? err.message : 'Unable to load need.'); }
+    try { const value = await apiFetch<Need>(`/v1/needs/${encodeURIComponent(needId.trim())}`, {}, false); setNeed(value); setProjectTitle(value.title); }
+    catch (err) { setNeed(null); setError(err instanceof Error ? err.message : 'Unable to load need.'); }
     finally { setBusy(''); }
   }
 
   async function transition(state: string, label: string) {
     if (!need) return;
     setBusy(state); setError('');
-    try {
-      const value = await postJSON<Need>(`/v1/needs/${encodeURIComponent(need.id)}/verification`, { state });
-      setNeed(value);
-      Alert.alert('Verification updated', `${label} was recorded by the server.`);
-    } catch (err) { setError(err instanceof Error ? err.message : 'Verification could not be updated.'); }
+    try { const value = await postJSON<Need>(`/v1/needs/${encodeURIComponent(need.id)}/verification`, { state }); setNeed(value); Alert.alert('Verification updated', `${label} was recorded by the server.`); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Verification could not be updated.'); }
     finally { setBusy(''); }
   }
 
-  async function reviewEvidence(decision: 'approve' | 'reject' | 'quarantine') {
+  async function reviewEvidence(decision: EvidenceDecision) {
     if (!evidenceId.trim()) { Alert.alert('Evidence ID required', 'Enter the evidence record you are reviewing.'); return; }
     setBusy(`evidence-${decision}`); setError('');
-    try {
-      await postJSON(`/v1/evidence/${encodeURIComponent(evidenceId.trim())}/review`, { decision });
-      Alert.alert('Evidence review recorded', `Decision: ${decision}.`);
-    } catch (err) { setError(err instanceof Error ? err.message : 'Evidence review could not be recorded.'); }
+    try { await postJSON(`/v1/evidence/${encodeURIComponent(evidenceId.trim())}/review`, { decision }); Alert.alert('Evidence review recorded', `State: ${human(decision)}.`); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Evidence review could not be recorded.'); }
     finally { setBusy(''); }
   }
 
@@ -58,10 +51,8 @@ export default function VerificationWorkspace() {
     if (!need) return;
     if (!projectTitle.trim() || !communityId.trim()) { Alert.alert('Project details required', 'Add a title and owner community ID.'); return; }
     setBusy('project'); setError('');
-    try {
-      const project = await postJSON<CreatedProject>(`/v1/needs/${encodeURIComponent(need.id)}/project`, { title: projectTitle.trim(), description: need.description, ownerCommunityId: communityId.trim() });
-      Alert.alert('Action Project created', project.title, [{ text: 'Open project', onPress: () => router.push(`/project/${project.id}`) }]);
-    } catch (err) { setError(err instanceof Error ? err.message : 'Project could not be created.'); }
+    try { const project = await postJSON<CreatedProject>(`/v1/needs/${encodeURIComponent(need.id)}/project`, { title: projectTitle.trim(), description: need.description, ownerCommunityId: communityId.trim() }); Alert.alert('Action Project created', project.title, [{ text: 'Open project', onPress: () => router.push(`/project/${project.id}`) }]); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Project could not be created.'); }
     finally { setBusy(''); }
   }
 
@@ -71,15 +62,10 @@ export default function VerificationWorkspace() {
     <View style={s.top}><Pressable onPress={() => router.back()}><Text style={s.link}>← Workspace</Text></Pressable><Text style={s.role}>{session?.roles.length ? session.roles.map(human).join(' · ') : 'Community member'}</Text></View>
     <Text style={s.kicker}>VERIFICATION WORKSPACE</Text><Text style={s.title}>Make evidence-backed state changes, not social-media votes.</Text><Text style={s.muted}>Only transitions authorized by your signed identity roles are shown. The API independently verifies the same authority.</Text>
     {!!error && <View style={s.errorCard}><Text style={s.error}>{error}</Text></View>}
-
     <View style={s.card}><Text style={s.section}>Load a reported need</Text><TextInput value={needId} onChangeText={setNeedId} style={s.input} autoCapitalize="none" placeholder="Need ID" /><Pressable style={s.secondary} onPress={() => void loadNeed()}><Text style={s.secondaryText}>{busy === 'need' ? 'Loading…' : 'Load need'}</Text></Pressable></View>
-
     {need && <View style={s.card}><View style={s.row}><Text style={s.badge}>{human(need.verificationState)}</Text><Text style={s.meta}>{need.id}</Text></View><Text style={s.needTitle}>{need.title}</Text><Text style={s.muted}>{need.description}</Text><Text style={s.section}>Permitted state changes</Text><View style={s.actions}>{transitions.map((item) => <Pressable key={item.state} disabled={!!busy} style={[s.action, item.state === 'rejected' && s.danger]} onPress={() => void transition(item.state, item.label)}><Text style={[s.actionText, item.state === 'rejected' && s.dangerText]}>{busy === item.state ? 'Saving…' : item.label}</Text></Pressable>)}</View></View>}
-
     {caps.has('project.convert') && need && <View style={s.card}><Text style={s.section}>Convert verified need to Action Project</Text><Text style={s.muted}>Conversion remains blocked by the API until the need has reached an accepted verified state.</Text><TextInput value={projectTitle} onChangeText={setProjectTitle} style={s.input} placeholder="Project title" /><TextInput value={communityId} onChangeText={setCommunityId} style={s.input} placeholder="Owner community ID" /><Pressable style={s.primary} disabled={!!busy} onPress={() => void convertToProject()}><Text style={s.primaryText}>{busy === 'project' ? 'Creating…' : 'Create Action Project'}</Text></Pressable></View>}
-
-    {caps.has('evidence.review') && <View style={s.card}><Text style={s.section}>Evidence review</Text><Text style={s.muted}>Use the immutable evidence record ID supplied by the moderation/review queue. Evidence remains unavailable until approved.</Text><TextInput value={evidenceId} onChangeText={setEvidenceId} style={s.input} autoCapitalize="none" placeholder="Evidence ID" /><View style={s.actions}><Pressable style={s.action} onPress={() => void reviewEvidence('approve')}><Text style={s.actionText}>Approve</Text></Pressable><Pressable style={s.action} onPress={() => void reviewEvidence('quarantine')}><Text style={s.actionText}>Quarantine</Text></Pressable><Pressable style={[s.action, s.danger]} onPress={() => void reviewEvidence('reject')}><Text style={s.dangerText}>Reject</Text></Pressable></View></View>}
-
+    {caps.has('evidence.review') && <View style={s.card}><Text style={s.section}>Evidence review</Text><Text style={s.muted}>Evidence remains unavailable until its canonical review state becomes Available.</Text><TextInput value={evidenceId} onChangeText={setEvidenceId} style={s.input} autoCapitalize="none" placeholder="Evidence ID" /><View style={s.actions}><Pressable style={s.action} onPress={() => void reviewEvidence('available')}><Text style={s.actionText}>Approve / make available</Text></Pressable><Pressable style={s.action} onPress={() => void reviewEvidence('quarantined')}><Text style={s.actionText}>Quarantine</Text></Pressable><Pressable style={[s.action, s.danger]} onPress={() => void reviewEvidence('rejected')}><Text style={s.dangerText}>Reject</Text></Pressable></View></View>}
     <View style={s.truth}><Text style={s.truthTitle}>Authority is scoped</Text><Text style={s.truthBody}>Community, institution, expert, audit and government confirmations are different authorities. iRespond preserves that distinction rather than collapsing them into one “verified” button.</Text></View>
   </ScrollView></SafeAreaView>;
 }
