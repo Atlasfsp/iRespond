@@ -67,22 +67,25 @@ function endpointRegex(endpoint) {
 function hasInvocation(source, op) {
   const regex = endpointRegex(op.path); let match;
   while ((match = regex.exec(source))) {
-    const start = Math.max(0, match.index - 450), end = Math.min(source.length, match.index + match[0].length + 500);
-    const window = source.slice(start, end);
-    if (methodEvidence(window, op.method)) return true;
+    const before = source.slice(Math.max(0, match.index - 260), match.index);
+    const after = source.slice(match.index + match[0].length, Math.min(source.length, match.index + match[0].length + 320));
+    if (methodEvidence(before, after, op.method)) return true;
     if (regex.lastIndex === match.index) regex.lastIndex++;
   }
   return false;
 }
-function methodEvidence(window, method) {
+function methodEvidence(before, after, method) {
+  const generic = '(?:<[^>\\n]+>)?';
+  const helperBefore = (names) => new RegExp(`\\b(?:${names})${generic}\\s*\\([^)]*$`, 's').test(before);
+  const explicit = (verb) => new RegExp(`method\\s*:\\s*['\"]${verb}['\"]`, 'i').test(after.slice(0, 220));
   if (method === 'get') {
-    if (/method\s*:\s*['\"](?:POST|PUT|PATCH|DELETE)['\"]/i.test(window)) return false;
-    return /\b(?:apiFetch|api|fetch)\s*\(/.test(window);
+    if (!helperBefore('apiFetch|api|fetch')) return false;
+    return !/method\s*:\s*['\"](?:POST|PUT|PATCH|DELETE)['\"]/i.test(after.slice(0, 220));
   }
-  if (method === 'post') return /\b(?:postJSON|post)\s*\(|method\s*:\s*['\"]POST['\"]/i.test(window);
-  if (method === 'put') return /\b(?:putJSON|put)\s*\(|method\s*:\s*['\"]PUT['\"]/i.test(window);
-  if (method === 'patch') return /method\s*:\s*['\"]PATCH['\"]/i.test(window);
-  if (method === 'delete') return /method\s*:\s*['\"]DELETE['\"]/i.test(window);
+  if (method === 'post') return helperBefore('postJSON|post') || (helperBefore('apiFetch|api|fetch') && explicit('POST'));
+  if (method === 'put') return helperBefore('putJSON|put') || (helperBefore('apiFetch|api|fetch') && explicit('PUT'));
+  if (method === 'patch') return helperBefore('apiFetch|api|fetch') && explicit('PATCH');
+  if (method === 'delete') return helperBefore('apiFetch|api|fetch') && explicit('DELETE');
   return false;
 }
 function escapeRegex(value) { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
