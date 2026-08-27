@@ -1,18 +1,40 @@
 import { createHash } from 'node:crypto';
-import { readFile, writeFile } from 'node:fs/promises';
+import { access, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const root = path.resolve(process.argv[2] || '.');
 const manifest = JSON.parse(await readFile(path.join(root, 'docs/documentation-system/screen-manifest.json'), 'utf8'));
+const trackedRoots = manifest.trackedFrontendRoots || ['apps/mobile', 'apps/web'];
+const uiExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json', '.css', '.html']);
+
+async function exists(target) {
+  try { await access(target); return true; } catch { return false; }
+}
+
+async function walk(relativeRoot) {
+  const absoluteRoot = path.join(root, relativeRoot);
+  if (!await exists(absoluteRoot)) return [];
+  const out = [];
+  async function visit(absoluteDir, relativeDir) {
+    const entries = await readdir(absoluteDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name === 'node_modules' || entry.name.startsWith('.expo')) continue;
+      const absolute = path.join(absoluteDir, entry.name);
+      const relative = path.posix.join(relativeDir.replaceAll('\\', '/'), entry.name);
+      if (entry.isDirectory()) await visit(absolute, relative);
+      else if (uiExtensions.has(path.extname(entry.name).toLowerCase())) out.push(relative);
+    }
+  }
+  await visit(absoluteRoot, relativeRoot);
+  return out;
+}
+
+const discovered = [];
+for (const trackedRoot of trackedRoots) discovered.push(...await walk(trackedRoot));
 const files = [...new Set([
-  ...manifest.screens.map((s) => s.source),
-  'apps/mobile/app/_layout.tsx',
-  'apps/mobile/lib/session.ts',
-  'apps/mobile/lib/drafts.ts',
-  'apps/mobile/lib/sync.ts',
-  'apps/mobile/app.json',
-  'apps/mobile/package.json'
-])].sort();
+  ...discovered,
+  ...manifest.screens.map((screen) => screen.source),
+])].filter(Boolean).sort();
 
 function gitBlobId(bytes) {
   const header = Buffer.from(`blob ${bytes.length}\0`);
@@ -22,16 +44,19 @@ function gitBlobId(bytes) {
 const sourceHashes = {};
 const aggregate = createHash('sha256');
 for (const rel of files) {
-  const bytes = await readFile(path.join(root, rel));
+  const absolute = path.join(root, rel);
+  if (!await exists(absolute)) continue;
+  const bytes = await readFile(absolute);
   const digest = gitBlobId(bytes);
   sourceHashes[rel] = digest;
   aggregate.update(rel).update('\0').update(digest).update('\0');
 }
 
 const out = {
-  schema: 'irespond.documentation-ui-fingerprint.v1',
+  schema: 'irespond.documentation-ui-fingerprint.v2',
   sourceRevision: process.env.GITHUB_SHA || 'local',
   hashModel: 'git-blob-sha1-per-source + sha256-aggregate',
+  trackedFrontendRoots: trackedRoots,
   aggregate: aggregate.digest('hex'),
   sources: sourceHashes
 };
