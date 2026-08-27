@@ -1,0 +1,11 @@
+flowchart LR
+ A[Observation] --> B[(YugabyteDB need record)]
+ A --> C[Evidence metadata]
+ C --> D[(RustFS object bytes)]
+ B --> E[Verification history]
+ E --> F[Project / milestones]
+ F --> G[Contribution & funding facts]
+ G --> H[Outcome evidence]
+ H --> I[Impact Passport]
+ B --> X[Privacy / retention orchestration]
+ D --> X
