@@ -1,0 +1,83 @@
+name: Living manuals
+
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/**'
+      - 'docs/manuals/**'
+      - 'tools/docs-sync/**'
+      - '.github/workflows/living-manuals.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/**'
+      - 'docs/manuals/**'
+      - 'tools/docs-sync/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check frontend/manual freshness and route coverage
+        run: |
+          python tools/docs-sync/frontend_fingerprint.py \
+            --repo-root . \
+            --routes tools/docs-sync/routes.json \
+            --manifest docs/manuals/ui-screenshot-manifest.json \
+            --out "$RUNNER_TEMP/manual-change-plan.json" \
+            --fail-on-stale
+      - name: Upload documentation refresh plan
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: living-manual-change-plan
+          path: ${{ runner.temp }}/manual-change-plan.json
+          if-no-files-found: error
+
+  build-manuals:
+    needs: freshness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install document tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz libreoffice poppler-utils
+          python -m pip install --disable-pip-version-check -r tools/docs-sync/requirements.txt
+      - name: Regenerate documentation
+        env:
+          IRESPOND_SOURCE_REVISION: ${{ github.sha }}
+        run: python tools/docs-sync/build_manuals.py
+      - name: Convert Word editions to PDF
+        run: |
+          for f in docs/manuals/generated/*.docx; do
+            libreoffice --headless --convert-to pdf --outdir docs/manuals/generated "$f"
+          done
+      - name: Enforce minimum rendered page counts
+        run: python tools/docs-sync/verify_manual_pdfs.py --dir docs/manuals/generated
+      - name: Upload living-document editions
+        uses: actions/upload-artifact@v4
+        with:
+          name: irespond-living-manuals-${{ github.sha }}
+          path: |
+            docs/manuals/generated/*.docx
+            docs/manuals/generated/*.pdf
+            docs/manuals/mermaid/*.mmd
+          if-no-files-found: error
