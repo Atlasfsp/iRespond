@@ -1,0 +1,16 @@
+{
+  "name": "@irespond/docs-sync",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fingerprint": "node src/fingerprint.mjs",
+    "mock-api": "node src/mock-api.mjs",
+    "capture": "node src/capture.mjs",
+    "compare": "node src/compare-and-plan.mjs",
+    "manual-index": "node src/regenerate-manual-index.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.55.0"
+  }
+}
