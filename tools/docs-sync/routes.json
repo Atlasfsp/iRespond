@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "frontend_root": "apps/mobile/app",
+  "shared_paths": [
+    "apps/mobile/app/_layout.tsx",
+    "apps/mobile/app.json",
+    "apps/mobile/package.json"
+  ],
+  "screens": [
+    {"id":"home-impact-feed","source_paths":["apps/mobile/app/index.tsx"],"screenshot_file":"01-home-impact-feed.png","manuals":["product","user","training"]},
+    {"id":"report-need","source_paths":["apps/mobile/app/report.tsx"],"screenshot_file":"02-report-need.png","manuals":["product","user","training"]},
+    {"id":"evidence-capture","source_paths":["apps/mobile/app/evidence.tsx"],"screenshot_file":"03-evidence-capture.png","manuals":["product","user","training"]},
+    {"id":"needmap","source_paths":["apps/mobile/app/needmap.tsx"],"screenshot_file":"04-needmap.png","manuals":["product","user","training"]},
+    {"id":"need-detail","source_paths":["apps/mobile/app/need/[id].tsx"],"screenshot_file":"05-need-detail.png","manuals":["product","user","training"]},
+    {"id":"project-room","source_paths":["apps/mobile/app/project/[id].tsx"],"screenshot_file":"06-project-room.png","manuals":["product","user","training"]},
+    {"id":"my-contribution-offers","source_paths":["apps/mobile/app/contributions.tsx"],"screenshot_file":"07-my-contribution-offers.png","manuals":["product","user","training"]},
+    {"id":"impact-passport","source_paths":["apps/mobile/app/impact.tsx"],"screenshot_file":"08-impact-passport.png","manuals":["product","user","training"]},
+    {"id":"privacy-data-rights","source_paths":["apps/mobile/app/privacy.tsx"],"screenshot_file":"09-privacy-data-rights.png","manuals":["product","user","training"]},
+    {"id":"notifications","source_paths":["apps/mobile/app/notifications.tsx"],"screenshot_file":"10-notifications.png","manuals":["product","user","training"]},
+    {"id":"ability-profile","source_paths":["apps/mobile/app/profile.tsx"],"screenshot_file":"11-ability-profile.png","manuals":["product","user","training"]},
+    {"id":"trust-safety-report","source_paths":["apps/mobile/app/report-safety.tsx"],"screenshot_file":"12-trust-safety-report.png","manuals":["product","user","training"]}
+  ],
+  "watch_only_paths": [
+    "apps/mobile/app/signin.tsx",
+    "apps/mobile/app/project/contribute.tsx",
+    "apps/mobile/app/project/funding.tsx"
+  ]
+}

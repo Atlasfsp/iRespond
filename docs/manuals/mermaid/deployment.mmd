@@ -1,0 +1,10 @@
+flowchart TB
+ C[Source + tests] --> AF[AppForge build / signing]
+ C --> SF[SkyForge deployment plan]
+ SF --> G[Gateway / TLS / DNS]
+ G --> K[Kubernetes application runtime]
+ K --> API[iRespond API]
+ API --> Y[(YugabyteDB)]
+ API --> R[(RustFS)]
+ K --> O[OTLP observability]
+ AF --> M[iOS / Android distributions]

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "source_revision": "6484873c8a0c3306a5972247bcc9981da4051bc6",
+  "capture_class": "source-faithful-reference-baseline",
+  "shared_fingerprints": {
+    "apps/mobile/app/_layout.tsx": "374b16421c10d1325fe381414f009a20ea899858",
+    "apps/mobile/app.json": "702d3dd235a4b0d157948e09342764bb988d3ca3",
+    "apps/mobile/package.json": "8a6fd80b7dd716c5591cff785f226695a47da63e"
+  },
+  "watch_only_fingerprints": {
+    "apps/mobile/app/signin.tsx": "7d7fe5fa9737a000dad6822a67e385021970ff47",
+    "apps/mobile/app/project/contribute.tsx": "ea85af6fccb4bbc11a4f72a671a19d7400ce3e8d",
+    "apps/mobile/app/project/funding.tsx": "f959e5dd4411e89fc14338174f09c0f96ae1f2db"
+  },
+  "screens": {
+    "home-impact-feed": {"screenshot_file":"01-home-impact-feed.png","screenshot_sha256":"0ee0c6cd89e53a3c89d687ecb95de8e592b5c0d898ba527fd46ed64d14f6cdf2","source_fingerprints":{"apps/mobile/app/index.tsx":"2a38c9dac82bd79ce62d5101356b4f5e646ea18d"},"manuals":["product","user","training"],"capture_class":"source-faithful-reference-baseline"},
+    "report-need": {"screenshot_file":"02-report-need.png","screenshot_sha256":"fcf18f42028473a82ae2885c152213a72662a3267507b2a55a8f173cf9cf38a9","source_fingerprints":{"apps/mobile/app/report.tsx":"ed46375aa28c6d886f0bd7215ff53f17d28bca21"},"manuals":["product","user","training"],"capture_class":"source-faithful-reference-baseline"},
+    "evidence-capture": {"screenshot_file":"03-evidence-capture.png","screenshot_sha256":"da27a4f1f508c17d147c26472f313e93c69e9e7c4a3e47320f63fdf30c1f7a23","source_fingerprints":{"apps/mobile/app/evidence.tsx":"9bdd1af22c8216eb143c63a51772d9afeae6e2a0"},"manuals":["product","user","training"],"capture_class":"source-faithful-reference-baseline"},
+    "needmap": {"screenshot_file":"04-needmap.png","screenshot_sha256":"594aee041ca1d808dc6c369c84e02d3e8ce30bffa1329aec1537079128bb3148","source_fingerprints":{"apps/mobile/app/needmap.tsx":"953bd6e576fbd95673299a7addc9cbea32de3633"},"manuals":["product","user","training"],"capture_class":"source-faithful-reference-baseline"},
+    "need-detail": {"screenshot_file":"05-need-detail.png","screenshot_sha256":"594cad26a20c071f1155a3e94c21a9047942a604eeb1ed79692c90f85c86cafa","source_fingerprints":{"apps/mobile/app/need/[id].tsx":"a2433ecab3e5dd1bbe1f4df47a197d73dea0da3a"},"manuals":["product","user","training"],"capture_class":"source-faithful-reference-baseline"},
+    "project-room": {"screenshot_file":"06-project-room.png","screenshot_sha256":"bb9d78bcf0ed76de9e8a47fc0985d854d4be7ee90e6c5b2bd7a31bd07956bb2f","source_fingerprints":{"apps/mobile/app/project/[id].tsx":"3be3a0c79849c24dcbc4d915e66edddf580ef316"},"manuals":["product","user","training"],"capture_class":"source-faithful-reference-baseline"},
+    "my-contribution-offers": {"screenshot_file":"07-my-contribution-offers.png","screenshot_sha256":"10f4b7bade3d783437dcd116e836f7fdfdce9578d931b2d9fa63c6d0b1c1b2b0","source_fingerprints":{"apps/mobile/app/contributions.tsx":"4851365923f29e52c0a1444ccaf3899a291c4c5c"},"manuals":["product","user","training"],"capture_class":"source-faithful-reference-baseline"},
+    "impact-passport": {"screenshot_file":"08-impact-passport.png","screenshot_sha256":"93dea1ef16bf9f551e047da34ca51373425dccb64c0cb2964e5df0a4d04bbfd4","source_fingerprints":{"apps/mobile/app/impact.tsx":"8944ded89a2351cb3e28997a34b4a682974d7491"},"manuals":["product","user","training"],"capture_class":"source-faithful-reference-baseline"},
+    "privacy-data-rights": {"screenshot_file":"09-privacy-data-rights.png","screenshot_sha256":"3ef871928976be9981c80118fc4552870bf34f4f12c220e3cd63aa57b3077d48","source_fingerprints":{"apps/mobile/app/privacy.tsx":"4827e556c107f4ce1e7e16ffb215135490d8e727"},"manuals":["product","user","training"],"capture_class":"source-faithful-reference-baseline"},
+    "notifications": {"screenshot_file":"10-notifications.png","screenshot_sha256":"29b0bc6d32c1dfb1a173bdeb418e65340953ea554bb007030cc0564e31a78d4a","source_fingerprints":{"apps/mobile/app/notifications.tsx":"0a55ea2ad838c3488f3f693106e4899f01d00e0d"},"manuals":["product","user","training"],"capture_class":"source-faithful-reference-baseline"},
+    "ability-profile": {"screenshot_file":"11-ability-profile.png","screenshot_sha256":"14f4cc53244782231c819e0599ae0317ee4707dcc114771e0c1691bb6e2f7bc0","source_fingerprints":{"apps/mobile/app/profile.tsx":"07a4433360b98b6786417924a26195b6188ea4b5"},"manuals":["product","user","training"],"capture_class":"source-faithful-reference-baseline"},
+    "trust-safety-report": {"screenshot_file":"12-trust-safety-report.png","screenshot_sha256":"86a98382f5af59c683cf753442411715f1dd6a96b33069811974b1b5f16561fb","source_fingerprints":{"apps/mobile/app/report-safety.tsx":"8a92b565161082b1d9a208129fbe4833252db6a5"},"manuals":["product","user","training"],"capture_class":"source-faithful-reference-baseline"}
+  }
+}

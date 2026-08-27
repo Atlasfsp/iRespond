@@ -1,0 +1,11 @@
+flowchart LR
+ A[Frontend source change] --> B[Fingerprint changed routes]
+ B --> C[Capture approved UI screenshots]
+ C --> D[Compare image hashes]
+ D --> E[Regenerate affected manual sections]
+ E --> F[Render DOCX/PDF]
+ F --> G[Visual + structural QA]
+ G --> H{Changed?}
+ H -- Yes --> I[Open documentation update PR]
+ H -- No --> J[No-op]
+ I --> K[Human review + publish]

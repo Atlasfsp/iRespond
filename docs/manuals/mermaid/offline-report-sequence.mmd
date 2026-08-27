@@ -1,0 +1,13 @@
+sequenceDiagram
+ participant U as Reporter
+ participant A as Mobile app
+ participant Q as Local queue
+ participant API as iRespond API
+ U->>A: Describe need + optional location
+ A->>A: Save local draft
+ U->>A: Capture safe evidence
+ U->>A: Submit observation
+ A->>Q: Queue idempotent report
+ A->>API: Flush queue when reachable
+ API-->>A: Created / replay-safe response
+ A->>Q: Remove synced item

@@ -1,0 +1,9 @@
+flowchart TB
+ R[Reporter] -->|observes| N[Need]
+ V[Eligible verifier] -->|confirms / disputes| N
+ N -->|verified| P[Action Project]
+ S[Project steward] -->|plans| P
+ C[Contributor] -->|offers ability| P
+ F[Funding partner] -->|pledges via governed rail| P
+ T[Trust & Safety] -->|reviews concerns / evidence| P
+ O[Operations] -->|supports platform, not domain outcome| P
