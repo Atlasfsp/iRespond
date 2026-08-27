@@ -13,6 +13,7 @@ on:
       - 'tools/verify_frontend_api_coverage.mjs'
       - 'tools/verify_frontend_execution.mjs'
       - 'tools/verify_frontend_reachability.mjs'
+      - 'tools/verify_frontend_authorization.mjs'
       - '.github/workflows/web-verify.yml'
 
 permissions:
@@ -36,5 +37,7 @@ jobs:
         run: node tools/verify_frontend_execution.mjs
       - name: Frontend route and screen reachability
         run: node tools/verify_frontend_reachability.mjs
+      - name: Frontend role and resource authorization
+        run: node tools/verify_frontend_authorization.mjs
       - name: Frontend design and trust boundary contract
         run: node tools/verify_web_frontend.mjs
