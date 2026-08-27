@@ -7,6 +7,7 @@ const PROFILE_KEY = 'irespond.ability-profile.v1';
 export type NeedDraft = {
   title: string;
   description: string;
+  category?: string;
   locationLabel?: string;
   latitude?: number;
   longitude?: number;
