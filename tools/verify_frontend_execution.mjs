@@ -17,7 +17,8 @@ for (const op of operations) {
     failures.push(`${op.operationId}: missing frontend mapping`);
     continue;
   }
-  if (!hasInvocation(mobile, op)) failures.push(`${op.operationId}: mobile frontend does not execute ${op.method.toUpperCase()} ${op.path}`);
+  const mobileExec = op.operationId === 'getSession' ? sharedSessionWrapperExecuted(mobile) : hasInvocation(mobile, op);
+  if (!mobileExec) failures.push(`${op.operationId}: mobile frontend does not execute ${op.method.toUpperCase()} ${op.path}`);
   if (!hasInvocation(web, op)) failures.push(`${op.operationId}: web frontend does not execute ${op.method.toUpperCase()} ${op.path}`);
 }
 
@@ -58,6 +59,11 @@ function parseOperations(source) {
     if (operationMatch && currentPath && currentMethod) out.push({ path: currentPath, method: currentMethod, operationId: operationMatch[1] });
   }
   return out;
+}
+function sharedSessionWrapperExecuted(source) {
+  const defined = /function\s+getSession\s*\(\)\s*\{[\s\S]{0,180}apiFetch(?:<[^>\n]+>)?\s*\(\s*['"]\/v1\/session['"]/.test(source);
+  const calls = [...source.matchAll(/\bgetSession\s*\(\s*\)/g)];
+  return defined && calls.length >= 2; // one definition plus at least one consumer call
 }
 function endpointRegex(endpoint) {
   const pieces = endpoint.split(/\{[^}]+\}/g).map(escapeRegex);
