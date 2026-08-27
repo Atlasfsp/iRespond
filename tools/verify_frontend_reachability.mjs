@@ -40,20 +40,16 @@ for(const match of catalogTs.matchAll(/mobileRoute:\s*['"]([^'"]+)['"]/g)){
 
 for(const route of liveWebRoutes(webCatalogManifest))mappedWebRoutes.add(stripWebQuery(route));
 
-// The web application uses one hash router. Every hash route referenced by the
-// API ownership map or live Stitch catalog must have a render target and an
-// inbound navigation entry. Role-restricted entries can be conditional, but
-// they must still be present in renderChrome and server authorization remains
-// authoritative after navigation.
+// The browser runtime uses a route-id -> render-function dispatch object. Every
+// hash route referenced by the API map or live Stitch catalog must be present in
+// that dispatch map and have an inbound navigation entry. Role-restricted nav
+// entries may be conditional, but the route itself may never become orphaned.
 for(const route of [...mappedWebRoutes].sort()){
  if(!route.startsWith('#')){failures.push(`web route ${route}: expected a hash route`);continue;}
  const id=route.slice(1);
  if(!id){failures.push(`web route ${route}: empty route id`);continue;}
- const rendered=id==='home'
-   ? /default\s*:\s*await\s+renderHome\(\)/.test(webApp)
-   : new RegExp(`case['"]${escapeRegExp(id)}['"]\\s*:\\s*await\\s+render[A-Za-z0-9_]+\\(`).test(webApp);
- if(!rendered)failures.push(`${route}: no web router render target`);
- const navigable=hasWebNavEntry(webApp,id)||webCatalog.includes(`href=\"\${catEsc(screen.webRoute)}\"`);
+ if(!hasWebRenderer(webApp,id))failures.push(`${route}: no web router render target`);
+ const navigable=hasWebNavEntry(webApp,id)||webCatalog.includes('screen.webRoute');
  if(!navigable)failures.push(`${route}: no browser navigation/catalog entry`);
 }
 
@@ -71,12 +67,14 @@ async function expoRoutes(root){const out=[];await walk(root,'',out);return out.
 async function walk(dir,relative,out){for(const entry of await readdir(dir,{withFileTypes:true})){const nextRelative=relative?`${relative}/${entry.name}`:entry.name;const full=path.join(dir,entry.name);if(entry.isDirectory())await walk(full,nextRelative,out);else if(entry.name.endsWith('.tsx')&&entry.name!=='_layout.tsx')out.push(fileToRoute(nextRelative))}}
 function fileToRoute(file){let value=file.replace(/\.tsx$/,'');if(value==='index')return'/';if(value.endsWith('/index'))value=value.slice(0,-6);return`/${value}`}
 function stripQuery(route){return String(route).split('?')[0]}
-function stripWebQuery(route){const value=String(route);const [hash,query='']=value.split('?');return query?hash:hash}
+function stripWebQuery(route){return String(route).split('?')[0]}
 function escapeRegExp(value){return String(value).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
+function hasWebRenderer(source,id){
+ const escaped=escapeRegExp(id);
+ return new RegExp(`(?:^|[,{])\\s*(?:['"]${escaped}['"]|${escaped})\\s*:\\s*render[A-Za-z0-9_]+`, 'm').test(source);
+}
 function hasWebNavEntry(source,id){
- const token=`['${id}'`;
- const tokenDouble=`[\"${id}\"`;
- return source.includes(token)||source.includes(tokenDouble);
+ return source.includes(`['${id}'`)||source.includes(`[\"${id}\"`);
 }
 function liveWebRoutes(manifest){
  const routes=[];
