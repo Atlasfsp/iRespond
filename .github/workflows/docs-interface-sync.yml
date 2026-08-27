@@ -92,12 +92,20 @@ jobs:
           git checkout -b "$branch"
           git config user.name "iRespond Documentation Bot"
           git config user.email "documentation-bot@users.noreply.github.com"
+
+          # Required source-only evidence must always be staged. Optional runtime
+          # files are added independently so their absence cannot suppress a PR.
           git add docs/documentation-system/current-baseline.json \
                   docs/documentation-system/ui-fingerprint.generated.json \
                   docs/documentation-system/ui-change-report.generated.json \
-                  docs/documentation-system/runtime-capture.generated.json \
-                  docs/manuals/generated/ui-interface-baseline.md \
-                  docs/screenshots/current 2>/dev/null || true
+                  docs/manuals/generated/ui-interface-baseline.md
+          if test -f docs/documentation-system/runtime-capture.generated.json; then
+            git add docs/documentation-system/runtime-capture.generated.json
+          fi
+          if test -d docs/screenshots/current; then
+            git add docs/screenshots/current
+          fi
+
           if git diff --cached --quiet; then
             echo "No documentation changes to publish."
             exit 0
