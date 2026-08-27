@@ -1,0 +1,31 @@
+{
+  "schema": "irespond.frontend-navigation.v1",
+  "root": "/",
+  "universalEntries": ["/catalog", "/notifications"],
+  "routes": {
+    "/": {"access":"public","inbound":["app-launch"],"exits":["/needmap","/report","/workspace","/impact","/catalog","/notifications"]},
+    "/catalog": {"access":"public","inbound":["universal-topbar","/"],"exits":["/stitch/[screen]","/"]},
+    "/stitch/[screen]": {"access":"catalog-policy","inbound":["/catalog"],"exits":["/catalog","live-screen-route"]},
+    "/needmap": {"access":"public","inbound":["/","/catalog"],"exits":["/need/[id]","/report","/"]},
+    "/need/[id]": {"access":"public","inbound":["/needmap","/"],"exits":["/project/[id]","/report-safety","/signin","/"]},
+    "/report": {"access":"public","inbound":["bottom-nav","/","/needmap","/catalog"],"exits":["/evidence","/"]},
+    "/evidence": {"access":"public-draft-auth-on-sync","inbound":["/report","/catalog"],"exits":["/","/signin"]},
+    "/project/[id]": {"access":"public-read-resource-authority","inbound":["/need/[id]","/notifications"],"exits":["/project/contribute","/project/funding","/project-admin","/report-safety","/"]},
+    "/project/contribute": {"access":"authenticated","inbound":["/project/[id]"],"exits":["/project/[id]","/signin"]},
+    "/project/funding": {"access":"authenticated","inbound":["/project/[id]"],"exits":["/project/[id]","/pledges","/signin"]},
+    "/project-admin": {"access":"resource-permission-envelope","inbound":["/project/[id]","/workspace"],"exits":["/project/[id]","/workspace","/signin"]},
+    "/workspace": {"access":"authenticated","inbound":["bottom-nav","/","/notifications"],"exits":["/verify","/project-admin","/impact","/contributions","/pledges","/role-invite","/notifications","/privacy","/safety","/safety-ops","/profile","/signin"]},
+    "/contributions": {"access":"authenticated","inbound":["/workspace","/notifications"],"exits":["/role-invite","/workspace","/signin"]},
+    "/pledges": {"access":"authenticated","inbound":["/workspace","/project/funding","/notifications"],"exits":["/workspace","/signin"]},
+    "/role-invite": {"access":"authenticated-intended-invitee","inbound":["/workspace","/contributions","/notifications"],"exits":["/project/[id]","/workspace","/signin"]},
+    "/impact": {"access":"authenticated","inbound":["bottom-nav","/workspace","/catalog"],"exits":["/profile","/workspace","/signin"]},
+    "/profile": {"access":"authenticated-local-profile","inbound":["bottom-nav","/workspace","/impact","/catalog"],"exits":["/workspace","/"]},
+    "/notifications": {"access":"authenticated","inbound":["universal-topbar","/workspace"],"exits":["/project/[id]","/need/[id]","/role-invite","/contributions","/pledges","/safety","/privacy","/workspace","/signin"]},
+    "/privacy": {"access":"authenticated","inbound":["/workspace","/notifications","/catalog"],"exits":["/workspace","/signin"]},
+    "/safety": {"access":"authenticated","inbound":["/workspace","/notifications","/catalog"],"exits":["/report-safety","/workspace","/signin"]},
+    "/report-safety": {"access":"authenticated","inbound":["/safety","/need/[id]","/project/[id]"],"exits":["/safety","/signin"]},
+    "/safety-ops": {"access":"global-role:safety_reviewer|trust_safety_admin","inbound":["/workspace"],"exits":["/workspace","/signin"]},
+    "/verify": {"access":"global-verification-role","inbound":["/workspace","/catalog"],"exits":["/workspace","/project/[id]","/signin"]},
+    "/signin": {"access":"public","inbound":["protected-route-redirect","/workspace","/need/[id]"],"exits":["return-route","/"]}
+  }
+}
