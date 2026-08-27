@@ -17,9 +17,52 @@ const lines=[
 ];
 for(const screen of manifest.screens){
   const changed=report.changed.includes(screen.id)?' **Changed in this revision.**':'';
-  lines.push(`### ${screen.id}${changed}`,'',`- Route: \`${screen.route}\`` ,`- Source: \`${screen.source}\`` ,`- Source SHA-256: \`${fingerprint.sources[screen.source]||'unavailable'}\`` ,`- Expected UI anchor: “${screen.expectedText}”`,`- Screenshot: \`${screen.screenshot}\``,'',`![${screen.id} current interface](/${screen.screenshot})`,'');
+  lines.push(
+    `### ${screen.id}${changed}`,
+    '',
+    `- Surface: \`${screen.surface||'mobile'}\``,
+    `- Route: \`${screen.route}\``,
+    `- Source: \`${screen.source}\``,
+    `- Source git-blob SHA-1: \`${fingerprint.sources[screen.source]||'unavailable'}\``,
+    `- Expected UI anchor: “${screen.expectedText||'none'}”`,
+    `- Screenshot: \`${screen.screenshot}\``,
+    '',
+    `![${screen.id} current interface](/${screen.screenshot})`,
+    ''
+  );
 }
-lines.push('## Regeneration decision','',report.changed.length?`Manual interface sections require refresh for: ${report.changed.map(x=>`\`${x}\``).join(', ')}.`:'No registered interface section changed.','',`Runtime capture available in this run: **${report.runtimeCaptureAvailable?'yes':'no'}**.`,'');
+
+lines.push('## Newly changed or unmapped frontend sources','');
+if((report.unmappedFrontendChanges||[]).length){
+  lines.push('These files changed inside a canonical frontend root but are not yet assigned to a registered manual screenshot anchor. They must be reviewed before the documentation baseline is accepted.','');
+  for(const change of report.unmappedFrontendChanges){
+    lines.push(`- **${change.change}** \`${change.source}\` — previous \`${change.previous||'none'}\`, current \`${change.current||'deleted'}\``);
+  }
+  lines.push('');
+}else{
+  lines.push('No changed canonical frontend source is currently unmapped.','');
+}
+
+lines.push('## Runtime capture review','');
+if((report.runtimeFailures||[]).length){
+  lines.push('Runtime capture requires human review for the following registered surfaces:','');
+  for(const failure of report.runtimeFailures){
+    lines.push(`- \`${failure.id||failure.route||'unknown'}\`: ${failure.error||failure.anchorWarning||'capture/anchor mismatch'}`);
+  }
+  lines.push('');
+}else{
+  lines.push(`Runtime capture available in this run: **${report.runtimeCaptureAvailable?'yes':'no'}**. No captured route or text-anchor mismatch is currently recorded.`,'');
+}
+
+const hasAnyChange=(report.frontendSourceChanges||[]).length>0||(report.screenshotChanges||[]).length>0||(report.runtimeFailures||[]).length>0;
+lines.push(
+  '## Regeneration decision',
+  '',
+  hasAnyChange
+    ? `Manual interface review is required. Registered screen changes: ${report.changed.length?report.changed.map(x=>`\`${x}\``).join(', '):'none'}; changed canonical frontend source files: ${(report.frontendSourceChanges||[]).length}; unmapped changed sources: ${(report.unmappedFrontendChanges||[]).length}.`
+    : 'No canonical frontend source, registered screenshot or runtime-capture review signal changed.',
+  ''
+);
 const dir=path.join(root,'docs/manuals/generated');
 await mkdir(dir,{recursive:true});
 await writeFile(path.join(dir,'ui-interface-baseline.md'),`${lines.join('\n')}\n`);
