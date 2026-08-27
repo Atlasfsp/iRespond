@@ -1,0 +1,103 @@
+name: docs-interface-sync
+
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+      - 'tools/docs-sync/**'
+      - 'docs/documentation-system/**'
+      - '.github/workflows/docs-interface-sync.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Fingerprint registered mobile interface
+        run: node tools/docs-sync/src/fingerprint.mjs .
+      - name: Compare accepted documentation baseline
+        id: compare
+        run: node tools/docs-sync/src/compare-and-plan.mjs .
+      - name: Regenerate interface manual index
+        run: node tools/docs-sync/src/regenerate-manual-index.mjs .
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: documentation-ui-change-report
+          path: |
+            docs/documentation-system/ui-fingerprint.generated.json
+            docs/documentation-system/ui-change-report.generated.json
+            docs/manuals/generated/ui-interface-baseline.md
+          if-no-files-found: error
+      - name: Summarize documentation impact
+        run: |
+          echo "Registered interface changed: ${{ steps.compare.outputs.changed }}"
+          echo "Changed screen count: ${{ steps.compare.outputs.changed_count }}"
+
+  sync-on-main:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Fingerprint landed frontend
+        run: node tools/docs-sync/src/fingerprint.mjs .
+      - name: Optional runtime capture from documentation-safe preview
+        if: vars.IRESPOND_DOCS_CAPTURE_BASE_URL != ''
+        env:
+          DOCS_CAPTURE_BASE_URL: ${{ vars.IRESPOND_DOCS_CAPTURE_BASE_URL }}
+        run: |
+          npm install --prefix tools/docs-sync --ignore-scripts --no-audit --no-fund
+          npx --prefix tools/docs-sync playwright install chromium
+          node tools/docs-sync/src/capture.mjs .
+      - name: Compare and stage reviewed baseline candidate
+        id: compare
+        env:
+          DOCS_SYNC_UPDATE_BASELINE: '1'
+        run: node tools/docs-sync/src/compare-and-plan.mjs .
+      - name: Regenerate interface manual index
+        run: node tools/docs-sync/src/regenerate-manual-index.mjs .
+      - name: Open documentation synchronization PR
+        if: steps.compare.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch="docs-sync/${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}"
+          git checkout -b "$branch"
+          git config user.name "iRespond Documentation Bot"
+          git config user.email "documentation-bot@users.noreply.github.com"
+          git add docs/documentation-system/current-baseline.json \
+                  docs/documentation-system/ui-fingerprint.generated.json \
+                  docs/documentation-system/ui-change-report.generated.json \
+                  docs/documentation-system/runtime-capture.generated.json \
+                  docs/manuals/generated/ui-interface-baseline.md \
+                  docs/screenshots/current 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No documentation changes to publish."
+            exit 0
+          fi
+          git commit -m "docs: refresh manuals for frontend ${GITHUB_SHA:0:12}"
+          git push origin "$branch"
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "docs: refresh interface manuals for ${GITHUB_SHA:0:12}" \
+            --body "Automated documentation synchronization for frontend revision \`${GITHUB_SHA}\`. Review changed UI anchors/screenshots and training steps before merge. Runtime screenshots are included only when the configured documentation-safe preview rendered every registered route successfully. No production credentials or data were used."
