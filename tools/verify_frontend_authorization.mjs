@@ -4,10 +4,10 @@ const files={
  web:await readFile('apps/web/app.js','utf8'),
  webCatalog:await readFile('apps/web/stitch-catalog.js','utf8'),
  mobileCatalog:await readFile('apps/mobile/lib/stitch-screen-catalog.ts','utf8'),
+ capabilities:await readFile('apps/mobile/lib/capabilities.ts','utf8'),
  project:await readFile('apps/mobile/app/project/[id].tsx','utf8'),
  projectAdmin:await readFile('apps/mobile/app/project-admin.tsx','utf8'),
  workspace:await readFile('apps/mobile/app/workspace.tsx','utf8'),
- verify:await readFile('apps/mobile/app/verify.tsx','utf8'),
  safetyOps:await readFile('apps/mobile/app/safety-ops.tsx','utf8'),
  apiMap:await readFile('docs/frontend/frontend-api-map.json','utf8')
 };
@@ -37,10 +37,12 @@ need('mobileCatalog',"role !== 'resource-authorized'",'mobile catalog must exclu
 need('webCatalog',"role!=='resource-authorized'",'web catalog must exclude resource-authorized from global session roles');
 need('webCatalog','Open this capability from a concrete Project Room','web catalog must route resource authority through Project Room');
 
-// Global privileged domains remain role-gated.
-for(const role of ['community_verifier','institution_verifier','expert_verifier','impact_auditor','government_verifier','evidence_reviewer','trust_safety_admin'])need('verify',role,`verification workspace must preserve ${role} capability mapping`);
-need('safetyOps','safety.review','safety operations must require safety-review capability');
-need('workspace','safety.review','workspace must hide safety operations without reviewer authority');
+// Global privileged domains remain centralized in the role/capability boundary.
+for(const role of ['community_verifier','institution_verifier','expert_verifier','impact_auditor','government_verifier','evidence_reviewer','safety_reviewer','trust_safety_admin'])need('capabilities',role,`global capability map must preserve ${role}`);
+for(const capability of ['verification.community','verification.institution','verification.expert','verification.audit','verification.government','evidence.review','project.convert','milestone.validate','safety.review'])need('capabilities',capability,`global capability map must preserve ${capability}`);
+need('safetyOps',"hasCapability(session.roles,'safety.review')",'safety operations must require safety-review capability');
+need('workspace',"caps.has('safety.review')",'workspace must hide safety operations without reviewer authority');
+need('workspace',"v.startsWith('verification.')",'workspace must expose verification only through derived capabilities');
 
 // Service-to-service ingress is deliberately absent from untrusted clients.
 forbid('web',/\/v1\/internal\/notifications/,'internal notification ingress must not be callable by the web client');
