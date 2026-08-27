@@ -7,8 +7,8 @@ const web = await readFile('apps/web/app.js', 'utf8');
 const mobile = await readTree(['apps/mobile/app', 'apps/mobile/lib']);
 
 const operations = parseOperations(openapi);
-const excluded = new Set(Object.keys(map.excludedOperations || {}));
-const mapped = new Set(Object.keys(map.operations || {}));
+const excluded = new Set(Object.keys(map.coveragePolicy?.excludedOperations || {}));
+const mapped = new Set((map.operations || []).map((entry) => entry.operationId));
 const failures = [];
 
 for (const op of operations) {
