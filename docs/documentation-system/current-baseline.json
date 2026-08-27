@@ -1,0 +1,25 @@
+{
+  "schema": "irespond.documentation-baseline.v1",
+  "sourceRevision": "6484873c8a0c3306a5972247bcc9981da4051bc6",
+  "capturedAt": "2026-08-27",
+  "interfaceMode": "source-faithful-baseline",
+  "sources": {
+    "apps/mobile/app/index.tsx": "2a38c9dac82bd79ce62d5101356b4f5e646ea18d",
+    "apps/mobile/app/report.tsx": "ed46375aa28c6d886f0bd7215ff53f17d28bca21",
+    "apps/mobile/app/evidence.tsx": "9bdd1af22c8216eb143c63a51772d9afeae6e2a0",
+    "apps/mobile/app/needmap.tsx": "953bd6e576fbd95673299a7addc9cbea32de3633",
+    "apps/mobile/app/project/[id].tsx": "3be3a0c79849c24dcbc4d915e66edddf580ef316",
+    "apps/mobile/app/project/funding.tsx": "f959e5dd4411e89fc14338174f09c0f96ae1f2db",
+    "apps/mobile/app/impact.tsx": "8944ded89a2351cb3e28997a34b4a682974d7491",
+    "apps/mobile/app/privacy.tsx": "4827e556c107f4ce1e7e16ffb215135490d8e727",
+    "apps/mobile/app/report-safety.tsx": "8a92b565161082b1d9a208129fbe4833252db6a5"
+  },
+  "publications": [
+    {"id":"product","name":"iRespond Product Documentation","minimumPages":100,"renderedPages":127},
+    {"id":"technical","name":"iRespond Technical Documentation","minimumPages":100,"renderedPages":127},
+    {"id":"community","name":"Community Member Training & User Manual","minimumPages":100,"renderedPages":118},
+    {"id":"leaders","name":"Project Leader & Organization Training/User Manual","minimumPages":100,"renderedPages":118},
+    {"id":"contributors","name":"Contributor & Funder Training/User Manual","minimumPages":100,"renderedPages":118},
+    {"id":"operations","name":"Verification, Safety & Operations Training/User Manual","minimumPages":100,"renderedPages":118}
+  ]
+}
