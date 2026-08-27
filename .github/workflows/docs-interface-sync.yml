@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'apps/mobile/**'
+      - 'apps/web/**'
+      - 'docs/frontend/**'
       - 'tools/docs-sync/**'
       - 'docs/documentation-system/**'
       - '.github/workflows/docs-interface-sync.yml'
@@ -11,6 +13,8 @@ on:
     branches: [main]
     paths:
       - 'apps/mobile/**'
+      - 'apps/web/**'
+      - 'docs/frontend/**'
   workflow_dispatch:
 
 permissions:
@@ -24,7 +28,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-      - name: Fingerprint registered mobile interface
+      - name: Fingerprint canonical mobile and web interface
         run: node tools/docs-sync/src/fingerprint.mjs .
       - name: Compare accepted documentation baseline
         id: compare
@@ -41,8 +45,10 @@ jobs:
           if-no-files-found: error
       - name: Summarize documentation impact
         run: |
-          echo "Registered interface changed: ${{ steps.compare.outputs.changed }}"
-          echo "Changed screen count: ${{ steps.compare.outputs.changed_count }}"
+          echo "Canonical frontend changed: ${{ steps.compare.outputs.changed }}"
+          echo "Changed registered screen count: ${{ steps.compare.outputs.changed_count }}"
+          echo "Changed frontend source count: ${{ steps.compare.outputs.frontend_change_count }}"
+          echo "Changed sources without manual screen mapping: ${{ steps.compare.outputs.unmapped_change_count }}"
 
   sync-on-main:
     if: github.event_name == 'push'
@@ -59,10 +65,12 @@ jobs:
           node-version: 22
       - name: Fingerprint landed frontend
         run: node tools/docs-sync/src/fingerprint.mjs .
-      - name: Optional runtime capture from documentation-safe preview
-        if: vars.IRESPOND_DOCS_CAPTURE_BASE_URL != ''
+      - name: Optional runtime capture from documentation-safe previews
+        if: vars.IRESPOND_DOCS_CAPTURE_BASE_URL != '' || vars.IRESPOND_DOCS_MOBILE_CAPTURE_BASE_URL != '' || vars.IRESPOND_DOCS_WEB_CAPTURE_BASE_URL != ''
         env:
           DOCS_CAPTURE_BASE_URL: ${{ vars.IRESPOND_DOCS_CAPTURE_BASE_URL }}
+          DOCS_CAPTURE_MOBILE_BASE_URL: ${{ vars.IRESPOND_DOCS_MOBILE_CAPTURE_BASE_URL }}
+          DOCS_CAPTURE_WEB_BASE_URL: ${{ vars.IRESPOND_DOCS_WEB_CAPTURE_BASE_URL }}
         run: |
           npm install --prefix tools/docs-sync --ignore-scripts --no-audit --no-fund
           npx --prefix tools/docs-sync playwright install chromium
@@ -100,4 +108,4 @@ jobs:
             --base main \
             --head "$branch" \
             --title "docs: refresh interface manuals for ${GITHUB_SHA:0:12}" \
-            --body "Automated documentation synchronization for frontend revision \`${GITHUB_SHA}\`. Review changed UI anchors/screenshots and training steps before merge. Runtime screenshots are included only when the configured documentation-safe preview rendered every registered route successfully. No production credentials or data were used."
+            --body "Automated documentation synchronization for canonical frontend revision \`${GITHUB_SHA}\`. Review changed mobile/web UI anchors, newly added or unmapped frontend sources, screenshots and training steps before merge. Runtime screenshots are included only from configured documentation-safe previews; changed text anchors are preserved as review signals rather than silently accepted. No production credentials or data were used."
