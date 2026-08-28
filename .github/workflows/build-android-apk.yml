@@ -27,19 +27,24 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Set up pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.0 --activate
+          pnpm --version
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Install mobile dependencies
-        working-directory: apps/mobile
-        run: npm install --no-audit --no-fund
+      - name: Install canonical workspace dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Generate native Android project
         working-directory: apps/mobile
-        run: npx expo prebuild --platform android --clean --no-install
+        run: pnpm exec expo prebuild --platform android --clean --no-install
 
       - name: Build release APK
         working-directory: apps/mobile/android
