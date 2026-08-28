@@ -87,7 +87,11 @@ jobs:
 
       - name: Bundle Android assets smoke test
         working-directory: apps/mobile
-        run: pnpm exec expo export --platform android --output-dir /tmp/irespond-export
+        run: |
+          rm -rf .apk-export-smoke
+          pnpm exec expo export --platform android --output-dir .apk-export-smoke
+          test -d .apk-export-smoke
+          rm -rf .apk-export-smoke
 
       - name: Build release APK
         working-directory: apps/mobile/android
