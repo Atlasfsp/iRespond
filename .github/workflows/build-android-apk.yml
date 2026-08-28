@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - build/android-apk-20260828
+  pull_request:
+    branches:
+      - feature/stitch-unified-role-ui
 
 permissions:
   contents: read
