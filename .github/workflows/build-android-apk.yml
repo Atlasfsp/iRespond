@@ -1,0 +1,60 @@
+name: build-android-apk
+
+on:
+  push:
+    branches:
+      - build/android-apk-20260828
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: "1"
+      EXPO_NO_TELEMETRY: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: npm install --no-audit --no-fund
+
+      - name: Generate native Android project
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --clean --no-install
+
+      - name: Build release APK
+        working-directory: apps/mobile/android
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Verify APK
+        run: |
+          test -s apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          mkdir -p dist
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk dist/iRespond-0.1.0-stitch-test.apk
+          sha256sum dist/iRespond-0.1.0-stitch-test.apk | tee dist/iRespond-0.1.0-stitch-test.apk.sha256
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: iRespond-android-apk
+          path: |
+            dist/iRespond-0.1.0-stitch-test.apk
+            dist/iRespond-0.1.0-stitch-test.apk.sha256
+          if-no-files-found: error
+          retention-days: 7
