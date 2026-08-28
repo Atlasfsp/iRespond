@@ -34,6 +34,14 @@ jobs:
           corepack prepare pnpm@10.15.0 --activate
           pnpm --version
 
+      - name: Configure Expo pnpm autolinking hoists
+        run: |
+          cat > .npmrc <<'EOF'
+          public-hoist-pattern[]=*expo-modules-autolinking
+          public-hoist-pattern[]=*expo-modules-core
+          public-hoist-pattern[]=*babel-preset-expo
+          EOF
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -61,10 +69,17 @@ jobs:
           pnpm install --no-frozen-lockfile
           pnpm why image-size --recursive || true
 
-      - name: Verify Expo and Metro dependency contracts
+      - name: Verify Expo, Metro and Android autolinking contracts
         run: |
           cd apps/mobile
           pnpm exec expo install --check --pnpm
+          pnpm exec expo-modules-autolinking react-native-config --platform android > /tmp/irespond-rn-config.json
+          cat /tmp/irespond-rn-config.json
+          if grep -Fq 'expo.core.ExpoModulesPackage' /tmp/irespond-rn-config.json; then
+            echo 'Legacy expo.core.ExpoModulesPackage autolink detected' >&2
+            exit 1
+          fi
+          grep -Fq 'expo.modules.ExpoModulesPackage' /tmp/irespond-rn-config.json
           cd ../..
           METRO_DIR="$(find node_modules/.pnpm -path '*/metro@0.82.5/node_modules/metro' -type d | head -n 1)"
           test -n "$METRO_DIR"
