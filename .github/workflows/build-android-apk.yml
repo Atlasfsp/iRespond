@@ -19,6 +19,8 @@ jobs:
       CI: "1"
       NODE_ENV: production
       EXPO_NO_TELEMETRY: "1"
+      EXPO_PUBLIC_DEMO_MODE: "1"
+      EXPO_PUBLIC_API_BASE_URL: "https://demo.irespond.local"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -67,14 +69,12 @@ jobs:
           fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
           NODE
           pnpm install --no-frozen-lockfile
-          pnpm why image-size --recursive || true
 
       - name: Verify Expo, Metro and Android autolinking contracts
         run: |
           cd apps/mobile
           pnpm exec expo install --check --pnpm
           pnpm exec expo-modules-autolinking react-native-config --platform android > /tmp/irespond-rn-config.json
-          cat /tmp/irespond-rn-config.json
           if grep -Fq 'expo.core.ExpoModulesPackage' /tmp/irespond-rn-config.json; then
             echo 'Legacy expo.core.ExpoModulesPackage autolink detected' >&2
             exit 1
@@ -90,15 +90,23 @@ jobs:
           const metroRequire = createRequire(path.join(process.cwd(), metroDir, 'package.json'));
           const imageSize = metroRequire('image-size');
           const imageSizePkg = metroRequire('image-size/package.json');
-          console.log(`Metro image-size ${imageSizePkg.version}; typeof require(image-size)=${typeof imageSize}`);
-          if (imageSizePkg.version !== '1.0.2' || typeof imageSize !== 'function') {
-            throw new Error('Metro image-size CommonJS contract is not compatible');
-          }
+          if (imageSizePkg.version !== '1.0.2' || typeof imageSize !== 'function') throw new Error('Metro image-size CommonJS contract is not compatible');
           NODE
 
       - name: Generate native Android project
         working-directory: apps/mobile
         run: pnpm exec expo prebuild --platform android --clean --no-install
+
+      - name: Optimize demo release footprint
+        working-directory: apps/mobile/android
+        run: |
+          cat >> gradle.properties <<'EOF'
+          reactNativeArchitectures=arm64-v8a
+          android.enableMinifyInReleaseBuilds=true
+          android.enableShrinkResourcesInReleaseBuilds=true
+          org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g
+          EOF
+          tail -n 12 gradle.properties
 
       - name: Bundle Android assets smoke test
         working-directory: apps/mobile
@@ -108,7 +116,7 @@ jobs:
           test -d .apk-export-smoke
           rm -rf .apk-export-smoke
 
-      - name: Build release APK
+      - name: Build compact demo APK
         working-directory: apps/mobile/android
         run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
 
@@ -116,15 +124,16 @@ jobs:
         run: |
           test -s apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           mkdir -p dist
-          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk dist/iRespond-0.1.0-stitch-test.apk
-          sha256sum dist/iRespond-0.1.0-stitch-test.apk | tee dist/iRespond-0.1.0-stitch-test.apk.sha256
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk dist/iRespond-0.1.0-offline-demo-arm64.apk
+          stat -c '%n %s bytes' dist/iRespond-0.1.0-offline-demo-arm64.apk
+          sha256sum dist/iRespond-0.1.0-offline-demo-arm64.apk | tee dist/iRespond-0.1.0-offline-demo-arm64.apk.sha256
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: iRespond-android-apk
+          name: iRespond-offline-demo-arm64
           path: |
-            dist/iRespond-0.1.0-stitch-test.apk
-            dist/iRespond-0.1.0-stitch-test.apk.sha256
+            dist/iRespond-0.1.0-offline-demo-arm64.apk
+            dist/iRespond-0.1.0-offline-demo-arm64.apk.sha256
           if-no-files-found: error
           retention-days: 7
