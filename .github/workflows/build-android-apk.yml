@@ -45,14 +45,49 @@ jobs:
 
       - name: Align native dependencies to installed Expo SDK
         working-directory: apps/mobile
+        run: pnpm exec expo install --fix --pnpm
+
+      - name: Pin Metro-compatible image-size API
         run: |
-          pnpm exec expo install --fix --pnpm
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'package.json';
+          const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
+          pkg.pnpm ??= {};
+          pkg.pnpm.overrides ??= {};
+          pkg.pnpm.overrides['image-size'] = '1.0.2';
+          fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
+          NODE
+          pnpm install --no-frozen-lockfile
+          pnpm why image-size --recursive || true
+
+      - name: Verify Expo and Metro dependency contracts
+        run: |
+          cd apps/mobile
           pnpm exec expo install --check --pnpm
-          git diff -- package.json ../../pnpm-lock.yaml || true
+          cd ../..
+          METRO_DIR="$(find node_modules/.pnpm -path '*/metro@0.82.5/node_modules/metro' -type d | head -n 1)"
+          test -n "$METRO_DIR"
+          node - "$METRO_DIR" <<'NODE'
+          const path = require('path');
+          const { createRequire } = require('module');
+          const metroDir = process.argv[2];
+          const metroRequire = createRequire(path.join(process.cwd(), metroDir, 'package.json'));
+          const imageSize = metroRequire('image-size');
+          const imageSizePkg = metroRequire('image-size/package.json');
+          console.log(`Metro image-size ${imageSizePkg.version}; typeof require(image-size)=${typeof imageSize}`);
+          if (imageSizePkg.version !== '1.0.2' || typeof imageSize !== 'function') {
+            throw new Error('Metro image-size CommonJS contract is not compatible');
+          }
+          NODE
 
       - name: Generate native Android project
         working-directory: apps/mobile
         run: pnpm exec expo prebuild --platform android --clean --no-install
+
+      - name: Bundle Android assets smoke test
+        working-directory: apps/mobile
+        run: pnpm exec expo export --platform android --output-dir /tmp/irespond-export
 
       - name: Build release APK
         working-directory: apps/mobile/android
