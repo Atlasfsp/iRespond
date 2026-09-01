@@ -22,7 +22,7 @@ export default function VerificationWorkspace() {
 
   useEffect(() => { getSession().then(setSession).catch(() => router.replace('/signin')).finally(() => setBusy('')); }, []);
   const caps = useMemo(() => capabilitiesForRoles(session?.roles ?? []), [session?.roles]);
-  const transitions = useMemo(() => verificationTransitionsForRoles(session?.roles ?? []), [session?.roles]);
+  const transitions = useMemo(() => verificationTransitionsForRoles(session?.roles ?? [], need?.verificationState), [session?.roles, need?.verificationState]);
 
   async function loadNeed() {
     if (!needId.trim()) return;

@@ -5,6 +5,7 @@ const files={
  webCatalog:await readFile('apps/web/stitch-catalog.js','utf8'),
  mobileCatalog:await readFile('apps/mobile/lib/stitch-screen-catalog.ts','utf8'),
  capabilities:await readFile('apps/mobile/lib/capabilities.ts','utf8'),
+ verify:await readFile('apps/mobile/app/verify.tsx','utf8'),
  project:await readFile('apps/mobile/app/project/[id].tsx','utf8'),
  projectAdmin:await readFile('apps/mobile/app/project-admin.tsx','utf8'),
  projectFunding:await readFile('apps/mobile/app/project/funding.tsx','utf8'),
@@ -15,6 +16,8 @@ const files={
  mobileApi:await readFile('apps/mobile/lib/api.ts','utf8'),
  server:await readFile('services/api/cmd/server/main.go','utf8'),
  projectRoutes:await readFile('services/api/cmd/server/project_routes.go','utf8'),
+ safetyService:await readFile('services/api/internal/safety/service.go','utf8'),
+ safetyMigration:await readFile('services/api/migrations/0010_platform_safety_subject.sql','utf8'),
  apiMap:await readFile('docs/frontend/frontend-api-map.json','utf8')
 };
 const failures=[];
@@ -30,6 +33,7 @@ need('web',"p.canValidateMilestones&&m.status==='submitted'",'web verifier contr
 need('web','p.canManageRoles','project role management must be permission-gated');
 need('web','p.canManageProject','project lifecycle management must be permission-gated');
 need('web','p.canManageFunding','funding-plan management must be permission-gated');
+need('web','verificationButtons(need.verificationState)','web verification actions must honor the loaded need state');
 need('web','Promise.all([loadFundingPlan(id),api(`/v1/projects/${encodeURIComponent(id)}`)])','funding must load project permissions even when no plan exists yet');
 need('web','if(error.status===404)return null','a missing funding plan must be treated as an empty first-plan state');
 for(const role of ['project_manager','community_steward','verifier','volunteer_lead','procurement_lead','maintenance_owner'])need('web',`<option>${role}</option>`,`project role selector must offer canonical role ${role}`);
@@ -62,10 +66,14 @@ need('webCatalog','Open this capability from a concrete Project Room','web catal
 // Global privileged domains remain centralized in the role/capability boundary.
 for(const role of ['community_verifier','institution_verifier','expert_verifier','impact_auditor','government_verifier','evidence_reviewer','safety_reviewer','trust_safety_admin'])need('capabilities',role,`global capability map must preserve ${role}`);
 for(const capability of ['verification.community','verification.institution','verification.expert','verification.audit','verification.government','evidence.review','project.convert','milestone.validate','safety.review'])need('capabilities',capability,`global capability map must preserve ${capability}`);
+need('capabilities','verificationTransitionAllowed','mobile verification actions must share the server transition graph');
+need('verify','verificationTransitionsForRoles(session?.roles ?? [], need?.verificationState)','mobile verification actions must honor the loaded need state');
 if(!/impact_auditor:\s*\[[^\]]*'milestone\.validate'/.test(files.capabilities))failures.push('capabilities: impact_auditor must receive milestone validation');
 need('projectRoutes','p.HasRole("impact_auditor")','server milestone validation must recognize the canonical impact_auditor role');
 forbid('projectRoutes',/p\.HasRole\("auditor"\)/,'server milestone validation must not depend on the non-canonical auditor role');
 need('safetyOps',"hasCapability(session.roles,'safety.review')",'safety operations must require safety-review capability');
+need('safetyService','"platform":true','generic platform safety reports must be accepted by the domain service');
+need('safetyMigration',"'platform'",'database safety subject constraint must accept generic platform reports');
 need('workspace',"caps.has('safety.review')",'workspace must hide safety operations without reviewer authority');
 need('workspace',"v.startsWith('verification.')",'workspace must expose verification only through derived capabilities');
 if(!/has\('evidence\.review'\)\?`(?:(?!`:\x27\x27}).)*Approved evidence access(?:(?!`:\x27\x27}).)*`:\x27\x27}/s.test(files.web))failures.push('web: evidence access must be inside the evidence-review capability branch');
