@@ -309,5 +309,7 @@ assert.match(verificationWorkspace, /access\.unavailableReason/);
 const projectAdmin = await readFile('apps/mobile/app/project-admin.tsx', 'utf8');
 assert.match(projectAdmin, /offerState==='offered'/);
 assert.match(projectAdmin, /offerState==='accepted'/);
+assert.match(projectAdmin, /submitted:canValidate\?'validated':'cancelled'/);
+assert.match(projectAdmin, /disabled=\{!perms\.canManageMilestones\|\|!nextMilestoneState\(m\.status,false\)\}/);
 
 console.log('offline demo contract: PASS');

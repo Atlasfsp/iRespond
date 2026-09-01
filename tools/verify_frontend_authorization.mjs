@@ -31,7 +31,8 @@ need('web','p.canManageMilestones','milestone creation must be permission-gated'
 need('web','p.canValidateMilestones','milestone validation must be permission-gated');
 need('web',"p.canValidateMilestones&&m.status==='submitted'",'web verifier controls must be limited to submitted milestone validation');
 need('web',"if(p.canValidateMilestones&&m.status==='submitted')return",'submitted milestone validation must take precedence for dual-authority identities');
-need('web',"if(m.status==='submitted')return''",'submitted milestones must not expose a manager-only self-transition');
+need('web',"p.canManageMilestones&&m.status==='submitted'",'submitted milestones must preserve the manager cancellation transition');
+need('web',"milestoneTransitionForm(m,'cancelled','Cancel submitted milestone')",'submitted milestone cancellation must target the canonical cancelled state');
 need('web',"if(!p.canManageMilestones)return''",'non-managers must not receive milestone-management transitions');
 need('web',"offerState==='offered'",'web contribution decisions must be limited to offered commitments');
 need('web',"offerState==='accepted'",'web contribution fulfillment must be limited to accepted commitments');
