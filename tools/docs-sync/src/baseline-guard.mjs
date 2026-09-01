@@ -18,6 +18,7 @@ const publicationBranchPattern = /^docs-sync\/([0-9a-f]{40})-([1-9][0-9]*)-([0-9
 export function validateBaselineOwnership({
   publicationArtifactsChanged,
   acceptedBaselineExists,
+  baseRevision,
   baseRef,
   baseRepository,
   repository,
@@ -32,6 +33,9 @@ export function validateBaselineOwnership({
   }
   if (!publicationArtifactsChanged || !acceptedBaselineExists) return;
   const publicationBranchMatch = publicationBranchPattern.exec(headRef || '');
+  if (publicationBranchMatch && publicationBranchMatch[1] !== baseRevision) {
+    throw new Error('A generated documentation publication must match the exact accepted base revision.');
+  }
   const publicationOwned = pullRequestAuthor === 'github-actions[bot]'
     && publicationBranchMatch?.[3] === headRevision
     && sameRepository
@@ -83,6 +87,7 @@ async function main() {
   validateBaselineOwnership({
     publicationArtifactsChanged,
     acceptedBaselineExists,
+    baseRevision: acceptedRevision,
     baseRef: process.env.DOCS_SYNC_BASE_REF || '',
     baseRepository: process.env.DOCS_SYNC_BASE_REPOSITORY || '',
     repository: process.env.GITHUB_REPOSITORY || '',

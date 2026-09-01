@@ -202,6 +202,7 @@ test('all synchronized publication artifacts are owned by the publication workfl
     'docs/screenshots/current',
   ]);
   const protectedBase = {
+    baseRevision: sourceHead,
     baseRef: 'main',
     baseRepository: 'Atlasfsp/iRespond',
     repository: 'Atlasfsp/iRespond',
@@ -275,6 +276,17 @@ test('all synchronized publication artifacts are owned by the publication workfl
     sameRepository: true,
     publicationProvenanceVerified: false,
   }), /trusted docs-interface-sync run/);
+  assert.throws(() => validateBaselineOwnership({
+    ...protectedBase,
+    baseRevision: 'fedcba9876543210fedcba9876543210fedcba98',
+    publicationArtifactsChanged: true,
+    acceptedBaselineExists: true,
+    headRef: publicationRef,
+    headRevision: publicationHead,
+    pullRequestAuthor: 'github-actions[bot]',
+    sameRepository: true,
+    publicationProvenanceVerified: true,
+  }), /exact accepted base revision/);
   assert.throws(() => validateBaselineOwnership({
     ...protectedBase,
     baseRef: 'feature/unprotected-base',
@@ -732,6 +744,7 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.doesNotMatch(workflow, /Guard accepted baseline ownership/);
   assert.doesNotMatch(workflow, /run: node tools\/docs-sync\/src\/baseline-guard\.mjs/);
   assert.match(ownershipWorkflow, /pull_request_target:/);
+  assert.match(ownershipWorkflow, /push:\n\s+branches: \[main\]/);
   assert.match(ownershipWorkflow, /types: \[opened, synchronize, reopened, ready_for_review, edited\]/);
   assert.match(ownershipWorkflow, /workflow_dispatch:/);
   assert.match(ownershipWorkflow, /pull_request_number:/);
@@ -743,6 +756,7 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.match(ownershipWorkflow, /gh run download "\$publication_run_id"/);
   assert.match(ownershipWorkflow, /documentation-publication-provenance-\$\{publication_run_id\}/);
   assert.match(ownershipWorkflow, /publicationSha == \$publication_sha/);
+  assert.match(ownershipWorkflow, /baseSha == \$base_sha/);
   assert.match(ownershipWorkflow, /pullRequestNumber == \$pull_request_number/);
   assert.match(ownershipWorkflow, /\.github\/workflows\/docs-interface-sync\.yml/);
   assert.match(ownershipWorkflow, /DOCS_SYNC_PUBLICATION_PROVENANCE/);
@@ -752,6 +766,8 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.match(ownershipWorkflow, /node tools\/docs-sync\/src\/baseline-guard\.mjs \./);
   assert.match(ownershipWorkflow, /statuses: write/);
   assert.match(ownershipWorkflow, /context=docs-baseline-ownership/);
+  assert.match(ownershipWorkflow, /Revalidate open generated publications after main advances/);
+  assert.match(ownershipWorkflow, /-f state=pending/);
   assert.match(captureJob, /permissions:\n\s+contents: read/);
   assert.match(captureJob, /npm install --prefix tools\/docs-sync/);
   assert.match(captureJob, /DOCS_CAPTURE_REVISION_URL/);
@@ -769,6 +785,7 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.match(publishJob, /docs-sync\/\$\{GITHUB_SHA\}-\$\{GITHUB_RUN_ID\}-\$\{publication_sha\}/);
   assert.match(publishJob, /documentation-publication-provenance-\$\{\{ github\.run_id \}\}/);
   assert.match(publishJob, /docs-sync-publication-provenance\/publication\.json/);
+  assert.match(publishJob, /--arg baseSha "\$GITHUB_SHA"/);
   assert.match(
     publishJob,
     /gh workflow run docs-baseline-ownership\.yml --ref main -f pull_request_number="\$PUBLICATION_PR_NUMBER"/,

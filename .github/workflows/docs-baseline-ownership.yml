@@ -3,6 +3,8 @@ name: docs-baseline-ownership
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review, edited]
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       pull_request_number:
@@ -18,6 +20,7 @@ permissions:
 
 jobs:
   baseline-ownership:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Resolve authoritative pull request metadata
@@ -71,6 +74,7 @@ jobs:
                       --arg repository "$GITHUB_REPOSITORY" \
                       --arg workflow_path ".github/workflows/docs-interface-sync.yml" \
                       --arg source_sha "$source_sha" \
+                      --arg base_sha "$base_sha" \
                       --arg run_id "$publication_run_id" \
                       --arg branch "$head_ref" \
                       --arg publication_sha "$head_sha" \
@@ -78,6 +82,7 @@ jobs:
                       '.repository == $repository
                         and .workflowPath == $workflow_path
                         and .sourceSha == $source_sha
+                        and .baseSha == $base_sha
                         and .runId == $run_id
                         and .branch == $branch
                         and .publicationSha == $publication_sha
@@ -142,3 +147,33 @@ jobs:
             -f context=docs-baseline-ownership \
             -f description="Base-controlled documentation baseline ownership check" \
             -f target_url="$TARGET_URL"
+
+  revalidate-open-publications:
+    name: Revalidate open generated publications after main advances
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+      statuses: write
+    steps:
+      - name: Invalidate and dispatch every open generated publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          while IFS=$'\t' read -r pr_number head_sha head_ref author head_repository; do
+            test "$author" = "github-actions[bot]" || continue
+            test "$head_repository" = "$GITHUB_REPOSITORY" || continue
+            [[ "$head_ref" =~ ^docs-sync/[0-9a-f]{40}-[1-9][0-9]*-[0-9a-f]{40}$ ]] || continue
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${head_sha}" \
+              -f state=pending \
+              -f context=docs-baseline-ownership \
+              -f description="Main advanced; exact-base documentation revalidation required" \
+              -f target_url="$TARGET_URL"
+            gh workflow run docs-baseline-ownership.yml --ref main -f pull_request_number="$pr_number"
+            gh workflow run docs-interface-sync.yml --ref "$head_ref" -f pull_request_number="$pr_number"
+          done < <(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls?state=open&base=main&per_page=100" \
+            --jq '.[] | [.number, .head.sha, .head.ref, .user.login, .head.repo.full_name] | @tsv')

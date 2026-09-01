@@ -286,11 +286,12 @@ jobs:
             --arg repository "$GITHUB_REPOSITORY" \
             --arg workflowPath ".github/workflows/docs-interface-sync.yml" \
             --arg sourceSha "$GITHUB_SHA" \
+            --arg baseSha "$GITHUB_SHA" \
             --arg runId "$GITHUB_RUN_ID" \
             --arg branch "$branch" \
             --arg publicationSha "$publication_sha" \
             --argjson pullRequestNumber "$pr_number" \
-            '{repository: $repository, workflowPath: $workflowPath, sourceSha: $sourceSha, runId: $runId, branch: $branch, publicationSha: $publicationSha, pullRequestNumber: $pullRequestNumber}' \
+            '{repository: $repository, workflowPath: $workflowPath, sourceSha: $sourceSha, baseSha: $baseSha, runId: $runId, branch: $branch, publicationSha: $publicationSha, pullRequestNumber: $pullRequestNumber}' \
             > "$provenance_dir/publication.json"
           {
             echo "branch=$branch"
