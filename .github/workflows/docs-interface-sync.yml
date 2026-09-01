@@ -28,6 +28,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
+      - name: Verify documentation synchronization regressions
+        run: node --test tools/docs-sync/src/docs-sync.test.mjs
       - name: Fingerprint canonical mobile and web interface
         run: node tools/docs-sync/src/fingerprint.mjs .
       - name: Compare accepted documentation baseline
@@ -50,16 +52,18 @@ jobs:
           echo "Changed frontend source count: ${{ steps.compare.outputs.frontend_change_count }}"
           echo "Changed sources without manual screen mapping: ${{ steps.compare.outputs.unmapped_change_count }}"
 
-  sync-on-main:
+  capture-on-main:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
@@ -82,8 +86,37 @@ jobs:
         run: node tools/docs-sync/src/compare-and-plan.mjs .
       - name: Regenerate interface manual index
         run: node tools/docs-sync/src/regenerate-manual-index.mjs .
+      - name: Transfer documentation synchronization candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: documentation-sync-candidate-${{ github.sha }}
+          path: |
+            docs/documentation-system/current-baseline.json
+            docs/documentation-system/ui-fingerprint.generated.json
+            docs/documentation-system/ui-change-report.generated.json
+            docs/documentation-system/runtime-capture.generated.json
+            docs/manuals/generated/ui-interface-baseline.md
+            docs/screenshots/current
+          if-no-files-found: error
+
+  sync-on-main:
+    needs: capture-on-main
+    if: needs.capture-on-main.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download reviewed synchronization candidate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: documentation-sync-candidate-${{ github.sha }}
+          path: .
       - name: Open documentation synchronization PR
-        if: steps.compare.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -111,7 +144,7 @@ jobs:
             exit 0
           fi
           git commit -m "docs: refresh manuals for frontend ${GITHUB_SHA:0:12}"
-          git push origin "$branch"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$branch"
           gh pr create \
             --base main \
             --head "$branch" \

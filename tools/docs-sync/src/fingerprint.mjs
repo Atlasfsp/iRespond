@@ -5,7 +5,12 @@ import path from 'node:path';
 const root = path.resolve(process.argv[2] || '.');
 const manifest = JSON.parse(await readFile(path.join(root, 'docs/documentation-system/screen-manifest.json'), 'utf8'));
 const trackedRoots = manifest.trackedFrontendRoots || ['apps/mobile', 'apps/web'];
-const uiExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json', '.css', '.html']);
+const uiExtensions = new Set([
+  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json', '.css', '.html',
+  '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.heic',
+  '.svg', '.ico', '.woff', '.woff2', '.ttf', '.otf', '.eot',
+  '.mp4', '.webm', '.mov',
+]);
 
 async function exists(target) {
   try { await access(target); return true; } catch { return false; }

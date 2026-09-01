@@ -8,8 +8,13 @@ const fingerprint=JSON.parse(await readFile(path.join(root,'docs/documentation-s
 const baselinePath=path.join(root,'docs/documentation-system/current-baseline.json');
 const baseline=JSON.parse(await readFile(baselinePath,'utf8'));
 const runtimePath=path.join(root,'docs/documentation-system/runtime-capture.generated.json');
+const sourceRevision=process.env.GITHUB_SHA||fingerprint.sourceRevision||'local';
 let runtime=null;
-try { await access(runtimePath); runtime=JSON.parse(await readFile(runtimePath,'utf8')); } catch {}
+try {
+  await access(runtimePath);
+  const candidate=JSON.parse(await readFile(runtimePath,'utf8'));
+  if(candidate.sourceRevision===sourceRevision) runtime=candidate;
+} catch {}
 
 const mappedSources=new Map();
 for(const screen of manifest.screens){
@@ -51,7 +56,7 @@ const changedScreens=[...new Set([...sourceChanges.map(change=>change.id),...scr
 const hasChanges=frontendSourceChanges.length>0||screenshotChanges.length>0||runtimeFailures.length>0;
 const report={
   schema:'irespond.documentation-ui-change-report.v2',
-  sourceRevision:process.env.GITHUB_SHA||'local',
+  sourceRevision,
   baselineRevision:baseline.sourceRevision,
   runtimeCaptureAvailable:!!runtime,
   changed:changedScreens,

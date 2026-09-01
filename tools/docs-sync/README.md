@@ -12,7 +12,7 @@
 
 Set `DOCS_CAPTURE_BASE_URL` to a deterministic preview of the current mobile frontend. `npm run capture` uses Playwright Chromium at the viewport pinned in `screen-manifest.json`, grants only deterministic documentation geolocation, verifies an expected text anchor on each route and captures the rendered screen.
 
-The capture command intentionally exits non-zero if a registered screen cannot render. It never substitutes production tokens, users, evidence or provider accounts. A documentation build may supply `DOCS_CAPTURE_INIT_SCRIPT` to seed a synthetic session in a dedicated capture build; that script must never contain production credentials.
+After attempting all registered screens, the capture command exits successfully after writing the capture report. An unreachable route or changed text anchor is retained in that report as a route or text-anchor review signal so the separate publication job can deliver the incomplete evidence for human review. A missing documentation-safe preview URL still exits non-zero before capture begins. The command never substitutes production tokens, users, evidence or provider accounts. A documentation build may supply `DOCS_CAPTURE_INIT_SCRIPT` to seed a synthetic session in a dedicated capture build; that script must never contain production credentials.
 
 `mock-api.mjs` supplies deterministic synthetic API responses for documentation preview builds that can point `EXPO_PUBLIC_API_BASE_URL` at the local mock server.
 

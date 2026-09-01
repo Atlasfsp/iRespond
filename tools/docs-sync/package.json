@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "node --test src/docs-sync.test.mjs",
     "fingerprint": "node src/fingerprint.mjs",
     "mock-api": "node src/mock-api.mjs",
     "capture": "node src/capture.mjs",
