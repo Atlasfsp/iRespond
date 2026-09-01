@@ -279,6 +279,8 @@ for (const operation of apiMap.operations) {
   assert.notDeepEqual(result, { status: 404, body: { error: 'Offline demo route is not implemented.' } }, `${operation.operationId}: ${operation.method} ${path} must be implemented by the offline demo`);
 }
 
+const inheritedDemoMode = process.env.EXPO_PUBLIC_DEMO_MODE;
+delete process.env.EXPO_PUBLIC_DEMO_MODE;
 const productionConfig = mobileConfig({
   config: {
     name: 'iRespond',
@@ -299,6 +301,7 @@ assert.equal(demoConfig.scheme, 'irespond-demo');
 assert.equal(demoConfig.android?.package, 'global.irespond.app.demo');
 assert.equal(demoConfig.ios?.bundleIdentifier, 'global.irespond.app.demo');
 delete process.env.EXPO_PUBLIC_DEMO_MODE;
+if (inheritedDemoMode !== undefined) process.env.EXPO_PUBLIC_DEMO_MODE = inheritedDemoMode;
 
 const workflow = await readFile('.github/workflows/build-android-demo.yml', 'utf8');
 assert.match(workflow, /workflow_dispatch:/);
