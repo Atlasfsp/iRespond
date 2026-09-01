@@ -1,0 +1,36 @@
+name: docs-baseline-ownership
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  baseline-ownership:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Fetch pull request head as untrusted data
+        env:
+          DOCS_SYNC_PR_NUMBER: ${{ github.event.pull_request.number }}
+          DOCS_SYNC_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$DOCS_SYNC_PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          [[ "$DOCS_SYNC_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git fetch --no-tags origin "pull/${DOCS_SYNC_PR_NUMBER}/head"
+          test "$(git rev-parse FETCH_HEAD)" = "$DOCS_SYNC_HEAD_SHA"
+      - name: Enforce accepted baseline ownership from base-controlled code
+        env:
+          DOCS_SYNC_ACCEPTED_REVISION: ${{ github.event.pull_request.base.sha }}
+          DOCS_SYNC_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DOCS_SYNC_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          DOCS_SYNC_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          DOCS_SYNC_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: node tools/docs-sync/src/baseline-guard.mjs .

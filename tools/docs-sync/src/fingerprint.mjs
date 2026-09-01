@@ -42,6 +42,7 @@ const files = [...new Set([
 ])].filter(Boolean).sort();
 
 const synchronizationContractCandidates = [
+  '.github/workflows/docs-baseline-ownership.yml',
   '.github/workflows/docs-interface-sync.yml',
   'docs/documentation-system/screen-manifest.json',
   'tools/docs-sync/package.json',

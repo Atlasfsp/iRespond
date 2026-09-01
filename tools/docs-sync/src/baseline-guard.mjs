@@ -12,10 +12,12 @@ export function validateBaselineOwnership({
   acceptedBaselineExists,
   headRef,
   pullRequestAuthor,
+  sameRepository = false,
 }) {
   if (!baselineChanged || !acceptedBaselineExists) return;
   const publicationOwned = pullRequestAuthor === 'github-actions[bot]'
-    && publicationBranchPattern.test(headRef || '');
+    && publicationBranchPattern.test(headRef || '')
+    && sameRepository;
   if (!publicationOwned) {
     throw new Error(
       `Only a github-actions[bot] ${publicationBranchPattern} publication PR may change the accepted baseline.`,
@@ -36,8 +38,12 @@ async function gitExitCode(args, cwd) {
 async function main() {
   const root = path.resolve(process.argv[2] || '.');
   const acceptedRevision = process.env.DOCS_SYNC_ACCEPTED_REVISION || '';
+  const headRevision = process.env.DOCS_SYNC_HEAD_SHA || 'HEAD';
   if (!/^[0-9a-f]{40}$/.test(acceptedRevision)) {
     throw new Error('DOCS_SYNC_ACCEPTED_REVISION must be an exact 40-character Git SHA.');
+  }
+  if (headRevision !== 'HEAD' && !/^[0-9a-f]{40}$/.test(headRevision)) {
+    throw new Error('DOCS_SYNC_HEAD_SHA must be an exact 40-character Git SHA.');
   }
 
   const acceptedBaselineExists = await gitExitCode(
@@ -47,7 +53,7 @@ async function main() {
   let baselineChanged = true;
   if (acceptedBaselineExists) {
     const diffExit = await gitExitCode(
-      ['diff', '--quiet', `${acceptedRevision}...HEAD`, '--', baselinePath],
+      ['diff', '--quiet', `${acceptedRevision}...${headRevision}`, '--', baselinePath],
       root,
     );
     if (diffExit !== 0 && diffExit !== 1) {
@@ -61,8 +67,9 @@ async function main() {
     acceptedBaselineExists,
     headRef: process.env.DOCS_SYNC_HEAD_REF || '',
     pullRequestAuthor: process.env.DOCS_SYNC_PR_AUTHOR || '',
+    sameRepository: process.env.DOCS_SYNC_HEAD_REPOSITORY === process.env.GITHUB_REPOSITORY,
   });
-  console.log(JSON.stringify({ acceptedRevision, acceptedBaselineExists, baselineChanged }));
+  console.log(JSON.stringify({ acceptedRevision, headRevision, acceptedBaselineExists, baselineChanged }));
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

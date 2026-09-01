@@ -201,6 +201,7 @@ test('accepted baseline changes are owned by the publication workflow', async ()
     acceptedBaselineExists: true,
     headRef: 'docs-sync/0123456789ab-123456789',
     pullRequestAuthor: 'github-actions[bot]',
+    sameRepository: true,
   }));
   assert.throws(() => validateBaselineOwnership({
     baselineChanged: true,
@@ -213,6 +214,14 @@ test('accepted baseline changes are owned by the publication workflow', async ()
     acceptedBaselineExists: true,
     headRef: 'docs-sync/0123456789ab-123456789',
     pullRequestAuthor: 'contributor',
+    sameRepository: true,
+  }), /may change the accepted baseline/);
+  assert.throws(() => validateBaselineOwnership({
+    baselineChanged: true,
+    acceptedBaselineExists: true,
+    headRef: 'docs-sync/0123456789ab-123456789',
+    pullRequestAuthor: 'github-actions[bot]',
+    sameRepository: false,
   }), /may change the accepted baseline/);
 });
 
@@ -544,6 +553,10 @@ test('capture dependencies run outside the repository-write publication job', as
     path.join(repositoryRoot, '.github/workflows/docs-interface-sync.yml'),
     'utf8',
   );
+  const ownershipWorkflow = await readFile(
+    path.join(repositoryRoot, '.github/workflows/docs-baseline-ownership.yml'),
+    'utf8',
+  );
   const captureStart = workflow.indexOf('  capture-on-main:');
   const publishStart = workflow.indexOf('  sync-on-main:');
   const pushStart = workflow.indexOf('  push:');
@@ -556,6 +569,7 @@ test('capture dependencies run outside the repository-write publication job', as
   const publishJob = workflow.slice(publishStart);
   assert.match(pushTrigger, /docs\/documentation-system\/screen-manifest\.json/);
   assert.match(pushTrigger, /tools\/docs-sync\/\*\*/);
+  assert.match(pushTrigger, /\.github\/workflows\/docs-baseline-ownership\.yml/);
   assert.match(pushTrigger, /\.github\/workflows\/docs-interface-sync\.yml/);
   assert.match(workflow, /github\.event\.pull_request\.base\.sha/);
   assert.match(workflow, /github\.event\.before/);
@@ -563,12 +577,13 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.match(workflow, /git show .*docs\/documentation-system\/current-baseline\.json/);
   assert.match(workflow, /"bootstrap":true/);
   assert.doesNotMatch(workflow, /using the checked-in bootstrap baseline/);
-  assert.match(
-    workflow,
-    /git show .*tools\/docs-sync\/src\/baseline-guard\.mjs.*> "\$trusted_guard"/,
-  );
-  assert.match(workflow, /node "\$trusted_guard" \./);
+  assert.doesNotMatch(workflow, /Guard accepted baseline ownership/);
   assert.doesNotMatch(workflow, /run: node tools\/docs-sync\/src\/baseline-guard\.mjs/);
+  assert.match(ownershipWorkflow, /pull_request_target:/);
+  assert.match(ownershipWorkflow, /ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/);
+  assert.match(ownershipWorkflow, /persist-credentials: false/);
+  assert.match(ownershipWorkflow, /git fetch --no-tags origin "pull\/\$\{DOCS_SYNC_PR_NUMBER\}\/head"/);
+  assert.match(ownershipWorkflow, /node tools\/docs-sync\/src\/baseline-guard\.mjs \./);
   assert.match(captureJob, /permissions:\n\s+contents: read/);
   assert.match(captureJob, /npm install --prefix tools\/docs-sync/);
   assert.match(captureJob, /DOCS_CAPTURE_REVISION_URL/);
