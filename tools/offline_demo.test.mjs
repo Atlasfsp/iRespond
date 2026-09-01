@@ -53,6 +53,7 @@ expectOk('/v1/session', (body) => {
 
 expectOk('/v1/projects/project-water-1', (body) => {
   assert.equal(body.project.id, 'project-water-1');
+  assert.equal(body.project.status, 'executing');
   assert.equal(Array.isArray(body.milestones), true);
   assert.equal(Array.isArray(body.contributionNeeds), true);
   assert.equal(typeof body.permissions.canManageFunding, 'boolean');
@@ -77,6 +78,7 @@ expectOk(`/v1/needs/${createdNeed.id}`, (body) => assert.equal(body.verification
 const createdProject = expectOk(`/v1/needs/${createdNeed.id}/project`, (body) => {
   assert.equal(body.sourceNeedId, createdNeed.id);
   assert.equal(body.title, 'Safe classrooms follow-up');
+  assert.equal(body.status, 'draft');
 }, 'POST', { title: 'Safe classrooms follow-up', ownerCommunityId: 'community-school-1' });
 expectOk(`/v1/projects/${createdProject.id}`, (body) => {
   assert.equal(body.project.id, createdProject.id);
@@ -89,6 +91,27 @@ assert.equal(payload(`/v1/projects/${createdProject.id}/funding`).status, 404);
 const duplicateConversion = payload(`/v1/needs/${createdNeed.id}/project`, 'POST', { title: 'Duplicate project' });
 assert.equal(duplicateConversion.status, 409);
 assert.deepEqual(duplicateConversion.body, { error: 'need already has an action project' });
+
+const projectWithoutManager = payload(`/v1/projects/${createdProject.id}/transition`, 'POST', { state: 'approved' });
+assert.equal(projectWithoutManager.status, 409);
+assert.deepEqual(projectWithoutManager.body, { error: 'project manager must accept role before approval' });
+expectOk(`/v1/projects/${createdProject.id}/milestones`, (body) => {
+  assert.equal(body.status, 'planned');
+}, 'POST', { title: 'Confirm implementation scope', description: 'Required approval plan.', sequence: 1 });
+const managerInvite = expectOk(`/v1/projects/${createdProject.id}/roles/invite`, (body) => {
+  assert.equal(body.projectId, createdProject.id);
+  assert.equal(body.invitedActorId, 'offline-demo-user');
+  assert.equal(body.role, 'project_manager');
+  assert.equal(body.status, 'pending');
+}, 'POST', { actorId: 'offline-demo-user', role: 'project_manager' });
+expectOk(`/v1/project-role-invites/${managerInvite.id}/accept`, (body) => {
+  assert.equal(body.status, 'accepted');
+  assert.equal(body.role, 'project_manager');
+}, 'POST');
+expectOk(`/v1/projects/${createdProject.id}/transition`, (body) => {
+  assert.equal(body.status, 'approved');
+}, 'POST', { state: 'approved' });
+expectOk(`/v1/projects/${createdProject.id}`, (body) => assert.equal(body.project.status, 'approved'));
 
 expectOk('/v1/me/impact-passport', (body) => {
   assert.equal(body.subject, 'offline-demo-user');
@@ -155,8 +178,26 @@ const contributionOffer = expectOk('/v1/projects/project-water-1/contribution-ne
   assert.equal(body.status, 'offered');
 }, 'POST', { note: 'I can bring test kits.', availabilityNote: 'Tomorrow' });
 expectOk('/v1/me/contribution-offers', (body) => assert.equal(body.some((item) => item.id === contributionOffer.id), true));
+const prematureFulfillment = payload(`/v1/projects/project-water-1/contribution-offers/${contributionOffer.id}/fulfill`, 'POST', {});
+assert.equal(prematureFulfillment.status, 404);
+assert.deepEqual(prematureFulfillment.body, { error: 'accepted contribution offer not found' });
 expectOk(`/v1/contribution-offers/${contributionOffer.id}/withdraw`, (body) => assert.equal(body.status, 'withdrawn'), 'POST');
 expectOk('/v1/me/contribution-offers', (body) => assert.equal(body.find((item) => item.id === contributionOffer.id).status, 'withdrawn'));
+
+const acceptedOffer = expectOk('/v1/projects/project-water-1/contribution-needs/contribution-testing/offers', (body) => {
+  assert.equal(body.status, 'offered');
+}, 'POST', { note: 'Second local offer.', availabilityNote: 'This week' });
+expectOk(`/v1/projects/project-water-1/contribution-offers/${acceptedOffer.id}/decision`, (body) => {
+  assert.equal(body.status, 'accepted');
+}, 'POST', { decision: 'accepted', closeNeed: false });
+const repeatedDecision = payload(`/v1/projects/project-water-1/contribution-offers/${acceptedOffer.id}/decision`, 'POST', { decision: 'declined' });
+assert.equal(repeatedDecision.status, 409);
+assert.deepEqual(repeatedDecision.body, { error: 'only offered contributions may be accepted or declined' });
+expectOk(`/v1/projects/project-water-1/contribution-offers/${acceptedOffer.id}/fulfill`, (body) => {
+  assert.equal(body.status, 'fulfilled');
+}, 'POST', {});
+assert.deepEqual(payload(`/v1/projects/project-water-1/contribution-offers/${acceptedOffer.id}/fulfill`, 'POST', {}).body, { error: 'accepted contribution offer not found' });
+expectOk('/v1/me/contribution-offers', (body) => assert.equal(body.find((item) => item.id === acceptedOffer.id).status, 'fulfilled'));
 
 const newMilestone = expectOk('/v1/projects/project-water-1/milestones', (body) => {
   assert.equal(body.title, 'Demo closeout');
@@ -164,13 +205,21 @@ const newMilestone = expectOk('/v1/projects/project-water-1/milestones', (body) 
 expectOk('/v1/projects/project-water-1', (body) => assert.equal(body.milestones.some((item) => item.id === newMilestone.id), true));
 expectOk(`/v1/projects/project-water-1/milestones/${newMilestone.id}/transition`, (body) => assert.equal(body.status, 'ready'), 'POST', { state: 'ready' });
 expectOk('/v1/projects/project-water-1', (body) => assert.equal(body.milestones.find((item) => item.id === newMilestone.id).status, 'ready'));
+const invalidMilestoneTransition = payload(`/v1/projects/project-water-1/milestones/${newMilestone.id}/transition`, 'POST', { state: 'validated' });
+assert.equal(invalidMilestoneTransition.status, 409);
+assert.deepEqual(invalidMilestoneTransition.body, { error: 'invalid milestone transition' });
 
 const newContributionNeed = expectOk('/v1/projects/project-water-1/contribution-needs', (body) => {
   assert.equal(body.description, 'Community handover support');
 }, 'POST', { kind: 'time', description: 'Community handover support', quantityNote: 'Two hours' });
 expectOk('/v1/projects/project-water-1', (body) => assert.equal(body.contributionNeeds.some((item) => item.id === newContributionNeed.id), true));
-expectOk('/v1/projects/project-water-1/transition', (body) => assert.equal(body.status, 'completed'), 'POST', { state: 'completed' });
-expectOk('/v1/projects/project-water-1', (body) => assert.equal(body.project.status, 'completed'));
+const invalidProjectTransition = payload('/v1/projects/project-water-1/transition', 'POST', { state: 'completed' });
+assert.equal(invalidProjectTransition.status, 409);
+assert.deepEqual(invalidProjectTransition.body, { error: 'invalid project transition' });
+const projectNotReady = payload('/v1/projects/project-water-1/transition', 'POST', { state: 'validating' });
+assert.equal(projectNotReady.status, 409);
+assert.deepEqual(projectNotReady.body, { error: 'all active milestones must be submitted before validation' });
+expectOk('/v1/projects/project-water-1', (body) => assert.equal(body.project.status, 'executing'));
 
 expectOk('/v1/projects/project-water-1/milestones/milestone-repair/transition', (body) => {
   assert.equal(body.id, 'milestone-repair');
@@ -212,7 +261,7 @@ function fixturePath(path) {
 for (const operation of apiMap.operations) {
   const path = fixturePath(operation.path);
   const result = payload(path, operation.method, {});
-  assert.notEqual(result.status, 404, `${operation.operationId}: ${operation.method} ${path} must be implemented by the offline demo`);
+  assert.notDeepEqual(result, { status: 404, body: { error: 'Offline demo route is not implemented.' } }, `${operation.operationId}: ${operation.method} ${path} must be implemented by the offline demo`);
 }
 
 const productionConfig = mobileConfig({
@@ -256,5 +305,9 @@ assert.match(reactNativeConfig, /new ExpoModulesPackage\(\)/);
 
 const verificationWorkspace = await readFile('apps/mobile/app/verify.tsx', 'utf8');
 assert.match(verificationWorkspace, /access\.unavailableReason/);
+
+const projectAdmin = await readFile('apps/mobile/app/project-admin.tsx', 'utf8');
+assert.match(projectAdmin, /offerState==='offered'/);
+assert.match(projectAdmin, /offerState==='accepted'/);
 
 console.log('offline demo contract: PASS');

@@ -53,7 +53,7 @@ const projects = [
     title: 'Safe Water for 2,500 Residents',
     description: 'Repair, test and establish a community maintenance plan for the water point.',
     ownerCommunityId: 'community-lagos-mainland',
-    status: 'active',
+    status: 'executing',
     sdgTags: [6, 11],
   },
   {
@@ -62,7 +62,7 @@ const projects = [
     title: 'Mobile Community Health Days',
     description: 'Coordinate verified health partners for recurring community outreach.',
     ownerCommunityId: 'community-yaba',
-    status: 'active',
+    status: 'mobilising',
     sdgTags: [3, 5],
   },
 ];
@@ -96,6 +96,34 @@ const contributionNeedsByProject: Record<string, typeof contributionNeeds> = {
   'project-water-1': contributionNeeds,
   'project-health-1': [],
 };
+
+const projectRolesByProject: Record<string, Set<string>> = {
+  'project-water-1': new Set(['project_manager']),
+  'project-health-1': new Set(['project_manager']),
+};
+
+type DemoRoleInvite = {
+  id: string;
+  projectId: string;
+  invitedActorId: string;
+  role: string;
+  invitedBy: string;
+  status: string;
+  createdAt: string;
+  respondedAt?: string;
+};
+
+const roleInvites = new Map<string, DemoRoleInvite>([
+  ['invite-1', {
+    id: 'invite-1',
+    projectId: 'project-water-1',
+    invitedActorId: 'offline-demo-user',
+    role: 'volunteer_lead',
+    invitedBy: 'offline-demo-steward',
+    status: 'pending',
+    createdAt: '2026-08-30T09:00:00.000Z',
+  }],
+]);
 
 const offers = [
   {
@@ -187,6 +215,7 @@ const privacyRequests = [
 ];
 
 function ok(body: unknown): DemoResult { return { status: 200, body }; }
+function badRequest(message: string): DemoResult { return { status: 400, body: { error: message } }; }
 function missing(message = 'Offline demo record was not found.'): DemoResult { return { status: 404, body: { error: message } }; }
 function conflict(message: string): DemoResult { return { status: 409, body: { error: message } }; }
 function asRecord(value: unknown): JsonRecord { return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : {}; }
@@ -194,6 +223,30 @@ function lastSegment(path: string) { return decodeURIComponent(path.split('/').f
 function projectFor(id: string) { return projects.find((project) => project.id === id); }
 function needFor(id: string) { return needs.find((need) => need.id === id); }
 function isVerifiedState(state: string) { return ['community_confirmed', 'institution_confirmed', 'expert_confirmed', 'independently_audited', 'government_confirmed'].includes(state); }
+function validProjectRole(role: string) { return ['project_manager', 'community_steward', 'verifier', 'volunteer_lead', 'procurement_lead', 'maintenance_owner'].includes(role); }
+function allowedProjectTransition(from: string, to: string) {
+  if (to === 'cancelled' && from !== 'completed' && from !== 'cancelled') return true;
+  return ({ draft: 'approved', approved: 'mobilising', mobilising: 'executing', executing: 'validating', validating: 'maintaining', maintaining: 'completed' } as Record<string, string>)[from] === to;
+}
+function projectReadiness(projectId: string, target: string) {
+  const projectMilestones = milestonesByProject[projectId] ?? [];
+  const projectRoles = projectRolesByProject[projectId] ?? new Set<string>();
+  if (target === 'approved' && !projectRoles.has('project_manager')) return 'project manager must accept role before approval';
+  if (target === 'approved' && !projectMilestones.some((milestone) => milestone.status !== 'cancelled')) return 'at least one milestone is required before approval';
+  if (target === 'validating' && projectMilestones.some((milestone) => !['submitted', 'validated', 'cancelled'].includes(milestone.status))) return 'all active milestones must be submitted before validation';
+  if (target === 'maintaining' && projectMilestones.some((milestone) => !['validated', 'cancelled'].includes(milestone.status))) return 'all active milestones must be validated before maintenance';
+  if (target === 'completed' && !projectRoles.has('maintenance_owner')) return 'maintenance owner is required before completion';
+  return null;
+}
+function allowedMilestoneTransition(from: string, to: string) {
+  if (to === 'cancelled' && from !== 'validated' && from !== 'cancelled') return true;
+  if (from === 'planned') return to === 'ready';
+  if (from === 'ready') return to === 'in_progress';
+  if (from === 'in_progress') return to === 'blocked' || to === 'submitted';
+  if (from === 'blocked') return to === 'in_progress';
+  if (from === 'submitted') return to === 'validated';
+  return false;
+}
 function projectDetail(id: string) {
   const project = projectFor(id);
   return project ? { project, milestones: milestonesByProject[id] ?? [], contributionNeeds: contributionNeedsByProject[id] ?? [], permissions } : null;
@@ -278,12 +331,13 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
       title: String(input.title ?? need.title),
       description: String(input.description ?? need.description),
       ownerCommunityId: String(input.ownerCommunityId ?? 'offline-demo-community'),
-      status: 'planning',
+      status: 'draft',
       sdgTags: need.sdgTags,
     };
     projects.push(project);
     milestonesByProject[project.id] = [];
     contributionNeedsByProject[project.id] = [];
+    projectRolesByProject[project.id] = new Set();
     return ok(project);
   }
   const verification = path.match(/^\/v1\/needs\/([^/]+)\/verification$/);
@@ -348,11 +402,17 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
   }
   const contributionOffer = path.match(/^\/v1\/projects\/([^/]+)\/contribution-needs\/([^/]+)\/offers$/);
   if (contributionOffer && verb === 'POST') {
+    const projectId = decodeURIComponent(contributionOffer[1]);
+    const contributionNeedId = decodeURIComponent(contributionOffer[2]);
+    const contributionNeed = (contributionNeedsByProject[projectId] ?? []).find((candidate) => candidate.id === contributionNeedId);
+    if (!contributionNeed) return missing('contribution need not found');
+    if (!['open', 'partially_filled'].includes(contributionNeed.status)) return conflict('contribution need is not accepting offers');
     const offer = {
       ...offers[0],
       id: `demo-offer-${now.getTime()}-${offers.length}`,
-      projectId: decodeURIComponent(contributionOffer[1]),
-      contributionNeedId: decodeURIComponent(contributionOffer[2]),
+      projectId,
+      contributionNeedId,
+      kind: contributionNeed.kind,
       contributorId: 'offline-demo-user',
       note: String(input.note ?? ''),
       availabilityNote: String(input.availabilityNote ?? ''),
@@ -365,11 +425,6 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
   }
   const projectOffers = path.match(/^\/v1\/projects\/([^/]+)\/contribution-offers$/);
   if (projectOffers && verb === 'GET') return ok(offers.filter((offer) => offer.projectId === decodeURIComponent(projectOffers[1])));
-  if (projectOffers && verb === 'POST') {
-    const offer = { ...offers[0], id: `demo-offer-${now.getTime()}-${offers.length}`, projectId: decodeURIComponent(projectOffers[1]), note: String(input.note ?? ''), availabilityNote: String(input.availabilityNote ?? ''), status: 'offered', createdAt: now.toISOString(), updatedAt: now.toISOString() };
-    offers.push(offer);
-    return ok(offer);
-  }
   const milestoneCreate = path.match(/^\/v1\/projects\/([^/]+)\/milestones$/);
   if (verb === 'POST' && milestoneCreate) {
     const projectId = decodeURIComponent(milestoneCreate[1]);
@@ -393,19 +448,47 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
     const projectId = decodeURIComponent(projectTransition[1]);
     const index = projects.findIndex((project) => project.id === projectId);
     if (index < 0) return missing();
-    projects[index] = { ...projects[index], status: String(input.state ?? projects[index].status) };
+    const target = String(input.state ?? '');
+    if (!allowedProjectTransition(projects[index].status, target)) return conflict('invalid project transition');
+    const readinessError = projectReadiness(projectId, target);
+    if (readinessError) return conflict(readinessError);
+    projects[index] = { ...projects[index], status: target };
     return ok(projects[index]);
   }
   const offerMutation = path.match(/^\/v1\/projects\/([^/]+)\/contribution-offers\/([^/]+)\/(decision|fulfill)$/);
   if (verb === 'POST' && offerMutation) {
+    const projectId = decodeURIComponent(offerMutation[1]);
     const offerId = decodeURIComponent(offerMutation[2]);
-    const index = offers.findIndex((offer) => offer.id === offerId);
-    if (index < 0) return missing();
-    const status = offerMutation[3] === 'fulfill' ? 'fulfilled' : String(input.decision ?? 'accepted');
+    const index = offers.findIndex((offer) => offer.id === offerId && offer.projectId === projectId);
+    if (offerMutation[3] === 'fulfill') {
+      if (index < 0 || offers[index].status !== 'accepted') return missing('accepted contribution offer not found');
+      offers[index] = { ...offers[index], status: 'fulfilled', updatedAt: now.toISOString() };
+      return ok(offers[index]);
+    }
+    if (index < 0) return missing('contribution offer not found');
+    const status = String(input.decision ?? '').toLowerCase().trim();
+    if (status !== 'accepted' && status !== 'declined') return badRequest('decision must be accepted or declined');
+    if (offers[index].status !== 'offered') return conflict('only offered contributions may be accepted or declined');
     offers[index] = { ...offers[index], status, updatedAt: now.toISOString() };
+    if (status === 'accepted') {
+      const projectContributionNeeds = contributionNeedsByProject[projectId] ?? [];
+      const contributionNeed = projectContributionNeeds.find((candidate) => candidate.id === offers[index].contributionNeedId);
+      if (contributionNeed && ['open', 'partially_filled'].includes(contributionNeed.status)) contributionNeed.status = input.closeNeed ? 'filled' : 'partially_filled';
+    }
     return ok(offers[index]);
   }
-  if (verb === 'POST' && /^\/v1\/projects\/[^/]+\/roles\/invite$/.test(path)) return ok({ id: `demo-invite-${now.getTime()}`, status: 'pending', demo: true });
+  const roleInvite = path.match(/^\/v1\/projects\/([^/]+)\/roles\/invite$/);
+  if (verb === 'POST' && roleInvite) {
+    const projectId = decodeURIComponent(roleInvite[1]);
+    const invitedActorId = String(input.actorId ?? '').trim();
+    const role = String(input.role ?? '').trim();
+    if (!invitedActorId || !role) return badRequest('actorId and role are required');
+    if (!validProjectRole(role)) return badRequest('invalid project role');
+    if (!projectFor(projectId)) return badRequest('project not found');
+    const invite: DemoRoleInvite = { id: `demo-invite-${now.getTime()}-${roleInvites.size}`, projectId, invitedActorId, role, invitedBy: 'offline-demo-steward', status: 'pending', createdAt: now.toISOString() };
+    roleInvites.set(invite.id, invite);
+    return ok(invite);
+  }
   const projectMatch = path.match(/^\/v1\/projects\/([^/]+)$/);
   if (verb === 'GET' && projectMatch) {
     const detail = projectDetail(decodeURIComponent(projectMatch[1]));
@@ -418,7 +501,9 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
     const projectMilestones = milestonesByProject[projectId] ?? [];
     const index = projectMilestones.findIndex((milestone) => milestone.id === milestoneId);
     if (index < 0) return missing();
-    projectMilestones[index] = { ...projectMilestones[index], status: String(input.state ?? projectMilestones[index].status) };
+    const target = String(input.state ?? '');
+    if (!allowedMilestoneTransition(projectMilestones[index].status, target)) return conflict('invalid milestone transition');
+    projectMilestones[index] = { ...projectMilestones[index], status: target };
     return ok(projectMilestones[index]);
   }
 
@@ -454,8 +539,8 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
   const withdraw = path.match(/^\/v1\/contribution-offers\/([^/]+)\/withdraw$/);
   if (verb === 'POST' && withdraw) {
     const offerId = decodeURIComponent(withdraw[1]);
-    const index = offers.findIndex((item) => item.id === offerId);
-    if (index < 0) return missing();
+    const index = offers.findIndex((item) => item.id === offerId && item.contributorId === 'offline-demo-user' && item.status === 'offered');
+    if (index < 0) return missing('open contribution offer not found for this identity');
     offers[index] = { ...offers[index], status: 'withdrawn', updatedAt: now.toISOString() };
     return ok(offers[index]);
   }
@@ -501,7 +586,16 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
     safetyReports[index] = { ...safetyReports[index], status, updatedAt: now.toISOString() };
     return ok(safetyReports[index]);
   }
-  if (verb === 'POST' && /^\/v1\/project-role-invites\/[^/]+\/accept$/.test(path)) return ok({ projectId: 'project-water-1', role: 'volunteer_lead' });
+  const roleInviteAccept = path.match(/^\/v1\/project-role-invites\/([^/]+)\/accept$/);
+  if (verb === 'POST' && roleInviteAccept) {
+    const inviteId = decodeURIComponent(roleInviteAccept[1]);
+    const invite = roleInvites.get(inviteId);
+    if (!invite || invite.invitedActorId !== 'offline-demo-user' || invite.status !== 'pending') return missing('pending invite not found for this identity');
+    const accepted = { ...invite, status: 'accepted', respondedAt: now.toISOString() };
+    roleInvites.set(inviteId, accepted);
+    (projectRolesByProject[invite.projectId] ?? (projectRolesByProject[invite.projectId] = new Set())).add(invite.role);
+    return ok(accepted);
+  }
   if (verb === 'POST' && /^\/v1\/evidence\/[^/]+\/review$/.test(path)) return ok({ id: path.split('/')[3], status: String(input.decision ?? 'available') });
 
   return { status: 404, body: { error: 'Offline demo route is not implemented.' } };
