@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
       - name: Select accepted base-branch documentation baseline
         env:
-          DOCS_SYNC_ACCEPTED_REVISION: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          DOCS_SYNC_ACCEPTED_REVISION: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'push' && github.event.before || github.sha }}
         run: |
           set -euo pipefail
           accepted="$RUNNER_TEMP/docs-sync-accepted-baseline.json"
@@ -47,6 +47,13 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
+      - name: Guard accepted baseline ownership
+        if: github.event_name == 'pull_request'
+        env:
+          DOCS_SYNC_ACCEPTED_REVISION: ${{ github.event.pull_request.base.sha }}
+          DOCS_SYNC_HEAD_REF: ${{ github.head_ref }}
+          DOCS_SYNC_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: node tools/docs-sync/src/baseline-guard.mjs .
       - name: Verify documentation synchronization regressions
         run: node --test tools/docs-sync/src/docs-sync.test.mjs
       - name: Fingerprint canonical mobile and web interface

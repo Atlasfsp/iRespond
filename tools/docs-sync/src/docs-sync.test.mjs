@@ -182,6 +182,40 @@ test('bootstrap comparison cannot trust head-controlled accepted hashes', async 
   assert.equal('unreviewedHeadMetadata' in baseline, false);
 });
 
+test('accepted baseline changes are owned by the publication workflow', async () => {
+  const { validateBaselineOwnership } = await import('./baseline-guard.mjs');
+  assert.doesNotThrow(() => validateBaselineOwnership({
+    baselineChanged: false,
+    acceptedBaselineExists: true,
+    headRef: 'feature/no-baseline-change',
+    pullRequestAuthor: 'contributor',
+  }));
+  assert.doesNotThrow(() => validateBaselineOwnership({
+    baselineChanged: true,
+    acceptedBaselineExists: false,
+    headRef: 'docs/bootstrap-system',
+    pullRequestAuthor: 'contributor',
+  }));
+  assert.doesNotThrow(() => validateBaselineOwnership({
+    baselineChanged: true,
+    acceptedBaselineExists: true,
+    headRef: 'docs-sync/0123456789ab-123456789',
+    pullRequestAuthor: 'github-actions[bot]',
+  }));
+  assert.throws(() => validateBaselineOwnership({
+    baselineChanged: true,
+    acceptedBaselineExists: true,
+    headRef: 'feature/preaccept-future-hashes',
+    pullRequestAuthor: 'contributor',
+  }), /may change the accepted baseline/);
+  assert.throws(() => validateBaselineOwnership({
+    baselineChanged: true,
+    acceptedBaselineExists: true,
+    headRef: 'docs-sync/0123456789ab-123456789',
+    pullRequestAuthor: 'contributor',
+  }), /may change the accepted baseline/);
+});
+
 test('compare accepts runtime evidence only from the current source revision', async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -525,9 +559,11 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.match(pushTrigger, /\.github\/workflows\/docs-interface-sync\.yml/);
   assert.match(workflow, /github\.event\.pull_request\.base\.sha/);
   assert.match(workflow, /github\.event\.before/);
+  assert.match(workflow, /\|\| github\.sha/);
   assert.match(workflow, /git show .*docs\/documentation-system\/current-baseline\.json/);
   assert.match(workflow, /"bootstrap":true/);
   assert.doesNotMatch(workflow, /using the checked-in bootstrap baseline/);
+  assert.match(workflow, /baseline-guard\.mjs/);
   assert.match(captureJob, /permissions:\n\s+contents: read/);
   assert.match(captureJob, /npm install --prefix tools\/docs-sync/);
   assert.match(captureJob, /DOCS_CAPTURE_REVISION_URL/);

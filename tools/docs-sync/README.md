@@ -8,6 +8,8 @@
 
 `npm run fingerprint` hashes every registered screen plus shared mobile routing/session/sync inputs. It separately fingerprints the screen manifest, publication workflow and executable synchronization tooling as the documentation synchronization contract. In CI, `npm run compare` compares both sets of inputs with the accepted baseline loaded from the pull request's base revision or the pre-push main revision—not a baseline modified by the triggering change. When the accepted predecessor has no baseline, CI generates an empty bootstrap baseline so head-controlled hashes cannot be pre-accepted; descriptive bootstrap metadata is retained only after all source, contract and screenshot state is recomputed. A frontend source or synchronization-contract change is sufficient to require publication review even when no render target is available.
 
+After bootstrap, `current-baseline.json` may change only in a `docs-sync/<source-sha>-<run-id>` pull request created by `github-actions[bot]`. The pull-request guard rejects direct baseline edits from every other branch or author. Manual workflow dispatch compares against the baseline at the dispatched `github.sha`.
+
 ### 2. Runtime capture — enabled only with a documentation-safe preview
 
 Set `DOCS_CAPTURE_BASE_URL` to a deterministic preview of the current mobile frontend. `npm run capture` uses Playwright Chromium at the viewport pinned in `screen-manifest.json`, grants only deterministic documentation geolocation, verifies an expected text anchor on each route and captures the rendered screen.
