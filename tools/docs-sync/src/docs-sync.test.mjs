@@ -563,7 +563,12 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.match(workflow, /git show .*docs\/documentation-system\/current-baseline\.json/);
   assert.match(workflow, /"bootstrap":true/);
   assert.doesNotMatch(workflow, /using the checked-in bootstrap baseline/);
-  assert.match(workflow, /baseline-guard\.mjs/);
+  assert.match(
+    workflow,
+    /git show .*tools\/docs-sync\/src\/baseline-guard\.mjs.*> "\$trusted_guard"/,
+  );
+  assert.match(workflow, /node "\$trusted_guard" \./);
+  assert.doesNotMatch(workflow, /run: node tools\/docs-sync\/src\/baseline-guard\.mjs/);
   assert.match(captureJob, /permissions:\n\s+contents: read/);
   assert.match(captureJob, /npm install --prefix tools\/docs-sync/);
   assert.match(captureJob, /DOCS_CAPTURE_REVISION_URL/);

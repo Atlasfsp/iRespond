@@ -53,7 +53,15 @@ jobs:
           DOCS_SYNC_ACCEPTED_REVISION: ${{ github.event.pull_request.base.sha }}
           DOCS_SYNC_HEAD_REF: ${{ github.head_ref }}
           DOCS_SYNC_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-        run: node tools/docs-sync/src/baseline-guard.mjs .
+        run: |
+          set -euo pipefail
+          if git cat-file -e "${DOCS_SYNC_ACCEPTED_REVISION}:docs/documentation-system/current-baseline.json"; then
+            trusted_guard="$RUNNER_TEMP/docs-sync-baseline-guard.mjs"
+            git show "${DOCS_SYNC_ACCEPTED_REVISION}:tools/docs-sync/src/baseline-guard.mjs" > "$trusted_guard"
+            node "$trusted_guard" .
+          else
+            echo "Accepted revision has no baseline; ownership guard is in bootstrap mode."
+          fi
       - name: Verify documentation synchronization regressions
         run: node --test tools/docs-sync/src/docs-sync.test.mjs
       - name: Fingerprint canonical mobile and web interface
