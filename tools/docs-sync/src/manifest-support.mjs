@@ -27,7 +27,7 @@ export function validateScreenManifest(manifest) {
     if (path.posix.isAbsolute(portableScreenshot)) {
       throw new Error(`Screenshot target for ${screen.id} must be repository-relative.`);
     }
-    if (portableScreenshot !== repositoryRelativeScreenshot) {
+    if (screen.screenshot !== repositoryRelativeScreenshot) {
       throw new Error(`Screenshot target for ${screen.id} must use its canonical repository-relative path.`);
     }
     if (!repositoryRelativeScreenshot.startsWith('docs/screenshots/current/')) {
