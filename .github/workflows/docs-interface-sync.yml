@@ -118,7 +118,7 @@ jobs:
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: documentation-sync-candidate-${{ github.sha }}
-          path: .
+          path: docs
       - name: Apply manifest-constrained screenshot removals
         run: node tools/docs-sync/src/apply-screenshot-removals.mjs .
       - name: Open documentation synchronization PR

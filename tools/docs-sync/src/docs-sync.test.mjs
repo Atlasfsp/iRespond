@@ -393,6 +393,10 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.match(captureJob, /DOCS_CAPTURE_REVISION_URL/);
   assert.match(publishJob, /needs: capture-on-main/);
   assert.match(publishJob, /persist-credentials: false/);
+  assert.match(
+    publishJob,
+    /name: documentation-sync-candidate-\$\{\{ github\.sha \}\}\n\s+path: docs/,
+  );
   assert.match(publishJob, /apply-screenshot-removals\.mjs/);
   assert.doesNotMatch(publishJob, /npm install|playwright install|node tools\/docs-sync\/src\/capture/);
   assert.match(publishJob, /GH_TOKEN: \$\{\{ github\.token \}\}/);
