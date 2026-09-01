@@ -1,0 +1,110 @@
+name: build-android-demo
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'patches/**'
+      - 'tools/offline_demo.test.mjs'
+      - '.github/workflows/build-android-demo.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-demo-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-demo-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: '1'
+      NODE_ENV: production
+      EXPO_NO_TELEMETRY: '1'
+      EXPO_PUBLIC_DEMO_MODE: '1'
+      EXPO_PUBLIC_API_BASE_URL: 'https://demo.irespond.local'
+      DEMO_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out the exact requested head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify exact-head provenance
+        run: test "$(git rev-parse HEAD)" = "$DEMO_SOURCE_SHA"
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.15.0
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Set up Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install the immutable workspace
+        run: pnpm install --frozen-lockfile
+      - name: Verify offline demo contracts
+        run: node --experimental-strip-types tools/offline_demo.test.mjs
+      - name: Verify Expo dependency compatibility
+        working-directory: apps/mobile
+        run: pnpm exec expo install --check --pnpm
+      - name: Verify the isolated demo application identity
+        working-directory: apps/mobile
+        run: |
+          pnpm exec expo config --type public --json > /tmp/irespond-demo-config.json
+          test "$(jq -r '.android.package' /tmp/irespond-demo-config.json)" = 'global.irespond.app.demo'
+          test "$(jq -r '.ios.bundleIdentifier' /tmp/irespond-demo-config.json)" = 'global.irespond.app.demo'
+      - name: Generate the Android demo project
+        working-directory: apps/mobile
+        run: pnpm exec expo prebuild --platform android --clean --no-install
+      - name: Verify generated application identity
+        run: grep -R "applicationId.*global.irespond.app.demo" apps/mobile/android/app/build.gradle
+      - name: Optimize the ARM64 demo footprint
+        working-directory: apps/mobile/android
+        run: |
+          sed -i 's/^reactNativeArchitectures=.*/reactNativeArchitectures=arm64-v8a/' gradle.properties
+          printf '\nandroid.enableProguardInReleaseBuilds=true\nandroid.enableShrinkResourcesInReleaseBuilds=true\n' >> gradle.properties
+          test "$(grep -c '^reactNativeArchitectures=' gradle.properties)" = '1'
+          grep -E 'reactNativeArchitectures|enableProguard|enableShrink' gradle.properties
+      - name: Bundle Android assets
+        working-directory: apps/mobile
+        run: pnpm exec expo export --platform android --output-dir .apk-export-smoke
+      - name: Build the compact offline demo APK
+        working-directory: apps/mobile/android
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+      - name: Package immutable artifact evidence
+        run: |
+          test -s apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          mkdir -p dist
+          artifact="dist/iRespond-offline-demo-arm64-${DEMO_SOURCE_SHA}.apk"
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "$artifact"
+          sha256sum "$artifact" | tee "${artifact}.sha256"
+          jq -n \
+            --arg sourceSha "$DEMO_SOURCE_SHA" \
+            --arg applicationId 'global.irespond.app.demo' \
+            --arg artifact "$(basename "$artifact")" \
+            --arg sha256 "$(sha256sum "$artifact" | cut -d' ' -f1)" \
+            '{sourceSha:$sourceSha,applicationId:$applicationId,mode:"offline-demo",architecture:"arm64-v8a",artifact:$artifact,sha256:$sha256}' \
+            > dist/offline-demo-provenance.json
+      - name: Upload the APK and provenance
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: iRespond-offline-demo-arm64-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            dist/iRespond-offline-demo-arm64-*.apk
+            dist/iRespond-offline-demo-arm64-*.apk.sha256
+            dist/offline-demo-provenance.json
+          if-no-files-found: error
+          retention-days: 7

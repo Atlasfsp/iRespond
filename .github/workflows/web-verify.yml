@@ -5,6 +5,9 @@ on:
     paths:
       - 'apps/web/**'
       - 'apps/mobile/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'patches/**'
       - 'docs/frontend/**'
       - 'services/api/openapi.yaml'
       - 'services/api/cmd/server/**'
@@ -14,6 +17,8 @@ on:
       - 'tools/verify_frontend_execution.mjs'
       - 'tools/verify_frontend_reachability.mjs'
       - 'tools/verify_frontend_authorization.mjs'
+      - 'tools/offline_demo.test.mjs'
+      - '.github/workflows/build-android-demo.yml'
       - '.github/workflows/web-verify.yml'
 
 permissions:
@@ -41,3 +46,5 @@ jobs:
         run: node tools/verify_frontend_authorization.mjs
       - name: Frontend design and trust boundary contract
         run: node tools/verify_web_frontend.mjs
+      - name: Offline demo contract
+        run: node --experimental-strip-types tools/offline_demo.test.mjs
