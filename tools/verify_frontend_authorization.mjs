@@ -49,7 +49,7 @@ for(const capability of ['verification.community','verification.institution','ve
 need('safetyOps',"hasCapability(session.roles,'safety.review')",'safety operations must require safety-review capability');
 need('workspace',"caps.has('safety.review')",'workspace must hide safety operations without reviewer authority');
 need('workspace',"v.startsWith('verification.')",'workspace must expose verification only through derived capabilities');
-if(!/has\('evidence\.review'\)\?`[\s\S]*Approved evidence access[\s\S]*`:\x27\x27}/.test(files.web))failures.push('web: evidence access must be hidden without evidence-review authority');
+if(!/has\('evidence\.review'\)\?`(?:(?!`:\x27\x27}).)*Approved evidence access(?:(?!`:\x27\x27}).)*`:\x27\x27}/s.test(files.web))failures.push('web: evidence access must be inside the evidence-review capability branch');
 if((files.server.match(/auth\.CanReviewEvidence\(principal\)/g)||[]).length<2)failures.push('server: evidence review and signed access routes must share the reviewer authorization policy');
 
 // Service-to-service ingress is deliberately absent from untrusted clients.
