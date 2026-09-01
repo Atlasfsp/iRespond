@@ -61,6 +61,14 @@ await assert.rejects(
   webIntegrityDemo.request('/v1/projects/project-water-1/transition', { method: 'POST', body: JSON.stringify({ state: 'validating' }) }),
   (error) => error.status === 409 && error.body?.error === 'all active milestones must be submitted before validation',
 );
+const foreignWebInvite = await webIntegrityDemo.request('/v1/projects/project-water-1/roles/invite', {
+  method: 'POST',
+  body: JSON.stringify({ actorId: 'another-demo-user', role: 'maintenance_owner' }),
+});
+await assert.rejects(
+  webIntegrityDemo.request(`/v1/project-role-invites/${foreignWebInvite.id}/accept`, { method: 'POST', body: '{}' }),
+  (error) => error.status === 404 && error.body?.error === 'pending invite not found for this identity',
+);
 
 function payload(path, method = 'GET', requestBody) {
   return createDemoPayload(new URL(path, DEMO_API_BASE_URL), method, requestBody, now);

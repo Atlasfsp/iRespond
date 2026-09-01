@@ -1,4 +1,4 @@
-import { createWebDemoBackend } from './demo-backend.js?v=20260901-integrity-1';
+import { createWebDemoBackend } from './demo-backend.js?v=20260901-integrity-2';
 import { webRequestTarget } from './demo-routing.js?v=20260901-integrity-1';
 
 const config=Object.freeze({
