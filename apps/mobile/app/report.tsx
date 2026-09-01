@@ -67,7 +67,7 @@ export default function ReportNeed() {
   }
 
   async function captureLocation() {
-    if (captureInFlight.current) return;
+    if (captureInFlight.current || queuedRetryInFlight.current) return;
     captureInFlight.current = true;
     setLocationConfirmed(false);
     setCapturingLocation(true);
@@ -163,18 +163,18 @@ export default function ReportNeed() {
     <View style={s.form}>
       {(loadingQueuedReview || queuedReview) && <View style={s.reviewBanner}><Ionicons name="archive-outline" size={23} color={Stitch.color.tertiary}/><View style={s.flex}><Text style={s.reviewTitle}>{loadingQueuedReview ? 'Loading preserved observation…' : 'Review a preserved offline observation'}</Text><Text style={s.reviewBody}>This report was queued by an earlier app version. Its title, description and evidence remain intact; confirm only its intervention coordinates so the same queue item can continue safely.</Text></View></View>}
       <Text style={s.eyebrow}>INTERVENTION LOCATION</Text>
-      <Pressable style={[s.locationCard, capturingLocation && s.disabled]} disabled={capturingLocation} onPress={() => void captureLocation()} accessibilityRole="button">
+      <Pressable style={[s.locationCard, (capturingLocation || retryingQueuedReview) && s.disabled]} disabled={capturingLocation || retryingQueuedReview} onPress={() => void captureLocation()} accessibilityRole="button">
         {capturingLocation ? <ActivityIndicator color={Stitch.color.primary}/> : <Ionicons name="locate-outline" size={28} color={Stitch.color.primary}/>}<View style={{ flex: 1 }}><Text style={s.locationTitle}>{capturingLocation ? 'Capturing precise coordinates…' : 'Use my current coordinates'}</Text><Text style={s.locationMeta}>High-accuracy device location; nothing is submitted until you confirm.</Text></View><Ionicons name="navigate-outline" size={22} color={Stitch.color.primary}/>
       </Pressable>
       <View style={s.coordinateInputs}>
-        <View style={s.coordinateField}><FieldLabel required>Latitude of intervention</FieldLabel><TextInput style={s.input} value={latitudeText} onChangeText={value => updateManualCoordinate('latitude', value)} keyboardType="numbers-and-punctuation" autoCorrect={false} accessibilityLabel="Latitude of intervention" accessibilityHint="Enter a value between minus 90 and 90 degrees" placeholder="-90 to 90" placeholderTextColor="#6D7580"/></View>
-        <View style={s.coordinateField}><FieldLabel required>Longitude of intervention</FieldLabel><TextInput style={s.input} value={longitudeText} onChangeText={value => updateManualCoordinate('longitude', value)} keyboardType="numbers-and-punctuation" autoCorrect={false} accessibilityLabel="Longitude of intervention" accessibilityHint="Enter a value between minus 180 and 180 degrees" placeholder="-180 to 180" placeholderTextColor="#6D7580"/></View>
+        <View style={s.coordinateField}><FieldLabel required>Latitude of intervention</FieldLabel><TextInput style={[s.input, retryingQueuedReview && s.readOnly]} editable={!retryingQueuedReview} value={latitudeText} onChangeText={value => updateManualCoordinate('latitude', value)} keyboardType="numbers-and-punctuation" autoCorrect={false} accessibilityLabel="Latitude of intervention" accessibilityHint="Enter a value between minus 90 and 90 degrees" placeholder="-90 to 90" placeholderTextColor="#6D7580"/></View>
+        <View style={s.coordinateField}><FieldLabel required>Longitude of intervention</FieldLabel><TextInput style={[s.input, retryingQueuedReview && s.readOnly]} editable={!retryingQueuedReview} value={longitudeText} onChangeText={value => updateManualCoordinate('longitude', value)} keyboardType="numbers-and-punctuation" autoCorrect={false} accessibilityLabel="Longitude of intervention" accessibilityHint="Enter a value between minus 180 and 180 degrees" placeholder="-180 to 180" placeholderTextColor="#6D7580"/></View>
       </View>
       <View style={[s.locationStatus, coordinates ? s.locationStatusReady : s.locationStatusPending]}>
         <Ionicons name={coordinates ? 'checkmark-circle-outline' : 'information-circle-outline'} size={21} color={coordinates ? Stitch.color.secondary : Stitch.color.onSurfaceVariant}/>
         <View style={s.flex}><Text style={s.locationStatusTitle}>{coordinates ? `${formatCoordinate(coordinates.latitude)}, ${formatCoordinate(coordinates.longitude)}` : 'No valid coordinates yet'}</Text><Text style={s.locationStatusBody}>{coordinates ? `${locationSource === 'device' ? 'Device captured' : 'Manually entered'}${locationAccuracyMeters !== undefined ? ` · accuracy ±${Math.round(locationAccuracyMeters)} m` : ''}${locationCapturedAt ? ` · ${new Date(locationCapturedAt).toLocaleString()}` : ''}` : 'Use device capture or type both coordinates. Manual edits replace captured coordinates.'}</Text></View>
       </View>
-      <Pressable style={[s.confirmRow, !coordinates && s.disabled]} disabled={!coordinates} onPress={toggleLocationConfirmation} accessibilityRole="checkbox" accessibilityState={{ checked: locationConfirmed, disabled: !coordinates }}>
+      <Pressable style={[s.confirmRow, (!coordinates || retryingQueuedReview) && s.disabled]} disabled={!coordinates || retryingQueuedReview} onPress={toggleLocationConfirmation} accessibilityRole="checkbox" accessibilityState={{ checked: locationConfirmed, disabled: !coordinates || retryingQueuedReview }}>
         <Ionicons name={locationConfirmed ? 'checkbox' : 'square-outline'} size={26} color={locationConfirmed ? Stitch.color.secondary : Stitch.color.onSurfaceVariant}/><Text style={s.confirmText}>I confirm these coordinates point to the intervention location.</Text>
       </Pressable>
       <FieldLabel required>Title of need</FieldLabel><TextInput style={[s.input, queuedReview && s.readOnly]} editable={!queuedReview && !loadingQueuedReview} value={title} onChangeText={setTitle} placeholder="e.g. Severe pothole on Main St" placeholderTextColor="#6D7580"/>
