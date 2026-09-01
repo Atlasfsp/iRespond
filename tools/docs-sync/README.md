@@ -6,7 +6,7 @@
 
 ### 1. Source monitor — always available
 
-`npm run fingerprint` hashes every registered screen plus shared mobile routing/session/sync inputs. `npm run compare` compares the result with `docs/documentation-system/current-baseline.json`. A source change is sufficient to mark the corresponding manual section for review even when no render target is available.
+`npm run fingerprint` hashes every registered screen plus shared mobile routing/session/sync inputs. It separately fingerprints the screen manifest, publication workflow and executable synchronization tooling as the documentation synchronization contract. `npm run compare` compares both sets of inputs with `docs/documentation-system/current-baseline.json`. A frontend source or synchronization-contract change is sufficient to require publication review even when no render target is available.
 
 ### 2. Runtime capture — enabled only with a documentation-safe preview
 
@@ -43,6 +43,6 @@ npm run manual-index -- ../..
 
 ## Pull-request policy
 
-Frontend changes must not silently rewrite a published manual. The CI workflow produces a change report on every relevant PR. A main-branch frontend change may create a separate `docs-sync/<sha>` branch containing the updated capture pack and generated manual interface index. Human review remains required before publication.
+Frontend and synchronization-contract changes must not silently rewrite a published manual. The CI workflow produces a change report on every relevant PR. A relevant main-branch change may create a separate `docs-sync/<sha>` branch containing the updated capture pack and generated manual interface index. Human review remains required before publication.
 
 The initial long-form Word/PDF publications are generated artifacts outside the frozen application candidate. The repository stores the synchronization contract and publication source/baseline metadata; binary publications are released as documentation artifacts rather than being used as application runtime inputs.

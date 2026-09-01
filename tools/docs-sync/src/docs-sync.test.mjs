@@ -52,6 +52,54 @@ test('fingerprint includes rendered image, vector, and font assets', async (t) =
     'apps/web/fonts/interface.woff2',
     'apps/web/icon.svg',
   ]);
+  assert.deepEqual(Object.keys(result.synchronizationContract), [
+    'docs/documentation-system/screen-manifest.json',
+  ]);
+});
+
+test('manifest-only edits are published as synchronization-contract changes', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const contractPath = 'docs/documentation-system/screen-manifest.json';
+  await jsonFile(path.join(root, contractPath), { screens: [] });
+  await jsonFile(path.join(root, 'docs/documentation-system/current-baseline.json'), {
+    sourceRevision: 'baseline-head',
+    sources: {},
+    screenshots: {},
+    synchronizationContract: { [contractPath]: 'predecessor-contract-hash' },
+  });
+  await jsonFile(path.join(root, 'docs/documentation-system/ui-fingerprint.generated.json'), {
+    sourceRevision: 'current-head',
+    sources: {},
+    synchronizationContract: { [contractPath]: 'current-contract-hash' },
+  });
+  const outputPath = path.join(root, 'github-output');
+
+  await run('compare-and-plan.mjs', root, {
+    GITHUB_SHA: 'current-head',
+    GITHUB_OUTPUT: outputPath,
+    DOCS_SYNC_UPDATE_BASELINE: '1',
+  });
+
+  const report = JSON.parse(await readFile(
+    path.join(root, 'docs/documentation-system/ui-change-report.generated.json'),
+    'utf8',
+  ));
+  const baseline = JSON.parse(await readFile(
+    path.join(root, 'docs/documentation-system/current-baseline.json'),
+    'utf8',
+  ));
+  assert.deepEqual(report.synchronizationContractChanges, [{
+    source: contractPath,
+    previous: 'predecessor-contract-hash',
+    current: 'current-contract-hash',
+    change: 'modified',
+  }]);
+  assert.equal(report.action, 'regenerate-manual-interface-sections');
+  assert.deepEqual(baseline.synchronizationContract, {
+    [contractPath]: 'current-contract-hash',
+  });
+  assert.match(await readFile(outputPath, 'utf8'), /changed=true/);
 });
 
 test('compare accepts runtime evidence only from the current source revision', async (t) => {
@@ -384,10 +432,17 @@ test('capture dependencies run outside the repository-write publication job', as
   );
   const captureStart = workflow.indexOf('  capture-on-main:');
   const publishStart = workflow.indexOf('  sync-on-main:');
+  const pushStart = workflow.indexOf('  push:');
+  const dispatchStart = workflow.indexOf('  workflow_dispatch:');
   assert.notEqual(captureStart, -1);
   assert.ok(publishStart > captureStart);
+  assert.ok(pushStart !== -1 && dispatchStart > pushStart);
+  const pushTrigger = workflow.slice(pushStart, dispatchStart);
   const captureJob = workflow.slice(captureStart, publishStart);
   const publishJob = workflow.slice(publishStart);
+  assert.match(pushTrigger, /docs\/documentation-system\/screen-manifest\.json/);
+  assert.match(pushTrigger, /tools\/docs-sync\/\*\*/);
+  assert.match(pushTrigger, /\.github\/workflows\/docs-interface-sync\.yml/);
   assert.match(captureJob, /permissions:\n\s+contents: read/);
   assert.match(captureJob, /npm install --prefix tools\/docs-sync/);
   assert.match(captureJob, /DOCS_CAPTURE_REVISION_URL/);

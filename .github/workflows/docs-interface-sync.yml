@@ -15,6 +15,9 @@ on:
       - 'apps/mobile/**'
       - 'apps/web/**'
       - 'docs/frontend/**'
+      - 'docs/documentation-system/screen-manifest.json'
+      - 'tools/docs-sync/**'
+      - '.github/workflows/docs-interface-sync.yml'
   workflow_dispatch:
 
 permissions:
@@ -50,6 +53,7 @@ jobs:
           echo "Canonical frontend changed: ${{ steps.compare.outputs.changed }}"
           echo "Changed registered screen count: ${{ steps.compare.outputs.changed_count }}"
           echo "Changed frontend source count: ${{ steps.compare.outputs.frontend_change_count }}"
+          echo "Changed synchronization contract input count: ${{ steps.compare.outputs.contract_change_count }}"
           echo "Changed sources without manual screen mapping: ${{ steps.compare.outputs.unmapped_change_count }}"
 
   capture-on-main:

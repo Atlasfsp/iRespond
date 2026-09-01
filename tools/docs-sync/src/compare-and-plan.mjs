@@ -43,6 +43,18 @@ for(const source of allSourcePaths){
 const sourceChanges=frontendSourceChanges.filter(change=>change.screens.length>0).flatMap(change=>change.screens.map(id=>({id,source:change.source,previous:change.previous,current:change.current,change:change.change})));
 const unmappedFrontendChanges=frontendSourceChanges.filter(change=>change.screens.length===0);
 
+const currentSynchronizationContract=fingerprint.synchronizationContract||{};
+const previousSynchronizationContract=baseline.synchronizationContract||{};
+const allSynchronizationContractPaths=[...new Set([...Object.keys(currentSynchronizationContract),...Object.keys(previousSynchronizationContract)])].sort();
+const synchronizationContractChanges=[];
+for(const source of allSynchronizationContractPaths){
+  const current=currentSynchronizationContract[source]??null;
+  const previous=previousSynchronizationContract[source]??null;
+  if(current!==previous){
+    synchronizationContractChanges.push({source,previous,current,change:previous===null?'added':current===null?'deleted':'modified'});
+  }
+}
+
 const previousScreenshots=baseline.screenshots||{};
 const previousScreenshotPaths=baseline.screenshotPaths||{};
 const priorScreenshotRevision=baseline.screenshotSourceRevision
@@ -108,7 +120,7 @@ if(!Object.keys(screenshotState).length) screenshotSourceRevision=null;
 
 const runtimeFailures=((runtime||runtimeAttempt)?.results||[]).filter(result=>result.status==='failed'||result.anchorMatched===false);
 const changedScreens=[...new Set([...sourceChanges.map(change=>change.id),...screenshotChanges.map(change=>change.id),...runtimeFailures.map(result=>result.id).filter(Boolean)])];
-const hasChanges=frontendSourceChanges.length>0||screenshotChanges.length>0||runtimeFailures.length>0;
+const hasChanges=frontendSourceChanges.length>0||synchronizationContractChanges.length>0||screenshotChanges.length>0||runtimeFailures.length>0;
 const report={
   schema:'irespond.documentation-ui-change-report.v2',
   sourceRevision,
@@ -119,6 +131,7 @@ const report={
   screenshotEvidence,
   changed:changedScreens,
   frontendSourceChanges,
+  synchronizationContractChanges,
   sourceChanges,
   unmappedFrontendChanges,
   screenshotChanges,
@@ -129,13 +142,13 @@ await mkdir(path.join(root,'docs/documentation-system'),{recursive:true});
 await writeFile(path.join(root,'docs/documentation-system/ui-change-report.generated.json'),`${JSON.stringify(report,null,2)}\n`);
 
 // Baseline advancement is opt-in and happens only on the dedicated docs-sync
-// branch after a frontend change lands on main. Replacing the source map rather
-// than merging it ensures deleted frontend files cannot linger as accepted UI.
+// branch after a relevant change lands on main. Replacing accepted maps rather
+// than merging them ensures deleted inputs cannot linger in the baseline.
 if(process.env.DOCS_SYNC_UPDATE_BASELINE==='1'){
-  const next={...baseline,sourceRevision:report.sourceRevision,capturedAt:new Date().toISOString(),sources:currentSources,screenshotSourceRevision,screenshots:screenshotState,screenshotPaths};
+  const next={...baseline,sourceRevision:report.sourceRevision,capturedAt:new Date().toISOString(),sources:currentSources,synchronizationContract:currentSynchronizationContract,screenshotSourceRevision,screenshots:screenshotState,screenshotPaths};
   await writeFile(baselinePath,`${JSON.stringify(next,null,2)}\n`);
 }
 if(process.env.GITHUB_OUTPUT){
-  await writeFile(process.env.GITHUB_OUTPUT,`changed=${hasChanges?'true':'false'}\nchanged_count=${changedScreens.length}\nfrontend_change_count=${frontendSourceChanges.length}\nunmapped_change_count=${unmappedFrontendChanges.length}\n`,{flag:'a'});
+  await writeFile(process.env.GITHUB_OUTPUT,`changed=${hasChanges?'true':'false'}\nchanged_count=${changedScreens.length}\nfrontend_change_count=${frontendSourceChanges.length}\ncontract_change_count=${synchronizationContractChanges.length}\nunmapped_change_count=${unmappedFrontendChanges.length}\n`,{flag:'a'});
 }
 console.log(JSON.stringify(report));

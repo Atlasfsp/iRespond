@@ -31,6 +31,18 @@
     "apps/mobile/package.json": "8a6fd80b7dd716c5591cff785f226695a47da63e",
     "apps/mobile/tsconfig.json": "10925c99bc2a1dbb453696ec81aa75cc0c307377"
   },
+  "synchronizationContract": {
+    ".github/workflows/docs-interface-sync.yml": "1d04b895ee3e5769fac7e921a14f95c8600c556a",
+    "docs/documentation-system/screen-manifest.json": "ec96c4178d5025f20b2df728e0fc081eb04884d0",
+    "tools/docs-sync/package.json": "1901f4de07a0bdf650c23569a4edf51da5322825",
+    "tools/docs-sync/src/apply-screenshot-removals.mjs": "3b0615b5ad2353c8cfcfc79eb2e1fa4eeae1f251",
+    "tools/docs-sync/src/capture-support.mjs": "b37104e8689e7abd1bcec2c90937d718f5c7bc06",
+    "tools/docs-sync/src/capture.mjs": "b48dca4a04a8529294d555b97b49a18f2b35121a",
+    "tools/docs-sync/src/compare-and-plan.mjs": "f78a4d364c6ae98840d4fe22727271b55ddcaaff",
+    "tools/docs-sync/src/fingerprint.mjs": "a75e2042bf650929f3c4e1fbd27014cde68863b7",
+    "tools/docs-sync/src/mock-api.mjs": "da820576578e0f5e50c42aab92ad81ef98b81a81",
+    "tools/docs-sync/src/regenerate-manual-index.mjs": "ac1fb963a68b47307b852af86abc22860c3f180b"
+  },
   "publications": [
     {"id":"product","name":"iRespond Product Documentation","minimumPages":100,"renderedPages":127},
     {"id":"technical","name":"iRespond Technical Documentation","minimumPages":100,"renderedPages":127},

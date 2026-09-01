@@ -41,6 +41,17 @@ const files = [...new Set([
   ...manifest.screens.map((screen) => screen.source),
 ])].filter(Boolean).sort();
 
+const synchronizationContractCandidates = [
+  '.github/workflows/docs-interface-sync.yml',
+  'docs/documentation-system/screen-manifest.json',
+  'tools/docs-sync/package.json',
+  ...(await walk('tools/docs-sync/src')).filter((file) => !file.endsWith('.test.mjs')),
+];
+const synchronizationContractFiles = [];
+for (const file of [...new Set(synchronizationContractCandidates)].sort()) {
+  if (await exists(path.join(root, file))) synchronizationContractFiles.push(file);
+}
+
 function gitBlobId(bytes) {
   const header = Buffer.from(`blob ${bytes.length}\0`);
   return createHash('sha1').update(header).update(bytes).digest('hex');
@@ -57,13 +68,24 @@ for (const rel of files) {
   aggregate.update(rel).update('\0').update(digest).update('\0');
 }
 
+const synchronizationContract = {};
+const synchronizationContractAggregate = createHash('sha256');
+for (const rel of synchronizationContractFiles) {
+  const bytes = await readFile(path.join(root, rel));
+  const digest = gitBlobId(bytes);
+  synchronizationContract[rel] = digest;
+  synchronizationContractAggregate.update(rel).update('\0').update(digest).update('\0');
+}
+
 const out = {
   schema: 'irespond.documentation-ui-fingerprint.v2',
   sourceRevision: process.env.GITHUB_SHA || 'local',
   hashModel: 'git-blob-sha1-per-source + sha256-aggregate',
   trackedFrontendRoots: trackedRoots,
   aggregate: aggregate.digest('hex'),
-  sources: sourceHashes
+  sources: sourceHashes,
+  synchronizationContractAggregate: synchronizationContractAggregate.digest('hex'),
+  synchronizationContract,
 };
 const target = path.join(root, 'docs/documentation-system/ui-fingerprint.generated.json');
 await writeFile(target, `${JSON.stringify(out, null, 2)}\n`);
