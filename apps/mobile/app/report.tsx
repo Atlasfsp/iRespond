@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,6 +26,8 @@ export default function ReportNeed() {
   const [capturingLocation, setCapturingLocation] = useState(false);
   const [queuedReview, setQueuedReview] = useState<QueuedNeed | null>(null);
   const [loadingQueuedReview, setLoadingQueuedReview] = useState(route.reviewQueue === '1');
+  const [retryingQueuedReview, setRetryingQueuedReview] = useState(false);
+  const queuedRetryInFlight = useRef(false);
   const coordinates = parseInterventionCoordinates(latitudeText, longitudeText);
 
   useEffect(() => {
@@ -114,6 +116,9 @@ export default function ReportNeed() {
     const source = locationSource ?? 'manual';
     const locationLabel = `${source === 'device' ? 'Device capture' : 'Manual entry'} · ${formatCoordinate(coordinates.latitude)}, ${formatCoordinate(coordinates.longitude)}`;
     if (queuedReview) {
+      if (queuedRetryInFlight.current) return;
+      queuedRetryInFlight.current = true;
+      setRetryingQueuedReview(true);
       try {
         await confirmQueuedNeedLocation(queuedReview.idempotencyKey, { ...coordinates, locationLabel, locationSource: source, locationAccuracyMeters, locationCapturedAt, locationConfirmedAt });
         const result = await flushNeedQueue();
@@ -121,6 +126,9 @@ export default function ReportNeed() {
         Alert.alert('Intervention location confirmed', synced ? 'The preserved offline observation has now reached iRespond.' : 'The preserved observation now has confirmed coordinates and remains safely queued until connectivity and any evidence upload requirements are available.', [{ text: 'Done', onPress: () => router.replace('/') }]);
       } catch (error) {
         Alert.alert('Unable to update pending report', error instanceof Error ? error.message : 'The preserved observation could not be updated.');
+      } finally {
+        queuedRetryInFlight.current = false;
+        setRetryingQueuedReview(false);
       }
       return;
     }
@@ -164,7 +172,7 @@ export default function ReportNeed() {
       <FieldLabel>Description</FieldLabel><TextInput style={[s.input, s.textarea, queuedReview && s.readOnly]} editable={!queuedReview && !loadingQueuedReview} value={description} onChangeText={setDescription} multiline placeholder="Describe the issue and its impact…" placeholderTextColor="#6D7580"/>
       <FieldLabel>Primary area of impact</FieldLabel><View accessibilityRole="radiogroup" accessibilityLabel="Primary area of impact"><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>{categories.map(item => <Pressable key={item} disabled={Boolean(queuedReview || loadingQueuedReview)} accessibilityRole="radio" accessibilityState={{ checked: item === category, disabled: Boolean(queuedReview || loadingQueuedReview) }} accessibilityLabel={item} onPress={() => setCategory(item)} style={[s.chip, item === category && s.chipOn, queuedReview && s.readOnly]}><Ionicons name={item === 'Infrastructure' ? 'construct-outline' : item === 'Health' ? 'shield-checkmark-outline' : item === 'Environment' ? 'leaf-outline' : item === 'Education' ? 'school-outline' : 'people-outline'} size={18} color={item === category ? Stitch.color.primaryFixed : Stitch.color.onSurface}/><Text style={[s.chipText, item === category && s.chipTextOn]}>{item}</Text></Pressable>)}</ScrollView></View>
       <View style={s.truth}><Text style={s.truthTitle}>Observation first</Text><Text style={s.truthBody}>Submitting creates an observation. Verification, project approval and fundraising are separate governed states.</Text></View>
-      <Pressable style={s.primary} onPress={() => void continueReport()}><Ionicons name={queuedReview ? 'sync-outline' : 'send-outline'} size={22} color={Stitch.color.primary}/><Text style={s.primaryText}>{queuedReview ? 'Confirm location & retry sync' : 'Save draft & add evidence'}</Text></Pressable>
+      <Pressable style={[s.primary, (retryingQueuedReview || loadingQueuedReview) && s.disabled]} disabled={retryingQueuedReview || loadingQueuedReview} accessibilityState={{ disabled: retryingQueuedReview || loadingQueuedReview, busy: retryingQueuedReview }} onPress={() => void continueReport()}><Ionicons name={queuedReview ? 'sync-outline' : 'send-outline'} size={22} color={Stitch.color.primary}/><Text style={s.primaryText}>{retryingQueuedReview ? 'Confirming location & retrying…' : queuedReview ? 'Confirm location & retry sync' : 'Save draft & add evidence'}</Text></Pressable>
     </View>
   </ScrollView><StitchBottomNav/></View></SafeAreaView>;
 }
