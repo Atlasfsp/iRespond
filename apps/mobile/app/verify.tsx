@@ -52,7 +52,11 @@ export default function VerificationWorkspace() {
     if (!need?.id || !evidenceId.trim()) { Alert.alert('Need and evidence required', 'Load the need and enter the evidence ID first.'); return; }
     setBusy('evidence-access'); setError('');
     try {
-      const access = await apiFetch<{ url: string }>(`/v1/needs/${encodeURIComponent(need.id)}/evidence/${encodeURIComponent(evidenceId.trim())}/access`);
+      const access = await apiFetch<{ url?: string; unavailableReason?: string }>(`/v1/needs/${encodeURIComponent(need.id)}/evidence/${encodeURIComponent(evidenceId.trim())}/access`);
+      if (access.unavailableReason) {
+        Alert.alert('Evidence preview unavailable', access.unavailableReason);
+        return;
+      }
       if (!access.url) throw new Error('The evidence service did not return a signed access URL.');
       const supported = await Linking.canOpenURL(access.url);
       if (!supported) throw new Error('This device cannot open the approved evidence URL.');

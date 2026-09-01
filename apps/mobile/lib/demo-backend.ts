@@ -226,14 +226,33 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
   if (verb === 'POST' && /^\/v1\/needs\/[^/]+\/evidence\/[^/]+\/complete$/.test(path)) return ok({ id: path.split('/')[5], status: 'pending_review', demo: true });
 
   const evidenceAccess = path.match(/^\/v1\/needs\/([^/]+)\/evidence\/([^/]+)\/access$/);
-  if (verb === 'GET' && evidenceAccess) return ok({ url: `${DEMO_API_BASE_URL}/approved-evidence/${encodeURIComponent(evidenceAccess[2])}` });
+  if (verb === 'GET' && evidenceAccess) return ok({
+    available: false,
+    unavailableReason: 'Approved evidence bytes are not bundled with this offline demonstration. Review decisions remain available as local sample data.',
+  });
   const needProject = path.match(/^\/v1\/needs\/([^/]+)\/project$/);
   if (needProject && verb === 'GET') {
     const need = needFor(decodeURIComponent(needProject[1]));
     const project = projects.find((candidate) => candidate.sourceNeedId === need?.id);
     return project ? ok(project) : missing();
   }
-  if (needProject && verb === 'POST') return ok({ ...projects[0], ...input, id: `demo-project-${now.getTime()}`, sourceNeedId: decodeURIComponent(needProject[1]) });
+  if (needProject && verb === 'POST') {
+    const sourceNeedId = decodeURIComponent(needProject[1]);
+    const need = needFor(sourceNeedId);
+    if (!need) return missing();
+    const project = {
+      ...projects[0],
+      id: `demo-project-${sourceNeedId}-${now.getTime()}`,
+      sourceNeedId,
+      title: String(input.title ?? need.title),
+      description: String(input.description ?? need.description),
+      ownerCommunityId: String(input.ownerCommunityId ?? 'offline-demo-community'),
+      status: 'planning',
+      sdgTags: need.sdgTags,
+    };
+    projects.push(project);
+    return ok(project);
+  }
   const verification = path.match(/^\/v1\/needs\/([^/]+)\/verification$/);
   if (verification && verb === 'POST') {
     const need = needFor(decodeURIComponent(verification[1]));
@@ -334,21 +353,43 @@ function requestBody(value: BodyInit | null | undefined) {
   try { return JSON.parse(value) as unknown; } catch { return undefined; }
 }
 
-export function installDemoBackend() {
-  const demoGlobal = globalThis as typeof globalThis & { __IRESPOND_DEMO_FETCH__?: boolean };
-  if (!demoMode || demoGlobal.__IRESPOND_DEMO_FETCH__) return;
-  demoGlobal.__IRESPOND_DEMO_FETCH__ = true;
-  const realFetch = globalThis.fetch.bind(globalThis);
-  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
+export function createDemoFetch(realFetch: FetchLike, latencyMs = 80): FetchLike {
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
     const raw = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-    if (!isDemoRequest(raw)) return realFetch(input, init);
+    if (!isDemoRequest(raw)) {
+      try {
+        const protocol = new URL(raw).protocol;
+        if (protocol === 'http:' || protocol === 'https:') {
+          return new Response(JSON.stringify({ error: 'External network requests are disabled in the offline demo.' }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json', 'X-iRespond-Demo': 'network-blocked' },
+          });
+        }
+      } catch {
+        return new Response(JSON.stringify({ error: 'Invalid request URL.' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', 'X-iRespond-Demo': 'invalid-url' },
+        });
+      }
+      return realFetch(input, init);
+    }
     const url = new URL(raw.replace(/^http:/, 'https:'));
     const method = (init?.method ?? (typeof input === 'object' && 'method' in input ? input.method : 'GET')).toUpperCase();
     const result = createDemoPayload(url, method, requestBody(init?.body));
-    await new Promise((resolve) => setTimeout(resolve, 80));
+    if (latencyMs > 0) await new Promise((resolve) => setTimeout(resolve, latencyMs));
     return new Response(JSON.stringify(result.body), {
       status: result.status,
       headers: { 'Content-Type': 'application/json', 'X-iRespond-Demo': 'offline' },
     });
   };
+}
+
+export function installDemoBackend() {
+  const demoGlobal = globalThis as typeof globalThis & { __IRESPOND_DEMO_FETCH__?: boolean };
+  if (!demoMode || demoGlobal.__IRESPOND_DEMO_FETCH__) return;
+  demoGlobal.__IRESPOND_DEMO_FETCH__ = true;
+  const realFetch = globalThis.fetch.bind(globalThis);
+  globalThis.fetch = createDemoFetch(realFetch);
 }

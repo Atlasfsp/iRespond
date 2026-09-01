@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import mobileConfig from '../apps/mobile/app.config.ts';
 import {
   DEMO_API_BASE_URL,
+  createDemoFetch,
   createDemoPayload,
   isDemoRequest,
 } from '../apps/mobile/lib/demo-backend.ts';
@@ -27,6 +28,18 @@ assert.equal(isDemoRequest(`${DEMO_API_BASE_URL}/v1/platform`), true);
 assert.equal(isDemoRequest('http://demo.irespond.local/v1/platform'), true);
 assert.equal(isDemoRequest('https://api.irespond.example/v1/platform'), false);
 
+let delegatedRequests = 0;
+const guardedFetch = createDemoFetch(async () => {
+  delegatedRequests += 1;
+  return new Response(null, { status: 204 });
+});
+const blockedDiscovery = await guardedFetch('https://invalid.local/.well-known/openid-configuration');
+assert.equal(blockedDiscovery.status, 503);
+assert.deepEqual(await blockedDiscovery.json(), { error: 'External network requests are disabled in the offline demo.' });
+assert.equal(delegatedRequests, 0, 'the offline demo must not delegate external HTTP requests');
+assert.equal((await guardedFetch('data:text/plain,offline-demo')).status, 204);
+assert.equal(delegatedRequests, 1, 'non-network URI schemes may use the platform fetch implementation');
+
 expectOk('/v1/platform', (body) => {
   assert.equal(typeof body.name, 'string');
   assert.equal(Array.isArray(body.capabilities), true);
@@ -44,6 +57,16 @@ expectOk('/v1/projects/project-water-1', (body) => {
   assert.equal(Array.isArray(body.contributionNeeds), true);
   assert.equal(typeof body.permissions.canManageFunding, 'boolean');
 });
+
+const createdProject = expectOk('/v1/needs/need-school-1/project', (body) => {
+  assert.equal(body.sourceNeedId, 'need-school-1');
+  assert.equal(body.title, 'Safe classrooms follow-up');
+}, 'POST', { title: 'Safe classrooms follow-up', ownerCommunityId: 'community-school-1' });
+expectOk(`/v1/projects/${createdProject.id}`, (body) => {
+  assert.equal(body.project.id, createdProject.id);
+  assert.equal(body.project.sourceNeedId, 'need-school-1');
+});
+expectOk('/v1/needs/need-school-1/project', (body) => assert.equal(body.id, createdProject.id));
 
 expectOk('/v1/me/impact-passport', (body) => {
   assert.equal(body.subject, 'offline-demo-user');
@@ -73,6 +96,11 @@ expectOk('/v1/me/privacy/requests', (body) => {
   assert.equal(Array.isArray(body), true);
   assert.equal(typeof body[0].type, 'string');
   assert.equal(typeof body[0].requestedAt, 'string');
+});
+expectOk('/v1/needs/need-water-1/evidence/demo-evidence/access', (body) => {
+  assert.equal(body.available, false);
+  assert.equal(body.url, undefined);
+  assert.match(body.unavailableReason, /not bundled/i);
 });
 
 const upload = expectOk('/v1/needs/need-water-1/evidence/uploads', (body) => {
@@ -157,5 +185,8 @@ assert.match(metroPatch, /typeof isImageInput === "string" \? fs\.readFileSync\(
 const reactNativeConfig = await readFile('apps/mobile/react-native.config.js', 'utf8');
 assert.match(reactNativeConfig, /import expo\.modules\.ExpoModulesPackage;/);
 assert.match(reactNativeConfig, /new ExpoModulesPackage\(\)/);
+
+const verificationWorkspace = await readFile('apps/mobile/app/verify.tsx', 'utf8');
+assert.match(verificationWorkspace, /access\.unavailableReason/);
 
 console.log('offline demo contract: PASS');
