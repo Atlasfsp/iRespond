@@ -87,6 +87,7 @@
       button.disabled = true;
       button.textContent = 'Capturing precise coordinates…';
       checkbox.checked = false;
+      checkbox.disabled = true;
       setStatus(status, 'Waiting for a fresh high-accuracy device location…');
       navigator.geolocation.getCurrentPosition(position => {
         try {
@@ -94,16 +95,21 @@
           latitude.value = displayCoordinate(coordinates.latitude);
           longitude.value = displayCoordinate(coordinates.longitude);
           form.dataset.locationSource = 'device';
+          checkbox.checked = false;
+          checkbox.disabled = false;
           const accuracy = Number.isFinite(position.coords.accuracy) ? ` · accuracy ±${Math.round(position.coords.accuracy)} m` : '';
           const capturedAt = new Date(position.timestamp || Date.now()).toLocaleString();
           setStatus(status, `Device captured ${latitude.value}, ${longitude.value}${accuracy} · ${capturedAt}. Check the location, then confirm it.`, 'ready');
         } catch (error) {
+          checkbox.checked = false;
+          checkbox.disabled = false;
           setStatus(status, error instanceof Error ? error.message : 'The device returned invalid coordinates.', 'error');
         } finally {
           button.disabled = false;
           button.textContent = 'Capture current coordinates again';
         }
       }, error => {
+        checkbox.disabled = false;
         setStatus(status, geolocationMessage(error), 'error');
         button.disabled = false;
         button.textContent = 'Try current coordinates again';

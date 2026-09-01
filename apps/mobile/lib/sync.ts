@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import type { NeedDraft } from './drafts';
-import { parseInterventionCoordinates } from './coordinates';
+import { parseInterventionCoordinates, type CoordinateSource } from './coordinates';
 import { getAccessToken } from './session';
 
 const QUEUE_KEY = 'irespond.sync-queue.v1';
@@ -38,14 +38,43 @@ export async function queueNeedForSync(draft: NeedDraft) {
   const queue=await loadQueue();const item:QueuedNeed={idempotencyKey:makeId('need'),draft:{...draft,...coordinates},queuedAt:new Date().toISOString(),attempts:0,uploadedEvidenceUris:[]};await saveQueue([...queue,item]);return item;
 }
 
+export type ConfirmedNeedLocation = {
+  latitude: number;
+  longitude: number;
+  locationLabel: string;
+  locationSource: CoordinateSource;
+  locationAccuracyMeters?: number;
+  locationCapturedAt?: string;
+  locationConfirmedAt: string;
+};
+
+function needsLocationReview(item: QueuedNeed) {
+  return !item.serverNeedId && (!item.draft.locationConfirmedAt || !parseInterventionCoordinates(item.draft.latitude,item.draft.longitude));
+}
+
+export async function pendingNeedLocationReviewCount() {
+  return (await loadQueue()).filter(needsLocationReview).length;
+}
+
+export async function getNextNeedLocationReview() {
+  return (await loadQueue()).find(needsLocationReview) ?? null;
+}
+
+export async function confirmQueuedNeedLocation(idempotencyKey: string, location: ConfirmedNeedLocation) {
+  const coordinates=parseInterventionCoordinates(location.latitude,location.longitude);
+  if(!coordinates||!location.locationConfirmedAt)throw new Error('Valid confirmed coordinates are required.');
+  const queue=await loadQueue();const index=queue.findIndex(item=>item.idempotencyKey===idempotencyKey&&!item.serverNeedId);
+  if(index<0)throw new Error('The pending observation is no longer available for location review.');
+  const current=queue[index];const updated:QueuedNeed={...current,draft:{...current.draft,...location,...coordinates}};queue[index]=updated;await saveQueue(queue);return updated;
+}
+
 export type SyncResult={synced:number;remaining:number;offline:boolean;syncedKeys:string[]};
 
 export async function flushNeedQueue():Promise<SyncResult>{
   const baseUrl=process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/,'');const queue=await loadQueue();if(!baseUrl||queue.length===0)return{synced:0,remaining:queue.length,offline:!baseUrl,syncedKeys:[]};
   const actorId=await getLocalActorId();const token=await getAccessToken();const remaining:QueuedNeed[]=[];const syncedKeys:string[]=[];let synced=0;
   for(const original of queue){let item={...original,uploadedEvidenceUris:[...(original.uploadedEvidenceUris??[])]};try{
-      const coordinates=parseInterventionCoordinates(item.draft.latitude,item.draft.longitude);if(!coordinates||!item.draft.locationConfirmedAt){remaining.push(item);continue;}
-      if(!item.serverNeedId){const response=await fetch(`${baseUrl}/v1/needs`,{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':item.idempotencyKey},body:JSON.stringify({title:item.draft.title,description:item.draft.description,category:item.draft.category??'community',latitude:coordinates.latitude,longitude:coordinates.longitude,reporterId:actorId,sdgTags:[]})});if(!response.ok)throw new Error(`need sync ${response.status}`);const created=(await response.json()) as CreatedNeed;item.serverNeedId=created.id;}
+      if(!item.serverNeedId){const coordinates=parseInterventionCoordinates(item.draft.latitude,item.draft.longitude);if(!coordinates||!item.draft.locationConfirmedAt){remaining.push(item);continue;}const response=await fetch(`${baseUrl}/v1/needs`,{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':item.idempotencyKey},body:JSON.stringify({title:item.draft.title,description:item.draft.description,category:item.draft.category??'community',latitude:coordinates.latitude,longitude:coordinates.longitude,reporterId:actorId,sdgTags:[]})});if(!response.ok)throw new Error(`need sync ${response.status}`);const created=(await response.json()) as CreatedNeed;item.serverNeedId=created.id;}
       const pendingEvidence=item.draft.evidenceUris.filter((uri)=>!item.uploadedEvidenceUris?.includes(uri));
       if(pendingEvidence.length>0&&!token){remaining.push(item);continue;}
       for(const uri of pendingEvidence){if(!token)break;await uploadEvidence(baseUrl,item.serverNeedId!,uri,token);item.uploadedEvidenceUris=[...(item.uploadedEvidenceUris??[]),uri];}

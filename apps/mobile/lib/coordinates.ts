@@ -9,9 +9,12 @@ export function parseInterventionCoordinates(
   latitude: string | number | undefined,
   longitude: string | number | undefined,
 ): InterventionCoordinates | null {
-  if (latitude === '' || longitude === '' || latitude === undefined || longitude === undefined) return null;
-  const parsedLatitude = typeof latitude === 'number' ? latitude : Number(latitude.trim());
-  const parsedLongitude = typeof longitude === 'number' ? longitude : Number(longitude.trim());
+  if (latitude === undefined || longitude === undefined) return null;
+  const latitudeText = typeof latitude === 'number' ? String(latitude) : latitude.trim();
+  const longitudeText = typeof longitude === 'number' ? String(longitude) : longitude.trim();
+  if (!latitudeText || !longitudeText) return null;
+  const parsedLatitude = Number(latitudeText);
+  const parsedLongitude = Number(longitudeText);
   if (!Number.isFinite(parsedLatitude) || !Number.isFinite(parsedLongitude)) return null;
   if (parsedLatitude < -90 || parsedLatitude > 90 || parsedLongitude < -180 || parsedLongitude > 180) return null;
   return { latitude: parsedLatitude, longitude: parsedLongitude };
