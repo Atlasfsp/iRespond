@@ -83,7 +83,7 @@ for (const rel of synchronizationContractFiles) {
 
 const out = {
   schema: 'irespond.documentation-ui-fingerprint.v2',
-  sourceRevision: process.env.GITHUB_SHA || 'local',
+  sourceRevision: process.env.DOCS_SYNC_SOURCE_REVISION || process.env.GITHUB_SHA || 'local',
   hashModel: 'git-blob-sha1-per-source + sha256-aggregate',
   trackedFrontendRoots: trackedRoots,
   aggregate: aggregate.digest('hex'),

@@ -18,7 +18,7 @@ const baseline=acceptedBaselinePath===baselinePath
   ? workingBaseline
   : JSON.parse(await readFile(acceptedBaselinePath,'utf8'));
 const runtimePath=path.join(root,'docs/documentation-system/runtime-capture.generated.json');
-const sourceRevision=process.env.GITHUB_SHA||fingerprint.sourceRevision||'local';
+const sourceRevision=process.env.DOCS_SYNC_SOURCE_REVISION||process.env.GITHUB_SHA||fingerprint.sourceRevision||'local';
 let runtime=null;
 let runtimeAttempt=null;
 try {
@@ -163,7 +163,7 @@ if(process.env.DOCS_SYNC_UPDATE_BASELINE==='1'){
         publications:workingBaseline.publications||[],
       }
     : baseline;
-  const next={...baselineSeed,sourceRevision:report.sourceRevision,capturedAt:new Date().toISOString(),sources:currentSources,synchronizationContract:currentSynchronizationContract,screenshotSourceRevision,screenshots:screenshotState,screenshotPaths};
+  const next={...baselineSeed,sourceRevision:report.sourceRevision,capturedAt:process.env.DOCS_SYNC_CAPTURED_AT||new Date().toISOString(),sources:currentSources,synchronizationContract:currentSynchronizationContract,screenshotSourceRevision,screenshots:screenshotState,screenshotPaths};
   delete next.bootstrap;
   await writeFile(baselinePath,`${JSON.stringify(next,null,2)}\n`);
 }

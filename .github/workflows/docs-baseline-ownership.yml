@@ -11,6 +11,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
   pull-requests: read
   statuses: write
@@ -36,18 +37,69 @@ jobs:
           [[ "$pr_number" =~ ^[1-9][0-9]*$ ]]
           pr_json=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}")
           base_sha=$(jq -r '.base.sha' <<< "$pr_json")
+          base_ref=$(jq -r '.base.ref' <<< "$pr_json")
+          base_repository=$(jq -r '.base.repo.full_name' <<< "$pr_json")
           head_sha=$(jq -r '.head.sha' <<< "$pr_json")
+          head_ref=$(jq -r '.head.ref' <<< "$pr_json")
+          head_repository=$(jq -r '.head.repo.full_name' <<< "$pr_json")
           [[ "$base_sha" =~ ^[0-9a-f]{40}$ ]]
           [[ "$head_sha" =~ ^[0-9a-f]{40}$ ]]
+          publication_provenance=false
+          if [[ "$head_ref" =~ ^docs-sync/([0-9a-f]{40})-([1-9][0-9]*)-([0-9a-f]{40})$ ]]; then
+            source_sha=${BASH_REMATCH[1]}
+            publication_run_id=${BASH_REMATCH[2]}
+            publication_sha=${BASH_REMATCH[3]}
+            if test "$publication_sha" = "$head_sha"; then
+              if run_json=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${publication_run_id}" 2>/dev/null); then
+                if jq -e \
+                  --arg repository "$GITHUB_REPOSITORY" \
+                  --arg source_sha "$source_sha" \
+                  '.repository.full_name == $repository
+                    and .path == ".github/workflows/docs-interface-sync.yml"
+                    and .event == "push"
+                    and .head_branch == "main"
+                    and .head_sha == $source_sha
+                    and ((.status == "in_progress" and .conclusion == null)
+                      or (.status == "completed" and .conclusion == "success"))' \
+                  <<< "$run_json" >/dev/null; then
+                  provenance_dir=$(mktemp -d)
+                  if gh run download "$publication_run_id" \
+                    --repo "$GITHUB_REPOSITORY" \
+                    --name "documentation-publication-provenance-${publication_run_id}" \
+                    --dir "$provenance_dir" >/dev/null 2>&1; then
+                    if jq -e \
+                      --arg repository "$GITHUB_REPOSITORY" \
+                      --arg workflow_path ".github/workflows/docs-interface-sync.yml" \
+                      --arg source_sha "$source_sha" \
+                      --arg run_id "$publication_run_id" \
+                      --arg branch "$head_ref" \
+                      --arg publication_sha "$head_sha" \
+                      --argjson pull_request_number "$pr_number" \
+                      '.repository == $repository
+                        and .workflowPath == $workflow_path
+                        and .sourceSha == $source_sha
+                        and .runId == $run_id
+                        and .branch == $branch
+                        and .publicationSha == $publication_sha
+                        and .pullRequestNumber == $pull_request_number' \
+                      "$provenance_dir/publication.json" >/dev/null; then
+                      publication_provenance=true
+                    fi
+                  fi
+                fi
+              fi
+            fi
+          fi
           {
             echo "number=$pr_number"
             echo "base_sha=$base_sha"
-            echo "base_ref=$(jq -r '.base.ref' <<< "$pr_json")"
-            echo "base_repository=$(jq -r '.base.repo.full_name' <<< "$pr_json")"
+            echo "base_ref=$base_ref"
+            echo "base_repository=$base_repository"
             echo "head_sha=$head_sha"
-            echo "head_ref=$(jq -r '.head.ref' <<< "$pr_json")"
+            echo "head_ref=$head_ref"
             echo "author=$(jq -r '.user.login' <<< "$pr_json")"
-            echo "head_repository=$(jq -r '.head.repo.full_name' <<< "$pr_json")"
+            echo "head_repository=$head_repository"
+            echo "publication_provenance=$publication_provenance"
           } >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -73,6 +125,7 @@ jobs:
           DOCS_SYNC_HEAD_REF: ${{ steps.pr.outputs.head_ref }}
           DOCS_SYNC_PR_AUTHOR: ${{ steps.pr.outputs.author }}
           DOCS_SYNC_HEAD_REPOSITORY: ${{ steps.pr.outputs.head_repository }}
+          DOCS_SYNC_PUBLICATION_PROVENANCE: ${{ steps.pr.outputs.publication_provenance }}
         run: node tools/docs-sync/src/baseline-guard.mjs .
       - name: Publish ownership status on the pull request head
         if: always() && steps.pr.outputs.head_sha != ''

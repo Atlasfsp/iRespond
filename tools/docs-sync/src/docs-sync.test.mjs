@@ -41,7 +41,10 @@ test('fingerprint includes rendered image, vector, and font assets', async (t) =
   await writeFile(path.join(root, 'apps/web/icon.svg'), '<svg></svg>');
   await writeFile(path.join(root, 'apps/web/fonts/interface.woff2'), Buffer.from([3, 4, 5]));
 
-  await run('fingerprint.mjs', root, { GITHUB_SHA: 'asset-head' });
+  await run('fingerprint.mjs', root, {
+    GITHUB_SHA: 'workflow-dispatch-head',
+    DOCS_SYNC_SOURCE_REVISION: 'asset-head',
+  });
   const result = JSON.parse(await readFile(
     path.join(root, 'docs/documentation-system/ui-fingerprint.generated.json'),
     'utf8',
@@ -55,6 +58,7 @@ test('fingerprint includes rendered image, vector, and font assets', async (t) =
   assert.deepEqual(Object.keys(result.synchronizationContract), [
     'docs/documentation-system/screen-manifest.json',
   ]);
+  assert.equal(result.sourceRevision, 'asset-head');
 });
 
 test('manifest-only edits are published as synchronization-contract changes', async (t) => {
@@ -153,6 +157,7 @@ test('bootstrap comparison cannot trust head-controlled accepted hashes', async 
     GITHUB_SHA: 'current-head',
     DOCS_SYNC_UPDATE_BASELINE: '1',
     DOCS_SYNC_BASELINE_PATH: bootstrapBaselinePath,
+    DOCS_SYNC_CAPTURED_AT: '2026-08-27T17:00:00+00:00',
   });
 
   const report = JSON.parse(await readFile(
@@ -178,14 +183,16 @@ test('bootstrap comparison cannot trust head-controlled accepted hashes', async 
   }]);
   assert.equal(report.action, 'regenerate-manual-interface-sections');
   assert.deepEqual(baseline.publications, [{ id: 'product' }]);
+  assert.equal(baseline.capturedAt, '2026-08-27T17:00:00+00:00');
   assert.equal('bootstrap' in baseline, false);
   assert.equal('unreviewedHeadMetadata' in baseline, false);
 });
 
 test('all synchronized publication artifacts are owned by the publication workflow', async () => {
   const { protectedPublicationPaths, validateBaselineOwnership } = await import('./baseline-guard.mjs');
+  const sourceHead = '89abcdef0123456789abcdef0123456789abcdef';
   const publicationHead = '0123456789abcdef0123456789abcdef01234567';
-  const publicationRef = `docs-sync/0123456789ab-123456789-${publicationHead}`;
+  const publicationRef = `docs-sync/${sourceHead}-123456789-${publicationHead}`;
   assert.deepEqual(protectedPublicationPaths, [
     'docs/documentation-system/current-baseline.json',
     'docs/documentation-system/ui-fingerprint.generated.json',
@@ -221,6 +228,7 @@ test('all synchronized publication artifacts are owned by the publication workfl
     headRevision: publicationHead,
     pullRequestAuthor: 'github-actions[bot]',
     sameRepository: true,
+    publicationProvenanceVerified: true,
   }));
   assert.throws(() => validateBaselineOwnership({
     ...protectedBase,
@@ -255,7 +263,18 @@ test('all synchronized publication artifacts are owned by the publication workfl
     headRevision: 'fedcba9876543210fedcba9876543210fedcba98',
     pullRequestAuthor: 'github-actions[bot]',
     sameRepository: true,
+    publicationProvenanceVerified: true,
   }), /synchronized publication artifacts/);
+  assert.throws(() => validateBaselineOwnership({
+    ...protectedBase,
+    publicationArtifactsChanged: true,
+    acceptedBaselineExists: true,
+    headRef: publicationRef,
+    headRevision: publicationHead,
+    pullRequestAuthor: 'github-actions[bot]',
+    sameRepository: true,
+    publicationProvenanceVerified: false,
+  }), /trusted docs-interface-sync run/);
   assert.throws(() => validateBaselineOwnership({
     ...protectedBase,
     baseRef: 'feature/unprotected-base',
@@ -307,6 +326,7 @@ test('base-controlled guard rejects deletion of a synchronized publication artif
     DOCS_SYNC_BASE_REF: 'main',
     DOCS_SYNC_BASE_REPOSITORY: 'Atlasfsp/iRespond',
     DOCS_SYNC_HEAD_REPOSITORY: 'Atlasfsp/iRespond',
+    DOCS_SYNC_PUBLICATION_PROVENANCE: 'true',
     GITHUB_REPOSITORY: 'Atlasfsp/iRespond',
   };
 
@@ -317,7 +337,7 @@ test('base-controlled guard rejects deletion of a synchronized publication artif
   }), /synchronized publication artifacts/);
   await assert.doesNotReject(run('baseline-guard.mjs', root, {
     ...commonEnvironment,
-    DOCS_SYNC_HEAD_REF: `docs-sync/${acceptedRevision.slice(0, 12)}-123-${headRevision}`,
+    DOCS_SYNC_HEAD_REF: `docs-sync/${acceptedRevision}-123-${headRevision}`,
     DOCS_SYNC_PR_AUTHOR: 'github-actions[bot]',
   }));
 });
@@ -715,9 +735,17 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.match(ownershipWorkflow, /types: \[opened, synchronize, reopened, ready_for_review, edited\]/);
   assert.match(ownershipWorkflow, /workflow_dispatch:/);
   assert.match(ownershipWorkflow, /pull_request_number:/);
+  assert.match(ownershipWorkflow, /actions: read/);
   assert.match(ownershipWorkflow, /gh api "repos\/\$\{GITHUB_REPOSITORY\}\/pulls\/\$\{pr_number\}"/);
   assert.match(ownershipWorkflow, /base_ref=\$\(jq -r '\.base\.ref'/);
   assert.match(ownershipWorkflow, /base_repository=\$\(jq -r '\.base\.repo\.full_name'/);
+  assert.match(ownershipWorkflow, /actions\/runs\/\$\{publication_run_id\}/);
+  assert.match(ownershipWorkflow, /gh run download "\$publication_run_id"/);
+  assert.match(ownershipWorkflow, /documentation-publication-provenance-\$\{publication_run_id\}/);
+  assert.match(ownershipWorkflow, /publicationSha == \$publication_sha/);
+  assert.match(ownershipWorkflow, /pullRequestNumber == \$pull_request_number/);
+  assert.match(ownershipWorkflow, /\.github\/workflows\/docs-interface-sync\.yml/);
+  assert.match(ownershipWorkflow, /DOCS_SYNC_PUBLICATION_PROVENANCE/);
   assert.match(ownershipWorkflow, /ref: \$\{\{ steps\.pr\.outputs\.base_sha \}\}/);
   assert.match(ownershipWorkflow, /persist-credentials: false/);
   assert.match(ownershipWorkflow, /git fetch --no-tags origin "pull\/\$\{DOCS_SYNC_PR_NUMBER\}\/head"/);
@@ -738,12 +766,22 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.doesNotMatch(publishJob, /npm install|playwright install|node tools\/docs-sync\/src\/capture/);
   assert.match(publishJob, /GH_TOKEN: \$\{\{ github\.token \}\}/);
   assert.match(publishJob, /publication_sha=\$\(git rev-parse HEAD\)/);
-  assert.match(publishJob, /docs-sync\/\$\{GITHUB_SHA:0:12\}-\$\{GITHUB_RUN_ID\}-\$\{publication_sha\}/);
+  assert.match(publishJob, /docs-sync\/\$\{GITHUB_SHA\}-\$\{GITHUB_RUN_ID\}-\$\{publication_sha\}/);
+  assert.match(publishJob, /documentation-publication-provenance-\$\{\{ github\.run_id \}\}/);
+  assert.match(publishJob, /docs-sync-publication-provenance\/publication\.json/);
   assert.match(
     publishJob,
-    /gh workflow run docs-baseline-ownership\.yml --ref main -f pull_request_number="\$pr_number"/,
+    /gh workflow run docs-baseline-ownership\.yml --ref main -f pull_request_number="\$PUBLICATION_PR_NUMBER"/,
   );
-  assert.match(publishJob, /gh workflow run docs-interface-sync\.yml --ref "\$branch"/);
+  assert.match(
+    publishJob,
+    /gh workflow run docs-interface-sync\.yml --ref "\$PUBLICATION_BRANCH" -f pull_request_number="\$PUBLICATION_PR_NUMBER"/,
+  );
+  assert.match(workflow, /DOCS_SYNC_SOURCE_REVISION/);
+  assert.match(workflow, /DOCS_SYNC_CAPTURED_AT/);
+  assert.match(workflow, /DOCS_SYNC_UPDATE_BASELINE:.*publication_verification/);
+  assert.match(workflow, /git diff --exit-code --.*current-baseline\.json/s);
+  assert.match(workflow, /git status --porcelain --untracked-files=all/);
 });
 
 test('README documents report-based runtime-capture review signaling', async () => {

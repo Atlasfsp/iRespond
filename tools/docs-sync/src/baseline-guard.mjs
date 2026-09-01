@@ -13,7 +13,7 @@ export const protectedPublicationPaths = Object.freeze([
   'docs/manuals/generated/ui-interface-baseline.md',
   'docs/screenshots/current',
 ]);
-const publicationBranchPattern = /^docs-sync\/[0-9a-f]{12}-[1-9][0-9]*-([0-9a-f]{40})$/;
+const publicationBranchPattern = /^docs-sync\/([0-9a-f]{40})-([1-9][0-9]*)-([0-9a-f]{40})$/;
 
 export function validateBaselineOwnership({
   publicationArtifactsChanged,
@@ -25,6 +25,7 @@ export function validateBaselineOwnership({
   headRevision,
   pullRequestAuthor,
   sameRepository = false,
+  publicationProvenanceVerified = false,
 }) {
   if (baseRef !== 'main' || baseRepository !== repository) {
     throw new Error(`Documentation ownership verification must target ${repository}:main.`);
@@ -32,11 +33,12 @@ export function validateBaselineOwnership({
   if (!publicationArtifactsChanged || !acceptedBaselineExists) return;
   const publicationBranchMatch = publicationBranchPattern.exec(headRef || '');
   const publicationOwned = pullRequestAuthor === 'github-actions[bot]'
-    && publicationBranchMatch?.[1] === headRevision
-    && sameRepository;
+    && publicationBranchMatch?.[3] === headRevision
+    && sameRepository
+    && publicationProvenanceVerified;
   if (!publicationOwned) {
     throw new Error(
-      `Only a github-actions[bot] ${publicationBranchPattern} publication PR may change synchronized publication artifacts.`,
+      `Only a github-actions[bot] ${publicationBranchPattern} publication PR verified against the trusted docs-interface-sync run may change synchronized publication artifacts.`,
     );
   }
 }
@@ -88,6 +90,7 @@ async function main() {
     headRevision,
     pullRequestAuthor: process.env.DOCS_SYNC_PR_AUTHOR || '',
     sameRepository: process.env.DOCS_SYNC_HEAD_REPOSITORY === process.env.GITHUB_REPOSITORY,
+    publicationProvenanceVerified: process.env.DOCS_SYNC_PUBLICATION_PROVENANCE === 'true',
   });
   console.log(JSON.stringify({
     acceptedRevision,

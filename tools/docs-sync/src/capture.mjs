@@ -17,7 +17,10 @@ const webBaseURL = process.env.DOCS_CAPTURE_WEB_BASE_URL || defaultBaseURL;
 const defaultRevisionURL = process.env.DOCS_CAPTURE_REVISION_URL || '';
 const mobileRevisionURL = process.env.DOCS_CAPTURE_MOBILE_REVISION_URL || defaultRevisionURL;
 const webRevisionURL = process.env.DOCS_CAPTURE_WEB_REVISION_URL || defaultRevisionURL;
-const expectedRevision = process.env.GITHUB_SHA || process.env.DOCS_CAPTURE_EXPECTED_REVISION || '';
+const expectedRevision = process.env.DOCS_SYNC_SOURCE_REVISION
+  || process.env.GITHUB_SHA
+  || process.env.DOCS_CAPTURE_EXPECTED_REVISION
+  || '';
 if (!mobileBaseURL && !webBaseURL) {
   console.error('A documentation-safe capture base URL is required for runtime screenshots. Source fingerprinting remains mandatory when no preview exists.');
   process.exit(2);
