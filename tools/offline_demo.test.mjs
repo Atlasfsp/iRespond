@@ -311,5 +311,6 @@ assert.match(projectAdmin, /offerState==='offered'/);
 assert.match(projectAdmin, /offerState==='accepted'/);
 assert.match(projectAdmin, /submitted:canValidate\?'validated':'cancelled'/);
 assert.match(projectAdmin, /disabled=\{!perms\.canManageMilestones\|\|!nextMilestoneState\(m\.status,false\)\}/);
+assert.match(projectAdmin, /setMilestoneId\(''\);setMilestoneState\(''\);await loadProject/);
 
 console.log('offline demo contract: PASS');
