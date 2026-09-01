@@ -6,19 +6,21 @@ import { fileURLToPath } from 'node:url';
 const execFileAsync = promisify(execFile);
 const baselinePath = 'docs/documentation-system/current-baseline.json';
 const screenshotPath = 'docs/screenshots/current';
-const publicationBranchPattern = /^docs-sync\/[0-9a-f]{12}-[1-9][0-9]*$/;
+const publicationBranchPattern = /^docs-sync\/[0-9a-f]{12}-[1-9][0-9]*-([0-9a-f]{40})$/;
 
 export function validateBaselineOwnership({
   baselineChanged,
   screenshotsChanged = false,
   acceptedBaselineExists,
   headRef,
+  headRevision,
   pullRequestAuthor,
   sameRepository = false,
 }) {
   if ((!baselineChanged && !screenshotsChanged) || !acceptedBaselineExists) return;
+  const publicationBranchMatch = publicationBranchPattern.exec(headRef || '');
   const publicationOwned = pullRequestAuthor === 'github-actions[bot]'
-    && publicationBranchPattern.test(headRef || '')
+    && publicationBranchMatch?.[1] === headRevision
     && sameRepository;
   if (!publicationOwned) {
     throw new Error(
@@ -78,6 +80,7 @@ async function main() {
     screenshotsChanged,
     acceptedBaselineExists,
     headRef: process.env.DOCS_SYNC_HEAD_REF || '',
+    headRevision,
     pullRequestAuthor: process.env.DOCS_SYNC_PR_AUTHOR || '',
     sameRepository: process.env.DOCS_SYNC_HEAD_REPOSITORY === process.env.GITHUB_REPOSITORY,
   });

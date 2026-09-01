@@ -163,8 +163,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          branch="docs-sync/${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}"
-          git checkout -b "$branch"
+          staging_branch="docs-sync-staging/${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}"
+          git checkout -b "$staging_branch"
           git config user.name "iRespond Documentation Bot"
           git config user.email "documentation-bot@users.noreply.github.com"
 
@@ -186,6 +186,9 @@ jobs:
             exit 0
           fi
           git commit -m "docs: refresh manuals for frontend ${GITHUB_SHA:0:12}"
+          publication_sha=$(git rev-parse HEAD)
+          branch="docs-sync/${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${publication_sha}"
+          git branch -m "$branch"
           git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$branch"
           pr_url=$(gh pr create \
             --base main \

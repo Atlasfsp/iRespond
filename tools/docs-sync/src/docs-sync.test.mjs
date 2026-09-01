@@ -184,6 +184,8 @@ test('bootstrap comparison cannot trust head-controlled accepted hashes', async 
 
 test('accepted baseline changes are owned by the publication workflow', async () => {
   const { validateBaselineOwnership } = await import('./baseline-guard.mjs');
+  const publicationHead = '0123456789abcdef0123456789abcdef01234567';
+  const publicationRef = `docs-sync/0123456789ab-123456789-${publicationHead}`;
   assert.doesNotThrow(() => validateBaselineOwnership({
     baselineChanged: false,
     acceptedBaselineExists: true,
@@ -199,7 +201,8 @@ test('accepted baseline changes are owned by the publication workflow', async ()
   assert.doesNotThrow(() => validateBaselineOwnership({
     baselineChanged: true,
     acceptedBaselineExists: true,
-    headRef: 'docs-sync/0123456789ab-123456789',
+    headRef: publicationRef,
+    headRevision: publicationHead,
     pullRequestAuthor: 'github-actions[bot]',
     sameRepository: true,
   }));
@@ -212,14 +215,16 @@ test('accepted baseline changes are owned by the publication workflow', async ()
   assert.throws(() => validateBaselineOwnership({
     baselineChanged: true,
     acceptedBaselineExists: true,
-    headRef: 'docs-sync/0123456789ab-123456789',
+    headRef: publicationRef,
+    headRevision: publicationHead,
     pullRequestAuthor: 'contributor',
     sameRepository: true,
   }), /may change the accepted baseline/);
   assert.throws(() => validateBaselineOwnership({
     baselineChanged: true,
     acceptedBaselineExists: true,
-    headRef: 'docs-sync/0123456789ab-123456789',
+    headRef: publicationRef,
+    headRevision: publicationHead,
     pullRequestAuthor: 'github-actions[bot]',
     sameRepository: false,
   }), /may change the accepted baseline/);
@@ -235,10 +240,19 @@ test('accepted baseline changes are owned by the publication workflow', async ()
     baselineChanged: false,
     screenshotsChanged: true,
     acceptedBaselineExists: true,
-    headRef: 'docs-sync/0123456789ab-123456789',
+    headRef: publicationRef,
+    headRevision: publicationHead,
     pullRequestAuthor: 'github-actions[bot]',
     sameRepository: true,
   }));
+  assert.throws(() => validateBaselineOwnership({
+    baselineChanged: true,
+    acceptedBaselineExists: true,
+    headRef: publicationRef,
+    headRevision: 'fedcba9876543210fedcba9876543210fedcba98',
+    pullRequestAuthor: 'github-actions[bot]',
+    sameRepository: true,
+  }), /accepted baseline or screenshots/);
 });
 
 test('screen manifest rejects duplicate normalized screenshot targets', async () => {
@@ -653,6 +667,8 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.match(publishJob, /apply-screenshot-removals\.mjs/);
   assert.doesNotMatch(publishJob, /npm install|playwright install|node tools\/docs-sync\/src\/capture/);
   assert.match(publishJob, /GH_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.match(publishJob, /publication_sha=\$\(git rev-parse HEAD\)/);
+  assert.match(publishJob, /docs-sync\/\$\{GITHUB_SHA:0:12\}-\$\{GITHUB_RUN_ID\}-\$\{publication_sha\}/);
   assert.match(
     publishJob,
     /gh workflow run docs-baseline-ownership\.yml --ref main -f pull_request_number="\$pr_number"/,
