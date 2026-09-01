@@ -6,7 +6,7 @@
 
 ### 1. Source monitor — always available
 
-`npm run fingerprint` hashes every registered screen plus shared mobile routing/session/sync inputs. It separately fingerprints the screen manifest, publication workflow and executable synchronization tooling as the documentation synchronization contract. `npm run compare` compares both sets of inputs with `docs/documentation-system/current-baseline.json`. A frontend source or synchronization-contract change is sufficient to require publication review even when no render target is available.
+`npm run fingerprint` hashes every registered screen plus shared mobile routing/session/sync inputs. It separately fingerprints the screen manifest, publication workflow and executable synchronization tooling as the documentation synchronization contract. In CI, `npm run compare` compares both sets of inputs with the accepted baseline loaded from the pull request's base revision or the pre-push main revision—not a baseline modified by the triggering change. The checked-in baseline is used directly only while bootstrapping a repository revision whose accepted predecessor has no baseline. A frontend source or synchronization-contract change is sufficient to require publication review even when no render target is available.
 
 ### 2. Runtime capture — enabled only with a documentation-safe preview
 

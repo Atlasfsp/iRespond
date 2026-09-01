@@ -28,6 +28,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select accepted base-branch documentation baseline
+        env:
+          DOCS_SYNC_ACCEPTED_REVISION: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          accepted="$RUNNER_TEMP/docs-sync-accepted-baseline.json"
+          if [[ "$DOCS_SYNC_ACCEPTED_REVISION" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "${DOCS_SYNC_ACCEPTED_REVISION}:docs/documentation-system/current-baseline.json"; then
+            git show "${DOCS_SYNC_ACCEPTED_REVISION}:docs/documentation-system/current-baseline.json" > "$accepted"
+            echo "DOCS_SYNC_BASELINE_PATH=$accepted" >> "$GITHUB_ENV"
+          else
+            echo "Accepted revision has no documentation baseline; using the checked-in bootstrap baseline."
+          fi
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
@@ -68,6 +83,18 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Select accepted pre-push documentation baseline
+        env:
+          DOCS_SYNC_ACCEPTED_REVISION: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          accepted="$RUNNER_TEMP/docs-sync-accepted-baseline.json"
+          if [[ "$DOCS_SYNC_ACCEPTED_REVISION" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "${DOCS_SYNC_ACCEPTED_REVISION}:docs/documentation-system/current-baseline.json"; then
+            git show "${DOCS_SYNC_ACCEPTED_REVISION}:docs/documentation-system/current-baseline.json" > "$accepted"
+            echo "DOCS_SYNC_BASELINE_PATH=$accepted" >> "$GITHUB_ENV"
+          else
+            echo "Accepted revision has no documentation baseline; using the checked-in bootstrap baseline."
+          fi
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22

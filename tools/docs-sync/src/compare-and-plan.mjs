@@ -6,7 +6,11 @@ const root=path.resolve(process.argv[2]||'.');
 const manifest=JSON.parse(await readFile(path.join(root,'docs/documentation-system/screen-manifest.json'),'utf8'));
 const fingerprint=JSON.parse(await readFile(path.join(root,'docs/documentation-system/ui-fingerprint.generated.json'),'utf8'));
 const baselinePath=path.join(root,'docs/documentation-system/current-baseline.json');
-const baseline=JSON.parse(await readFile(baselinePath,'utf8'));
+const configuredBaselinePath=process.env.DOCS_SYNC_BASELINE_PATH;
+const acceptedBaselinePath=configuredBaselinePath
+  ? (path.isAbsolute(configuredBaselinePath)?configuredBaselinePath:path.join(root,configuredBaselinePath))
+  : baselinePath;
+const baseline=JSON.parse(await readFile(acceptedBaselinePath,'utf8'));
 const runtimePath=path.join(root,'docs/documentation-system/runtime-capture.generated.json');
 const sourceRevision=process.env.GITHUB_SHA||fingerprint.sourceRevision||'local';
 let runtime=null;

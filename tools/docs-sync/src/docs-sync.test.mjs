@@ -63,6 +63,13 @@ test('manifest-only edits are published as synchronization-contract changes', as
   const contractPath = 'docs/documentation-system/screen-manifest.json';
   await jsonFile(path.join(root, contractPath), { screens: [] });
   await jsonFile(path.join(root, 'docs/documentation-system/current-baseline.json'), {
+    sourceRevision: 'self-advanced-head',
+    sources: {},
+    screenshots: {},
+    synchronizationContract: { [contractPath]: 'current-contract-hash' },
+  });
+  const acceptedBaselinePath = path.join(root, 'accepted-base-branch-baseline.json');
+  await jsonFile(acceptedBaselinePath, {
     sourceRevision: 'baseline-head',
     sources: {},
     screenshots: {},
@@ -79,6 +86,7 @@ test('manifest-only edits are published as synchronization-contract changes', as
     GITHUB_SHA: 'current-head',
     GITHUB_OUTPUT: outputPath,
     DOCS_SYNC_UPDATE_BASELINE: '1',
+    DOCS_SYNC_BASELINE_PATH: acceptedBaselinePath,
   });
   await run('regenerate-manual-index.mjs', root);
 
@@ -451,6 +459,9 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.match(pushTrigger, /docs\/documentation-system\/screen-manifest\.json/);
   assert.match(pushTrigger, /tools\/docs-sync\/\*\*/);
   assert.match(pushTrigger, /\.github\/workflows\/docs-interface-sync\.yml/);
+  assert.match(workflow, /github\.event\.pull_request\.base\.sha/);
+  assert.match(workflow, /github\.event\.before/);
+  assert.match(workflow, /git show .*docs\/documentation-system\/current-baseline\.json/);
   assert.match(captureJob, /permissions:\n\s+contents: read/);
   assert.match(captureJob, /npm install --prefix tools\/docs-sync/);
   assert.match(captureJob, /DOCS_CAPTURE_REVISION_URL/);
