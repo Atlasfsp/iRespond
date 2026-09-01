@@ -57,6 +57,18 @@ if((report.unmappedFrontendChanges||[]).length){
   lines.push('No changed canonical frontend source is currently unmapped.','');
 }
 
+const synchronizationContractChanges=report.synchronizationContractChanges||[];
+lines.push('## Synchronization contract review','');
+if(synchronizationContractChanges.length){
+  lines.push('The inputs that govern documentation synchronization changed and require publication review:','');
+  for(const change of synchronizationContractChanges){
+    lines.push(`- **${change.change}** \`${change.source}\` — previous \`${change.previous||'none'}\`, current \`${change.current||'deleted'}\``);
+  }
+  lines.push('');
+}else{
+  lines.push('No screen-manifest, publication-workflow or executable synchronization-tool input changed.','');
+}
+
 lines.push('## Runtime capture review','');
 if((report.runtimeFailures||[]).length){
   lines.push('Runtime capture requires human review for the following registered surfaces:','');
@@ -68,13 +80,13 @@ if((report.runtimeFailures||[]).length){
   lines.push(`Runtime capture available in this run: **${report.runtimeCaptureAvailable?'yes':'no'}**. No captured route or text-anchor mismatch is currently recorded.`,'');
 }
 
-const hasAnyChange=(report.frontendSourceChanges||[]).length>0||(report.screenshotChanges||[]).length>0||(report.runtimeFailures||[]).length>0;
+const hasAnyChange=(report.frontendSourceChanges||[]).length>0||synchronizationContractChanges.length>0||(report.screenshotChanges||[]).length>0||(report.runtimeFailures||[]).length>0;
 lines.push(
   '## Regeneration decision',
   '',
   hasAnyChange
-    ? `Manual interface review is required. Registered screen changes: ${report.changed.length?report.changed.map(x=>`\`${x}\``).join(', '):'none'}; changed canonical frontend source files: ${(report.frontendSourceChanges||[]).length}; unmapped changed sources: ${(report.unmappedFrontendChanges||[]).length}.`
-    : 'No canonical frontend source, registered screenshot or runtime-capture review signal changed.',
+    ? `Manual interface review is required. Registered screen changes: ${report.changed.length?report.changed.map(x=>`\`${x}\``).join(', '):'none'}; changed canonical frontend source files: ${(report.frontendSourceChanges||[]).length}; changed synchronization contract inputs: ${synchronizationContractChanges.length}; unmapped changed sources: ${(report.unmappedFrontendChanges||[]).length}.`
+    : 'No canonical frontend source, synchronization-contract input, registered screenshot or runtime-capture review signal changed.',
   ''
 );
 const dir=path.join(root,'docs/manuals/generated');

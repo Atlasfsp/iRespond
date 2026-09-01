@@ -41,7 +41,7 @@
     "tools/docs-sync/src/compare-and-plan.mjs": "f78a4d364c6ae98840d4fe22727271b55ddcaaff",
     "tools/docs-sync/src/fingerprint.mjs": "a75e2042bf650929f3c4e1fbd27014cde68863b7",
     "tools/docs-sync/src/mock-api.mjs": "da820576578e0f5e50c42aab92ad81ef98b81a81",
-    "tools/docs-sync/src/regenerate-manual-index.mjs": "ac1fb963a68b47307b852af86abc22860c3f180b"
+    "tools/docs-sync/src/regenerate-manual-index.mjs": "4e3abb9c3d9a9caf6bc0f1b6b3d771a8e78c1c8b"
   },
   "publications": [
     {"id":"product","name":"iRespond Product Documentation","minimumPages":100,"renderedPages":127},

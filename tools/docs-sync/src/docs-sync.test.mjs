@@ -80,6 +80,7 @@ test('manifest-only edits are published as synchronization-contract changes', as
     GITHUB_OUTPUT: outputPath,
     DOCS_SYNC_UPDATE_BASELINE: '1',
   });
+  await run('regenerate-manual-index.mjs', root);
 
   const report = JSON.parse(await readFile(
     path.join(root, 'docs/documentation-system/ui-change-report.generated.json'),
@@ -99,6 +100,13 @@ test('manifest-only edits are published as synchronization-contract changes', as
   assert.deepEqual(baseline.synchronizationContract, {
     [contractPath]: 'current-contract-hash',
   });
+  const manual = await readFile(
+    path.join(root, 'docs/manuals/generated/ui-interface-baseline.md'),
+    'utf8',
+  );
+  assert.match(manual, /Synchronization contract review/);
+  assert.match(manual, /modified.*docs\/documentation-system\/screen-manifest\.json/);
+  assert.match(manual, /changed synchronization contract inputs: 1/);
   assert.match(await readFile(outputPath, 'utf8'), /changed=true/);
 });
 
