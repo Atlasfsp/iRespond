@@ -87,7 +87,13 @@ export default function ImpactPassport() {
                   <Ionicons name="shield-checkmark" size={18} color={Stitch.color.onPrimary} />
                   <Text style={s.verifiedText}>SERVER-EVIDENCED PASSPORT</Text>
                 </View>
-                <Text style={s.heroSubject}>{profile?.displayName || 'iRespond contributor'}</Text>
+                <Text style={s.heroSubject}>{data.subject}</Text>
+              </View>
+
+              <View style={s.card}>
+                <Text style={s.section}>Self-declared Ability Profile</Text>
+                <Text style={s.muted}>These profile fields are saved on this device and are not server-evidenced.</Text>
+                <Text style={s.profileName}>{profile?.displayName || 'No local display name set'}</Text>
                 <View style={s.compassRow}>
                   <Compass icon="location-outline" label="Place" value={profile?.place || 'Set profile'} />
                   <Compass icon="people-outline" label="Position" value={profile?.position || 'Set profile'} />
@@ -254,9 +260,10 @@ const s = StyleSheet.create({
   verifiedText: { ...Stitch.type.tag, color: Stitch.color.onPrimary },
   heroSubject: { ...Stitch.type.hero, color: Stitch.color.onPrimary },
   compassRow: { flexDirection: 'row', gap: Stitch.space.sm },
-  compass: { flex: 1, minHeight: 78, padding: Stitch.space.sm, borderRadius: Stitch.radius.md, backgroundColor: 'rgba(207,229,255,.12)', alignItems: 'center', justifyContent: 'center' },
-  compassLabel: { ...Stitch.type.tag, color: Stitch.color.onPrimaryContainer, marginTop: 3 },
-  compassValue: { ...Stitch.type.footnote, color: Stitch.color.primaryFixed, maxWidth: '100%' },
+  compass: { flex: 1, minHeight: 78, padding: Stitch.space.sm, borderRadius: Stitch.radius.md, backgroundColor: Stitch.color.surfaceLow, alignItems: 'center', justifyContent: 'center' },
+  compassLabel: { ...Stitch.type.tag, color: Stitch.color.onSurfaceVariant, marginTop: 3 },
+  compassValue: { ...Stitch.type.footnote, color: Stitch.color.primary, maxWidth: '100%' },
+  profileName: { ...Stitch.type.card, color: Stitch.color.onSurface },
   metrics: { flexDirection: 'row', flexWrap: 'wrap', gap: Stitch.space.md },
   metric: { width: '47%', flexGrow: 1, padding: Stitch.space.base, borderRadius: Stitch.radius.lg, backgroundColor: Stitch.color.surfaceLowest, borderWidth: 1, borderColor: Stitch.color.outlineVariant },
   metricHead: { flexDirection: 'row', gap: 5, alignItems: 'center' },
