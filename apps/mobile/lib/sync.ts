@@ -35,19 +35,19 @@ export async function queueNeedForSync(draft: NeedDraft) {
   const queue=await loadQueue();const item:QueuedNeed={idempotencyKey:makeId('need'),draft,queuedAt:new Date().toISOString(),attempts:0,uploadedEvidenceUris:[]};await saveQueue([...queue,item]);return item;
 }
 
-export type SyncResult={synced:number;remaining:number;offline:boolean};
+export type SyncResult={synced:number;remaining:number;offline:boolean;syncedKeys:string[]};
 
 export async function flushNeedQueue():Promise<SyncResult>{
-  const baseUrl=process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/,'');const queue=await loadQueue();if(!baseUrl||queue.length===0)return{synced:0,remaining:queue.length,offline:!baseUrl};
-  const actorId=await getLocalActorId();const token=await getAccessToken();const remaining:QueuedNeed[]=[];let synced=0;
+  const baseUrl=process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/,'');const queue=await loadQueue();if(!baseUrl||queue.length===0)return{synced:0,remaining:queue.length,offline:!baseUrl,syncedKeys:[]};
+  const actorId=await getLocalActorId();const token=await getAccessToken();const remaining:QueuedNeed[]=[];const syncedKeys:string[]=[];let synced=0;
   for(const original of queue){let item={...original,uploadedEvidenceUris:[...(original.uploadedEvidenceUris??[])]};try{
       if(!item.serverNeedId){const response=await fetch(`${baseUrl}/v1/needs`,{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':item.idempotencyKey},body:JSON.stringify({title:item.draft.title,description:item.draft.description,category:item.draft.category??'community',latitude:item.draft.latitude??0,longitude:item.draft.longitude??0,reporterId:actorId,sdgTags:[]})});if(!response.ok)throw new Error(`need sync ${response.status}`);const created=(await response.json()) as CreatedNeed;item.serverNeedId=created.id;}
       const pendingEvidence=item.draft.evidenceUris.filter((uri)=>!item.uploadedEvidenceUris?.includes(uri));
       if(pendingEvidence.length>0&&!token){remaining.push(item);continue;}
       for(const uri of pendingEvidence){if(!token)break;await uploadEvidence(baseUrl,item.serverNeedId!,uri,token);item.uploadedEvidenceUris=[...(item.uploadedEvidenceUris??[]),uri];}
-      const allEvidenceDone=item.draft.evidenceUris.every((uri)=>item.uploadedEvidenceUris?.includes(uri));if(allEvidenceDone)synced+=1;else remaining.push(item);
+      const allEvidenceDone=item.draft.evidenceUris.every((uri)=>item.uploadedEvidenceUris?.includes(uri));if(allEvidenceDone){synced+=1;syncedKeys.push(item.idempotencyKey)}else remaining.push(item);
     }catch{remaining.push({...item,attempts:item.attempts+1});}}
-  await saveQueue(remaining);return{synced,remaining:remaining.length,offline:false};
+  await saveQueue(remaining);return{synced,remaining:remaining.length,offline:false,syncedKeys};
 }
 
 async function uploadEvidence(baseUrl:string,needId:string,uri:string,token:string){

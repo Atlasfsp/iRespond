@@ -47,6 +47,11 @@ type projectPermissions struct {
 	CanManageFunding            bool `json:"canManageFunding"`
 }
 
+func milestoneTransitionAuthorized(canManage, canValidate bool, target string) bool {
+	if target == "validated" { return canValidate }
+	return canManage
+}
+
 func registerProjectRoutes(mux *http.ServeMux, identity auth.Verifier, manager *projects.Manager) {
 	unavailable := func(w http.ResponseWriter) bool {
 		if manager == nil {
@@ -161,7 +166,7 @@ func registerProjectRoutes(mux *http.ServeMux, identity auth.Verifier, manager *
 		var req stateRequest
 		if json.NewDecoder(r.Body).Decode(&req) != nil { writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid milestone transition"}); return }
 		canValidate, err := canValidateMilestones(r, p); if err != nil { writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to authorize milestone validation"}); return }
-		if !allowed && !canValidate { writeJSON(w, http.StatusForbidden, map[string]string{"error": "project role required"}); return }
+		if !milestoneTransitionAuthorized(allowed, canValidate, req.State) { writeJSON(w, http.StatusForbidden, map[string]string{"error": "milestone transition is not authorized"}); return }
 		v, err := manager.TransitionMilestone(r.Context(), r.PathValue("id"), r.PathValue("milestoneId"), req.State, p.Subject, canValidate)
 		if err != nil { writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()}); return }
 		writeJSON(w, http.StatusOK, v)

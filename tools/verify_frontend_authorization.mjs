@@ -7,6 +7,8 @@ const files={
  capabilities:await readFile('apps/mobile/lib/capabilities.ts','utf8'),
  project:await readFile('apps/mobile/app/project/[id].tsx','utf8'),
  projectAdmin:await readFile('apps/mobile/app/project-admin.tsx','utf8'),
+ evidence:await readFile('apps/mobile/app/evidence.tsx','utf8'),
+ mobileSync:await readFile('apps/mobile/lib/sync.ts','utf8'),
  workspace:await readFile('apps/mobile/app/workspace.tsx','utf8'),
  safetyOps:await readFile('apps/mobile/app/safety-ops.tsx','utf8'),
  mobileApi:await readFile('apps/mobile/lib/api.ts','utf8'),
@@ -23,6 +25,7 @@ need('web','detail.permissions||emptyPermissions','Project Room must consume the
 need('web','permissions.canManageContributions','project contribution review must be permission-gated');
 need('web','p.canManageMilestones','milestone creation must be permission-gated');
 need('web','p.canValidateMilestones','milestone validation must be permission-gated');
+need('web',"p.canValidateMilestones&&m.status==='submitted'",'web verifier controls must be limited to submitted milestone validation');
 need('web','p.canManageRoles','project role management must be permission-gated');
 need('web','p.canManageProject','project lifecycle management must be permission-gated');
 need('web','p.canManageFunding','funding-plan management must be permission-gated');
@@ -41,8 +44,12 @@ need('mobileApi','authenticated === true','optional authentication must require 
 need('mobileApi','if (token)','optional authentication must attach an available token');
 need('projectAdmin','detail?.permissions??none','project admin must consume server permissions');
 for(const reset of ["setCurrency('NGN')","setTarget('')","setCounterpart('')"])need('projectAdmin',reset,`project admin must clear stale funding input with ${reset}`);
+need('projectAdmin',"m.status==='submitted'&&perms.canValidateMilestones",'mobile verifier controls must be limited to submitted milestones');
 for(const permission of ['canManageProject','canManageMilestones','canValidateMilestones','canManageRoles','canManageContributions','canPublishContributionNeeds','canManageFunding'])need('projectAdmin',permission,`project admin must honor ${permission}`);
 forbid('projectAdmin',/createdBy|projectManagerId/,'mobile must not infer resource authority from record ownership fields');
+need('mobileSync','syncedKeys:string[]','sync results must identify the individual queue items completed');
+need('evidence','result.syncedKeys.includes(queued.idempotencyKey)','evidence submission feedback must use the current queue item result');
+forbid('evidence',/result\.synced\s*>\s*0/,'evidence submission must not claim current success from aggregate queue progress');
 
 // Resource-only Stitch screens cannot be advertised to every authenticated identity.
 need('mobileCatalog',"role !== 'resource-authorized'",'mobile catalog must exclude resource-authorized from global session roles');
