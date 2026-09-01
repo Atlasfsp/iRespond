@@ -88,6 +88,15 @@ const contributionNeeds = [
   { id: 'contribution-testing', kind: 'material', description: 'Water-quality test kits', quantityNote: 'Ten complete kits', status: 'open' },
 ];
 
+const milestonesByProject: Record<string, typeof milestones> = {
+  'project-water-1': milestones,
+  'project-health-1': [],
+};
+const contributionNeedsByProject: Record<string, typeof contributionNeeds> = {
+  'project-water-1': contributionNeeds,
+  'project-health-1': [],
+};
+
 const offers = [
   {
     id: 'offer-1',
@@ -114,6 +123,7 @@ const fundingPlan = {
   confirmedMinor: 0,
   updatedAt: '2026-08-30T12:00:00.000Z',
 };
+const fundingPlans: Record<string, typeof fundingPlan | undefined> = { 'project-water-1': fundingPlan };
 
 const pledges = [
   {
@@ -178,13 +188,15 @@ const privacyRequests = [
 
 function ok(body: unknown): DemoResult { return { status: 200, body }; }
 function missing(message = 'Offline demo record was not found.'): DemoResult { return { status: 404, body: { error: message } }; }
+function conflict(message: string): DemoResult { return { status: 409, body: { error: message } }; }
 function asRecord(value: unknown): JsonRecord { return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : {}; }
 function lastSegment(path: string) { return decodeURIComponent(path.split('/').filter(Boolean).at(-1) ?? ''); }
 function projectFor(id: string) { return projects.find((project) => project.id === id); }
 function needFor(id: string) { return needs.find((need) => need.id === id); }
+function isVerifiedState(state: string) { return ['community_confirmed', 'institution_confirmed', 'expert_confirmed', 'independently_audited', 'government_confirmed'].includes(state); }
 function projectDetail(id: string) {
   const project = projectFor(id);
-  return project ? { project, milestones, contributionNeeds, permissions } : null;
+  return project ? { project, milestones: milestonesByProject[id] ?? [], contributionNeeds: contributionNeedsByProject[id] ?? [], permissions } : null;
 }
 
 export function isDemoRequest(raw: string) {
@@ -212,7 +224,24 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
     roles: ['community_verifier', 'impact_auditor', 'evidence_reviewer', 'safety_reviewer'],
   });
   if (verb === 'GET' && path === '/v1/needs') return ok(needs);
-  if (verb === 'POST' && path === '/v1/needs') return ok({ ...needs[0], ...input, id: `demo-need-${now.getTime()}`, verificationState: 'observed', createdAt: now.toISOString(), updatedAt: now.toISOString() });
+  if (verb === 'POST' && path === '/v1/needs') {
+    const need = {
+      ...needs[0],
+      id: `demo-need-${now.getTime()}-${needs.length}`,
+      title: String(input.title ?? 'Offline demo observation'),
+      description: String(input.description ?? ''),
+      category: String(input.category ?? 'community'),
+      latitude: Number(input.latitude ?? 0),
+      longitude: Number(input.longitude ?? 0),
+      reporterId: 'offline-demo-user',
+      verificationState: 'observed',
+      sdgTags: Array.isArray(input.sdgTags) ? input.sdgTags.map(Number) : [],
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
+    needs.push(need);
+    return ok(need);
+  }
   if (verb === 'GET' && path === '/v1/projects') return ok(projects);
 
   const evidenceInitiate = path.match(/^\/v1\/needs\/([^/]+)\/evidence\/uploads$/);
@@ -240,6 +269,8 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
     const sourceNeedId = decodeURIComponent(needProject[1]);
     const need = needFor(sourceNeedId);
     if (!need) return missing();
+    if (!isVerifiedState(need.verificationState)) return conflict('need must be verified before project conversion');
+    if (projects.some((candidate) => candidate.sourceNeedId === sourceNeedId)) return conflict('need already has an action project');
     const project = {
       ...projects[0],
       id: `demo-project-${sourceNeedId}-${now.getTime()}`,
@@ -251,12 +282,18 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
       sdgTags: need.sdgTags,
     };
     projects.push(project);
+    milestonesByProject[project.id] = [];
+    contributionNeedsByProject[project.id] = [];
     return ok(project);
   }
   const verification = path.match(/^\/v1\/needs\/([^/]+)\/verification$/);
   if (verification && verb === 'POST') {
-    const need = needFor(decodeURIComponent(verification[1]));
-    return need ? ok({ ...need, verificationState: String(input.state ?? need.verificationState), updatedAt: now.toISOString() }) : missing();
+    const needId = decodeURIComponent(verification[1]);
+    const index = needs.findIndex((candidate) => candidate.id === needId);
+    if (index < 0) return missing();
+    const need = { ...needs[index], verificationState: String(input.state ?? needs[index].verificationState), updatedAt: now.toISOString() };
+    needs[index] = need;
+    return ok(need);
   }
   const needMatch = path.match(/^\/v1\/needs\/([^/]+)$/);
   if (verb === 'GET' && needMatch) {
@@ -265,46 +302,125 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
   }
 
   const projectFundingPledges = path.match(/^\/v1\/projects\/([^/]+)\/funding\/pledges$/);
-  if (projectFundingPledges && verb === 'GET') return ok(pledges);
-  if (projectFundingPledges && verb === 'POST') return ok({
-    ...pledges[0],
-    ...input,
-    id: `demo-pledge-${now.getTime()}`,
-    projectId: decodeURIComponent(projectFundingPledges[1]),
-    status: 'pledged',
-    currency: fundingPlan.currency,
-    createdAt: now.toISOString(),
-  });
+  if (projectFundingPledges && verb === 'GET') return ok(pledges.filter((pledge) => pledge.projectId === decodeURIComponent(projectFundingPledges[1])));
+  if (projectFundingPledges && verb === 'POST') {
+    const projectId = decodeURIComponent(projectFundingPledges[1]);
+    const plan = fundingPlans[projectId];
+    if (!plan) return missing('Funding plan was not found.');
+    const pledge = {
+      ...pledges[0],
+      id: `demo-pledge-${now.getTime()}-${pledges.length}`,
+      projectId,
+      contributorId: 'offline-demo-user',
+      contributionClass: String(input.contributionClass ?? 'external_donation'),
+      amountMinor: Number(input.amountMinor ?? 0),
+      currency: plan.currency,
+      status: 'pledged',
+      createdAt: now.toISOString(),
+    };
+    pledges.push(pledge);
+    plan.pledgedMinor += pledge.amountMinor;
+    return ok(pledge);
+  }
   const projectFunding = path.match(/^\/v1\/projects\/([^/]+)\/funding$/);
-  if (projectFunding && verb === 'GET') return projectFor(decodeURIComponent(projectFunding[1])) ? ok({ ...fundingPlan, projectId: decodeURIComponent(projectFunding[1]) }) : missing();
+  if (projectFunding && verb === 'GET') {
+    const projectId = decodeURIComponent(projectFunding[1]);
+    const plan = fundingPlans[projectId];
+    return projectFor(projectId) && plan ? ok({ ...plan }) : missing();
+  }
   if (projectFunding && verb === 'PUT') {
-    const targetMinor = Number(input.targetMinor ?? fundingPlan.targetMinor);
-    const communityCounterpartMinor = Number(input.communityCounterpartMinor ?? fundingPlan.communityCounterpartMinor);
-    return ok({ ...fundingPlan, ...input, projectId: decodeURIComponent(projectFunding[1]), targetMinor, communityCounterpartMinor, externalTargetMinor: targetMinor - communityCounterpartMinor, updatedAt: now.toISOString() });
+    const projectId = decodeURIComponent(projectFunding[1]);
+    if (!projectFor(projectId)) return missing();
+    const plan = fundingPlans[projectId] ?? { projectId, currency: 'NGN', targetMinor: 0, communityCounterpartMinor: 0, externalTargetMinor: 0, status: 'draft', pledgedMinor: 0, confirmedMinor: 0, updatedAt: now.toISOString() };
+    const targetMinor = Number(input.targetMinor ?? plan.targetMinor);
+    const communityCounterpartMinor = Number(input.communityCounterpartMinor ?? plan.communityCounterpartMinor);
+    Object.assign(plan, {
+      projectId,
+      currency: String(input.currency ?? plan.currency),
+      targetMinor,
+      communityCounterpartMinor,
+      externalTargetMinor: targetMinor - communityCounterpartMinor,
+      status: String(input.status ?? plan.status),
+      updatedAt: now.toISOString(),
+    });
+    fundingPlans[projectId] = plan;
+    return ok({ ...plan });
   }
   const contributionOffer = path.match(/^\/v1\/projects\/([^/]+)\/contribution-needs\/([^/]+)\/offers$/);
-  if (contributionOffer && verb === 'POST') return ok({
-    ...offers[0],
-    ...input,
-    id: `demo-offer-${now.getTime()}`,
-    projectId: decodeURIComponent(contributionOffer[1]),
-    contributionNeedId: decodeURIComponent(contributionOffer[2]),
-    contributorId: 'offline-demo-user',
-    status: 'offered',
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-  });
+  if (contributionOffer && verb === 'POST') {
+    const offer = {
+      ...offers[0],
+      id: `demo-offer-${now.getTime()}-${offers.length}`,
+      projectId: decodeURIComponent(contributionOffer[1]),
+      contributionNeedId: decodeURIComponent(contributionOffer[2]),
+      contributorId: 'offline-demo-user',
+      note: String(input.note ?? ''),
+      availabilityNote: String(input.availabilityNote ?? ''),
+      status: 'offered',
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
+    offers.push(offer);
+    return ok(offer);
+  }
   const projectOffers = path.match(/^\/v1\/projects\/([^/]+)\/contribution-offers$/);
   if (projectOffers && verb === 'GET') return ok(offers.filter((offer) => offer.projectId === decodeURIComponent(projectOffers[1])));
-  if (projectOffers && verb === 'POST') return ok({ ...offers[0], ...input, id: `demo-offer-${now.getTime()}`, projectId: decodeURIComponent(projectOffers[1]), status: 'offered', createdAt: now.toISOString(), updatedAt: now.toISOString() });
+  if (projectOffers && verb === 'POST') {
+    const offer = { ...offers[0], id: `demo-offer-${now.getTime()}-${offers.length}`, projectId: decodeURIComponent(projectOffers[1]), note: String(input.note ?? ''), availabilityNote: String(input.availabilityNote ?? ''), status: 'offered', createdAt: now.toISOString(), updatedAt: now.toISOString() };
+    offers.push(offer);
+    return ok(offer);
+  }
+  const milestoneCreate = path.match(/^\/v1\/projects\/([^/]+)\/milestones$/);
+  if (verb === 'POST' && milestoneCreate) {
+    const projectId = decodeURIComponent(milestoneCreate[1]);
+    if (!projectFor(projectId)) return missing();
+    const projectMilestones = milestonesByProject[projectId] ?? (milestonesByProject[projectId] = []);
+    const milestone = { id: `demo-milestone-${now.getTime()}-${projectMilestones.length}`, title: String(input.title ?? 'Demo milestone'), description: String(input.description ?? ''), status: 'planned', sequence: Number(input.sequence ?? projectMilestones.length + 1) };
+    projectMilestones.push(milestone);
+    return ok(milestone);
+  }
+  const contributionNeedCreate = path.match(/^\/v1\/projects\/([^/]+)\/contribution-needs$/);
+  if (verb === 'POST' && contributionNeedCreate) {
+    const projectId = decodeURIComponent(contributionNeedCreate[1]);
+    if (!projectFor(projectId)) return missing();
+    const projectContributionNeeds = contributionNeedsByProject[projectId] ?? (contributionNeedsByProject[projectId] = []);
+    const contributionNeed = { id: `demo-contribution-need-${now.getTime()}-${projectContributionNeeds.length}`, kind: String(input.kind ?? 'time'), description: String(input.description ?? ''), quantityNote: String(input.quantityNote ?? ''), status: 'open' };
+    projectContributionNeeds.push(contributionNeed);
+    return ok(contributionNeed);
+  }
+  const projectTransition = path.match(/^\/v1\/projects\/([^/]+)\/transition$/);
+  if (verb === 'POST' && projectTransition) {
+    const projectId = decodeURIComponent(projectTransition[1]);
+    const index = projects.findIndex((project) => project.id === projectId);
+    if (index < 0) return missing();
+    projects[index] = { ...projects[index], status: String(input.state ?? projects[index].status) };
+    return ok(projects[index]);
+  }
+  const offerMutation = path.match(/^\/v1\/projects\/([^/]+)\/contribution-offers\/([^/]+)\/(decision|fulfill)$/);
+  if (verb === 'POST' && offerMutation) {
+    const offerId = decodeURIComponent(offerMutation[2]);
+    const index = offers.findIndex((offer) => offer.id === offerId);
+    if (index < 0) return missing();
+    const status = offerMutation[3] === 'fulfill' ? 'fulfilled' : String(input.decision ?? 'accepted');
+    offers[index] = { ...offers[index], status, updatedAt: now.toISOString() };
+    return ok(offers[index]);
+  }
+  if (verb === 'POST' && /^\/v1\/projects\/[^/]+\/roles\/invite$/.test(path)) return ok({ id: `demo-invite-${now.getTime()}`, status: 'pending', demo: true });
   const projectMatch = path.match(/^\/v1\/projects\/([^/]+)$/);
   if (verb === 'GET' && projectMatch) {
     const detail = projectDetail(decodeURIComponent(projectMatch[1]));
     return detail ? ok(detail) : missing();
   }
-  if (verb === 'POST' && /^\/v1\/projects\/[^/]+\/(milestones|transition|contribution-needs|roles\/invite|contribution-offers\/[^/]+\/(decision|fulfill))$/.test(path)) return ok({ id: `demo-action-${now.getTime()}`, status: 'accepted', demo: true });
-  const milestoneTransition = path.match(/^\/v1\/projects\/[^/]+\/milestones\/([^/]+)\/transition$/);
-  if (verb === 'POST' && milestoneTransition) return ok({ id: decodeURIComponent(milestoneTransition[1]), status: String(input.state ?? 'ready'), demo: true });
+  const milestoneTransition = path.match(/^\/v1\/projects\/([^/]+)\/milestones\/([^/]+)\/transition$/);
+  if (verb === 'POST' && milestoneTransition) {
+    const projectId = decodeURIComponent(milestoneTransition[1]);
+    const milestoneId = decodeURIComponent(milestoneTransition[2]);
+    const projectMilestones = milestonesByProject[projectId] ?? [];
+    const index = projectMilestones.findIndex((milestone) => milestone.id === milestoneId);
+    if (index < 0) return missing();
+    projectMilestones[index] = { ...projectMilestones[index], status: String(input.state ?? projectMilestones[index].status) };
+    return ok(projectMilestones[index]);
+  }
 
   if (verb === 'GET' && path === '/v1/me/impact-passport') return ok({
     subject: 'offline-demo-user',
@@ -320,28 +436,71 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
   });
   if (verb === 'GET' && path === '/v1/me/notifications') return ok(notifications);
   if (verb === 'GET' && path === '/v1/me/notification-preferences') return ok(notificationPreferences);
-  if (verb === 'PUT' && path === '/v1/me/notification-preferences') return ok({ ...notificationPreferences, ...input });
+  if (verb === 'PUT' && path === '/v1/me/notification-preferences') {
+    for (const key of ['inApp', 'push', 'sms', 'email'] as const) {
+      if (key in input) notificationPreferences[key] = Boolean(input[key]);
+    }
+    return ok({ ...notificationPreferences });
+  }
   const notificationRead = path.match(/^\/v1\/me\/notifications\/([^/]+)\/read$/);
   if (verb === 'POST' && notificationRead) {
-    const notice = notifications.find((item) => item.id === decodeURIComponent(notificationRead[1]));
-    return notice ? ok({ ...notice, readAt: now.toISOString() }) : missing();
+    const noticeId = decodeURIComponent(notificationRead[1]);
+    const index = notifications.findIndex((item) => item.id === noticeId);
+    if (index < 0) return missing();
+    notifications[index] = { ...notifications[index], readAt: now.toISOString() };
+    return ok(notifications[index]);
   }
   if (verb === 'GET' && path === '/v1/me/contribution-offers') return ok(offers);
   const withdraw = path.match(/^\/v1\/contribution-offers\/([^/]+)\/withdraw$/);
   if (verb === 'POST' && withdraw) {
-    const offer = offers.find((item) => item.id === decodeURIComponent(withdraw[1]));
-    return offer ? ok({ ...offer, status: 'withdrawn', updatedAt: now.toISOString() }) : missing();
+    const offerId = decodeURIComponent(withdraw[1]);
+    const index = offers.findIndex((item) => item.id === offerId);
+    if (index < 0) return missing();
+    offers[index] = { ...offers[index], status: 'withdrawn', updatedAt: now.toISOString() };
+    return ok(offers[index]);
   }
   if (verb === 'GET' && path === '/v1/me/funding/pledges') return ok(pledges);
-  if (verb === 'POST' && /^\/v1\/funding\/pledges\/[^/]+\/cancel$/.test(path)) return ok({ ...pledges[0], id: path.split('/')[4], status: 'cancelled' });
+  const pledgeCancel = path.match(/^\/v1\/funding\/pledges\/([^/]+)\/cancel$/);
+  if (verb === 'POST' && pledgeCancel) {
+    const pledgeId = decodeURIComponent(pledgeCancel[1]);
+    const index = pledges.findIndex((pledge) => pledge.id === pledgeId);
+    if (index < 0) return missing();
+    const plan = fundingPlans[pledges[index].projectId];
+    if (pledges[index].status === 'pledged' && plan) plan.pledgedMinor = Math.max(0, plan.pledgedMinor - pledges[index].amountMinor);
+    pledges[index] = { ...pledges[index], status: 'cancelled' };
+    return ok(pledges[index]);
+  }
   if (verb === 'GET' && path === '/v1/me/privacy/consents') return ok(privacyConsents);
   if (verb === 'GET' && path === '/v1/me/privacy/requests') return ok(privacyRequests);
-  if (verb === 'PUT' && /^\/v1\/me\/privacy\/consents\/[^/]+$/.test(path)) return ok({ purpose: lastSegment(path), granted: Boolean(input.granted), policyVersion: String(input.policyVersion ?? '2026-08'), updatedAt: now.toISOString() });
-  if (verb === 'POST' && path === '/v1/me/privacy/requests') return ok({ id: `demo-privacy-${now.getTime()}`, type: String(input.type ?? 'access'), status: 'received', requestedAt: now.toISOString() });
+  if (verb === 'PUT' && /^\/v1\/me\/privacy\/consents\/[^/]+$/.test(path)) {
+    const purpose = lastSegment(path);
+    const consent = { purpose, granted: Boolean(input.granted), policyVersion: String(input.policyVersion ?? '2026-08'), updatedAt: now.toISOString() };
+    const index = privacyConsents.findIndex((item) => item.purpose === purpose);
+    if (index >= 0) privacyConsents[index] = consent;
+    else privacyConsents.push(consent);
+    return ok(consent);
+  }
+  if (verb === 'POST' && path === '/v1/me/privacy/requests') {
+    const request = { id: `demo-privacy-${now.getTime()}-${privacyRequests.length}`, type: String(input.type ?? 'access'), status: 'received', requestedAt: now.toISOString() };
+    privacyRequests.unshift(request);
+    return ok(request);
+  }
   if (verb === 'GET' && path === '/v1/me/safety/reports') return ok(safetyReports);
   if (verb === 'GET' && path === '/v1/safety/review-queue') return ok(safetyReports);
-  if (verb === 'POST' && path === '/v1/safety/reports') return ok({ id: `demo-safety-${now.getTime()}`, reporterId: 'offline-demo-user', ...input, status: 'received', createdAt: now.toISOString(), updatedAt: now.toISOString() });
-  if (verb === 'POST' && /^\/v1\/safety\/reports\/[^/]+\/(appeal|decision)$/.test(path)) return ok({ id: path.split('/')[4], status: path.endsWith('/appeal') ? 'appealed' : String(input.decision ?? 'triage'), updatedAt: now.toISOString() });
+  if (verb === 'POST' && path === '/v1/safety/reports') {
+    const report = { id: `demo-safety-${now.getTime()}-${safetyReports.length}`, reporterId: 'offline-demo-user', subjectType: String(input.subjectType ?? 'platform'), subjectId: String(input.subjectId ?? 'general'), reason: String(input.reason ?? 'other'), details: String(input.details ?? ''), status: 'received', createdAt: now.toISOString(), updatedAt: now.toISOString() };
+    safetyReports.unshift(report);
+    return ok(report);
+  }
+  const safetyMutation = path.match(/^\/v1\/safety\/reports\/([^/]+)\/(appeal|decision)$/);
+  if (verb === 'POST' && safetyMutation) {
+    const reportId = decodeURIComponent(safetyMutation[1]);
+    const index = safetyReports.findIndex((report) => report.id === reportId);
+    if (index < 0) return missing();
+    const status = safetyMutation[2] === 'appeal' ? 'appealed' : String(input.decision ?? 'triage');
+    safetyReports[index] = { ...safetyReports[index], status, updatedAt: now.toISOString() };
+    return ok(safetyReports[index]);
+  }
   if (verb === 'POST' && /^\/v1\/project-role-invites\/[^/]+\/accept$/.test(path)) return ok({ projectId: 'project-water-1', role: 'volunteer_lead' });
   if (verb === 'POST' && /^\/v1\/evidence\/[^/]+\/review$/.test(path)) return ok({ id: path.split('/')[3], status: String(input.decision ?? 'available') });
 

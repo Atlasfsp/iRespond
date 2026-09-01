@@ -58,15 +58,37 @@ expectOk('/v1/projects/project-water-1', (body) => {
   assert.equal(typeof body.permissions.canManageFunding, 'boolean');
 });
 
-const createdProject = expectOk('/v1/needs/need-school-1/project', (body) => {
-  assert.equal(body.sourceNeedId, 'need-school-1');
+const createdNeed = expectOk('/v1/needs', (body) => {
+  assert.equal(body.title, 'New offline observation');
+  assert.equal(body.verificationState, 'observed');
+}, 'POST', { title: 'New offline observation', description: 'Created during the contract test.', category: 'water', latitude: 6.5, longitude: 3.4 });
+expectOk(`/v1/needs/${createdNeed.id}`, (body) => assert.equal(body.id, createdNeed.id));
+expectOk('/v1/needs', (body) => assert.equal(body.some((item) => item.id === createdNeed.id), true));
+
+const unverifiedConversion = payload(`/v1/needs/${createdNeed.id}/project`, 'POST', { title: 'Must not exist yet' });
+assert.equal(unverifiedConversion.status, 409);
+assert.deepEqual(unverifiedConversion.body, { error: 'need must be verified before project conversion' });
+
+expectOk(`/v1/needs/${createdNeed.id}/verification`, (body) => {
+  assert.equal(body.verificationState, 'community_confirmed');
+}, 'POST', { state: 'community_confirmed' });
+expectOk(`/v1/needs/${createdNeed.id}`, (body) => assert.equal(body.verificationState, 'community_confirmed'));
+
+const createdProject = expectOk(`/v1/needs/${createdNeed.id}/project`, (body) => {
+  assert.equal(body.sourceNeedId, createdNeed.id);
   assert.equal(body.title, 'Safe classrooms follow-up');
 }, 'POST', { title: 'Safe classrooms follow-up', ownerCommunityId: 'community-school-1' });
 expectOk(`/v1/projects/${createdProject.id}`, (body) => {
   assert.equal(body.project.id, createdProject.id);
-  assert.equal(body.project.sourceNeedId, 'need-school-1');
+  assert.equal(body.project.sourceNeedId, createdNeed.id);
+  assert.deepEqual(body.milestones, []);
+  assert.deepEqual(body.contributionNeeds, []);
 });
-expectOk('/v1/needs/need-school-1/project', (body) => assert.equal(body.id, createdProject.id));
+expectOk(`/v1/needs/${createdNeed.id}/project`, (body) => assert.equal(body.id, createdProject.id));
+assert.equal(payload(`/v1/projects/${createdProject.id}/funding`).status, 404);
+const duplicateConversion = payload(`/v1/needs/${createdNeed.id}/project`, 'POST', { title: 'Duplicate project' });
+assert.equal(duplicateConversion.status, 409);
+assert.deepEqual(duplicateConversion.body, { error: 'need already has an action project' });
 
 expectOk('/v1/me/impact-passport', (body) => {
   assert.equal(body.subject, 'offline-demo-user');
@@ -82,6 +104,10 @@ expectOk('/v1/me/notification-preferences', (body) => {
   assert.equal(typeof body.inApp, 'boolean');
   assert.equal(typeof body.push, 'boolean');
 });
+expectOk('/v1/me/notification-preferences', (body) => assert.equal(body.sms, true), 'PUT', { sms: true });
+expectOk('/v1/me/notification-preferences', (body) => assert.equal(body.sms, true));
+expectOk('/v1/me/notifications/notice-1/read', (body) => assert.match(body.readAt, /^2026-09-01T12:00:00\.000Z$/), 'POST');
+expectOk('/v1/me/notifications', (body) => assert.match(body.find((item) => item.id === 'notice-1').readAt, /^2026-09-01T12:00:00\.000Z$/));
 expectOk('/v1/projects/project-water-1/funding', (body) => {
   assert.equal(body.currency, 'NGN');
   assert.equal(Number.isInteger(body.targetMinor), true);
@@ -113,11 +139,53 @@ expectOk('/v1/needs/need-water-1/evidence/demo-evidence/complete', (body) => ass
 expectOk('/v1/projects/project-water-1/funding', (body) => {
   assert.equal(body.targetMinor, 18_000_000_00);
 }, 'PUT', { currency: 'NGN', targetMinor: 18_000_000_00, communityCounterpartMinor: 2_000_000_00 });
+expectOk('/v1/projects/project-water-1/funding', (body) => assert.equal(body.targetMinor, 18_000_000_00));
+
+const pledgedBefore = expectOk('/v1/projects/project-water-1/funding', (body) => assert.equal(Number.isInteger(body.pledgedMinor), true)).pledgedMinor;
+const pledge = expectOk('/v1/projects/project-water-1/funding/pledges', (body) => {
+  assert.equal(body.amountMinor, 50_000_00);
+}, 'POST', { contributionClass: 'external_donation', amountMinor: 50_000_00 });
+expectOk('/v1/me/funding/pledges', (body) => assert.equal(body.some((item) => item.id === pledge.id), true));
+expectOk('/v1/projects/project-water-1/funding', (body) => assert.equal(body.pledgedMinor, pledgedBefore + 50_000_00));
+expectOk(`/v1/funding/pledges/${pledge.id}/cancel`, (body) => assert.equal(body.status, 'cancelled'), 'POST');
+expectOk('/v1/me/funding/pledges', (body) => assert.equal(body.find((item) => item.id === pledge.id).status, 'cancelled'));
+expectOk('/v1/projects/project-water-1/funding', (body) => assert.equal(body.pledgedMinor, pledgedBefore));
+
+const contributionOffer = expectOk('/v1/projects/project-water-1/contribution-needs/contribution-testing/offers', (body) => {
+  assert.equal(body.status, 'offered');
+}, 'POST', { note: 'I can bring test kits.', availabilityNote: 'Tomorrow' });
+expectOk('/v1/me/contribution-offers', (body) => assert.equal(body.some((item) => item.id === contributionOffer.id), true));
+expectOk(`/v1/contribution-offers/${contributionOffer.id}/withdraw`, (body) => assert.equal(body.status, 'withdrawn'), 'POST');
+expectOk('/v1/me/contribution-offers', (body) => assert.equal(body.find((item) => item.id === contributionOffer.id).status, 'withdrawn'));
+
+const newMilestone = expectOk('/v1/projects/project-water-1/milestones', (body) => {
+  assert.equal(body.title, 'Demo closeout');
+}, 'POST', { title: 'Demo closeout', description: 'Show read-through.', sequence: 4 });
+expectOk('/v1/projects/project-water-1', (body) => assert.equal(body.milestones.some((item) => item.id === newMilestone.id), true));
+expectOk(`/v1/projects/project-water-1/milestones/${newMilestone.id}/transition`, (body) => assert.equal(body.status, 'ready'), 'POST', { state: 'ready' });
+expectOk('/v1/projects/project-water-1', (body) => assert.equal(body.milestones.find((item) => item.id === newMilestone.id).status, 'ready'));
+
+const newContributionNeed = expectOk('/v1/projects/project-water-1/contribution-needs', (body) => {
+  assert.equal(body.description, 'Community handover support');
+}, 'POST', { kind: 'time', description: 'Community handover support', quantityNote: 'Two hours' });
+expectOk('/v1/projects/project-water-1', (body) => assert.equal(body.contributionNeeds.some((item) => item.id === newContributionNeed.id), true));
+expectOk('/v1/projects/project-water-1/transition', (body) => assert.equal(body.status, 'completed'), 'POST', { state: 'completed' });
+expectOk('/v1/projects/project-water-1', (body) => assert.equal(body.project.status, 'completed'));
 
 expectOk('/v1/projects/project-water-1/milestones/milestone-repair/transition', (body) => {
   assert.equal(body.id, 'milestone-repair');
   assert.equal(body.status, 'in_progress');
 }, 'POST', { state: 'in_progress' });
+
+expectOk('/v1/me/privacy/consents/impact-research', (body) => assert.equal(body.granted, true), 'PUT', { granted: true, policyVersion: '2026-08' });
+expectOk('/v1/me/privacy/consents', (body) => assert.equal(body.find((item) => item.purpose === 'impact-research').granted, true));
+const privacyRequest = expectOk('/v1/me/privacy/requests', (body) => assert.equal(body.type, 'access'), 'POST', { type: 'access' });
+expectOk('/v1/me/privacy/requests', (body) => assert.equal(body.some((item) => item.id === privacyRequest.id), true));
+
+const safetyReport = expectOk('/v1/safety/reports', (body) => assert.equal(body.status, 'received'), 'POST', { subjectType: 'platform', subjectId: 'general', reason: 'unsafe_activity', details: 'Demo report' });
+expectOk('/v1/me/safety/reports', (body) => assert.equal(body.some((item) => item.id === safetyReport.id), true));
+expectOk(`/v1/safety/reports/${safetyReport.id}/appeal`, (body) => assert.equal(body.status, 'appealed'), 'POST', { reason: 'Please review' });
+expectOk('/v1/me/safety/reports', (body) => assert.equal(body.find((item) => item.id === safetyReport.id).status, 'appealed'));
 
 const missing = payload('/v1/not-a-real-route');
 assert.equal(missing.status, 404);
