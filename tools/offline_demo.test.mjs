@@ -10,6 +10,7 @@ import {
 } from '../apps/mobile/lib/demo-backend.ts';
 import { SDGS, toggleSdg } from '../apps/mobile/lib/sdgs.ts';
 import { createWebDemoBackend } from '../apps/web/demo-backend.js';
+import { webRequestTarget } from '../apps/web/demo-routing.js';
 
 const now = new Date('2026-09-01T12:00:00.000Z');
 const apiMap = JSON.parse(await readFile('docs/frontend/frontend-api-map.json', 'utf8'));
@@ -19,6 +20,10 @@ assert.equal(SDGS.length, 17, 'the selector must expose every UN Sustainable Dev
 assert.deepEqual(SDGS.map(({ id }) => id), Array.from({ length: 17 }, (_, index) => index + 1));
 assert.deepEqual(toggleSdg([6, 11], 17), [6, 11, 17], 'one dropdown must retain multiple selections');
 assert.deepEqual(toggleSdg([6, 11, 17], 11), [6, 17], 'selecting an active SDG must remove only that SDG');
+assert.equal(webRequestTarget({ demoSession: true, demoMode: true, apiBaseUrl: 'https://api.example.test', auth: false }), 'demo');
+assert.equal(webRequestTarget({ demoSession: false, demoMode: true, apiBaseUrl: 'https://api.example.test', auth: false }), 'api', 'real OIDC sessions must keep public calls on their selected API');
+assert.equal(webRequestTarget({ demoSession: false, demoMode: true, apiBaseUrl: '', auth: false }), 'demo', 'unconfigured loopback previews may serve public demo data');
+assert.equal(webRequestTarget({ demoSession: false, demoMode: true, apiBaseUrl: '', auth: true }), 'api', 'protected demo calls require an explicit demo session');
 
 const webDemo = createWebDemoBackend();
 assert.equal((await webDemo.request('/v1/session')).subject, 'offline-demo-user');
@@ -27,6 +32,35 @@ assert.deepEqual(webNeed.sdgTags, [3, 6, 11]);
 const webUpload = await webDemo.request('/v1/needs/need-water-1/evidence/uploads', { method: 'POST', body: '{}' });
 assert.equal(new URL(webUpload.uploadUrl).hostname, 'demo.irespond.local');
 assert.equal(webUpload.method, 'PUT');
+
+const webIntegrityDemo = createWebDemoBackend();
+await assert.rejects(
+  webIntegrityDemo.request('/v1/needs/need-school-1/project', { method: 'POST', body: JSON.stringify({ title: 'Invalid early conversion' }) }),
+  (error) => error.status === 409 && error.body?.error === 'need must be verified before project conversion',
+);
+const webIntegrityNeed = await webIntegrityDemo.request('/v1/needs', {
+  method: 'POST',
+  body: JSON.stringify({ title: 'Browser integrity observation', latitude: 6.5, longitude: 3.4 }),
+});
+await webIntegrityDemo.request(`/v1/needs/${webIntegrityNeed.id}/verification`, {
+  method: 'POST',
+  body: JSON.stringify({ state: 'community_confirmed' }),
+});
+const webIntegrityProject = await webIntegrityDemo.request(`/v1/needs/${webIntegrityNeed.id}/project`, {
+  method: 'POST',
+  body: JSON.stringify({ title: 'Isolated browser project' }),
+});
+const webIntegrityDetail = await webIntegrityDemo.request(`/v1/projects/${webIntegrityProject.id}`);
+assert.deepEqual(webIntegrityDetail.milestones, [], 'new browser-demo projects must not inherit another project’s milestones');
+assert.deepEqual(webIntegrityDetail.contributionNeeds, [], 'new browser-demo projects must not inherit another project’s contribution needs');
+await assert.rejects(
+  webIntegrityDemo.request('/v1/projects/project-water-1/transition', { method: 'POST', body: JSON.stringify({ state: 'completed' }) }),
+  (error) => error.status === 409 && error.body?.error === 'invalid project transition',
+);
+await assert.rejects(
+  webIntegrityDemo.request('/v1/projects/project-water-1/transition', { method: 'POST', body: JSON.stringify({ state: 'validating' }) }),
+  (error) => error.status === 409 && error.body?.error === 'all active milestones must be submitted before validation',
+);
 
 function payload(path, method = 'GET', requestBody) {
   return createDemoPayload(new URL(path, DEMO_API_BASE_URL), method, requestBody, now);
