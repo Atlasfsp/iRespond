@@ -136,12 +136,24 @@ jobs:
         if: always() && steps.pr.outputs.head_sha != ''
         env:
           GH_TOKEN: ${{ github.token }}
+          DOCS_SYNC_PR_NUMBER: ${{ steps.pr.outputs.number }}
           DOCS_SYNC_HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
+          SNAPSHOT_BASE_SHA: ${{ steps.pr.outputs.base_sha }}
+          SNAPSHOT_HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
           JOB_STATUS: ${{ job.status }}
           TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           state=failure
-          if test "$JOB_STATUS" = "success"; then state=success; fi
+          if test "$JOB_STATUS" = "success"; then
+            current_pr=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${DOCS_SYNC_PR_NUMBER}")
+            if jq -e \
+              --arg base_sha "$SNAPSHOT_BASE_SHA" \
+              --arg head_sha "$SNAPSHOT_HEAD_SHA" \
+              '.state == "open" and .base.sha == $base_sha and .head.sha == $head_sha' \
+              <<< "$current_pr" >/dev/null; then
+              state=success
+            fi
+          fi
           gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${DOCS_SYNC_HEAD_SHA}" \
             -f state="$state" \
             -f context=docs-baseline-ownership \

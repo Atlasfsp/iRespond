@@ -766,6 +766,10 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.match(ownershipWorkflow, /node tools\/docs-sync\/src\/baseline-guard\.mjs \./);
   assert.match(ownershipWorkflow, /statuses: write/);
   assert.match(ownershipWorkflow, /context=docs-baseline-ownership/);
+  assert.match(ownershipWorkflow, /SNAPSHOT_BASE_SHA/);
+  assert.match(ownershipWorkflow, /SNAPSHOT_HEAD_SHA/);
+  assert.match(ownershipWorkflow, /\.base\.sha == \$base_sha/);
+  assert.match(ownershipWorkflow, /\.head\.sha == \$head_sha/);
   assert.match(ownershipWorkflow, /Revalidate open generated publications after main advances/);
   assert.match(ownershipWorkflow, /-f state=pending/);
   assert.match(captureJob, /permissions:\n\s+contents: read/);
