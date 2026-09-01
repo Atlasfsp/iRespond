@@ -6,6 +6,7 @@ import { getAccessToken } from './session';
 
 const QUEUE_KEY = 'irespond.sync-queue.v1';
 const ACTOR_KEY = 'irespond.local-actor-id.v1';
+let queueOperationTail: Promise<void> = Promise.resolve();
 
 export type QueuedNeed = {
   idempotencyKey: string;
@@ -31,11 +32,12 @@ export async function getLocalActorId() {
 
 async function loadQueue(): Promise<QueuedNeed[]> { const raw=await AsyncStorage.getItem(QUEUE_KEY); return raw ? (JSON.parse(raw) as QueuedNeed[]) : []; }
 async function saveQueue(items: QueuedNeed[]) { await AsyncStorage.setItem(QUEUE_KEY,JSON.stringify(items)); }
+function withQueueOperation<T>(operation:()=>Promise<T>):Promise<T>{const result=queueOperationTail.then(operation,operation);queueOperationTail=result.then(()=>undefined,()=>undefined);return result;}
 
 export async function queueNeedForSync(draft: NeedDraft) {
   const coordinates=parseInterventionCoordinates(draft.latitude,draft.longitude);
   if(!coordinates||!draft.locationConfirmedAt)throw new Error('A confirmed intervention location is required before this report can sync.');
-  const queue=await loadQueue();const item:QueuedNeed={idempotencyKey:makeId('need'),draft:{...draft,...coordinates},queuedAt:new Date().toISOString(),attempts:0,uploadedEvidenceUris:[]};await saveQueue([...queue,item]);return item;
+  return withQueueOperation(async()=>{const queue=await loadQueue();const item:QueuedNeed={idempotencyKey:makeId('need'),draft:{...draft,...coordinates},queuedAt:new Date().toISOString(),attempts:0,uploadedEvidenceUris:[]};await saveQueue([...queue,item]);return item;});
 }
 
 export type ConfirmedNeedLocation = {
@@ -53,24 +55,26 @@ function needsLocationReview(item: QueuedNeed) {
 }
 
 export async function pendingNeedLocationReviewCount() {
-  return (await loadQueue()).filter(needsLocationReview).length;
+  return withQueueOperation(async()=>(await loadQueue()).filter(needsLocationReview).length);
 }
 
 export async function getNextNeedLocationReview() {
-  return (await loadQueue()).find(needsLocationReview) ?? null;
+  return withQueueOperation(async()=>(await loadQueue()).find(needsLocationReview) ?? null);
 }
 
 export async function confirmQueuedNeedLocation(idempotencyKey: string, location: ConfirmedNeedLocation) {
   const coordinates=parseInterventionCoordinates(location.latitude,location.longitude);
   if(!coordinates||!location.locationConfirmedAt)throw new Error('Valid confirmed coordinates are required.');
-  const queue=await loadQueue();const index=queue.findIndex(item=>item.idempotencyKey===idempotencyKey&&!item.serverNeedId);
-  if(index<0)throw new Error('The pending observation is no longer available for location review.');
-  const current=queue[index];const updated:QueuedNeed={...current,draft:{...current.draft,...location,...coordinates}};queue[index]=updated;await saveQueue(queue);return updated;
+  return withQueueOperation(async()=>{const queue=await loadQueue();const index=queue.findIndex(item=>item.idempotencyKey===idempotencyKey&&!item.serverNeedId);
+    if(index<0)throw new Error('The pending observation is no longer available for location review.');
+    const current=queue[index];const updated:QueuedNeed={...current,draft:{...current.draft,...location,...coordinates}};queue[index]=updated;await saveQueue(queue);return updated;});
 }
 
 export type SyncResult={synced:number;remaining:number;offline:boolean;syncedKeys:string[]};
 
-export async function flushNeedQueue():Promise<SyncResult>{
+export function flushNeedQueue():Promise<SyncResult>{return withQueueOperation(flushNeedQueueUnlocked)}
+
+async function flushNeedQueueUnlocked():Promise<SyncResult>{
   const baseUrl=process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/,'');const queue=await loadQueue();if(!baseUrl||queue.length===0)return{synced:0,remaining:queue.length,offline:!baseUrl,syncedKeys:[]};
   const actorId=await getLocalActorId();const token=await getAccessToken();const remaining:QueuedNeed[]=[];const syncedKeys:string[]=[];let synced=0;
   for(const original of queue){let item={...original,uploadedEvidenceUris:[...(original.uploadedEvidenceUris??[])]};try{
@@ -92,5 +96,5 @@ async function uploadEvidence(baseUrl:string,needId:string,uri:string,token:stri
 
 function allowedType(value:string){const v=value.toLowerCase();return['image/jpeg','image/png','image/webp','video/mp4','video/quicktime'].includes(v)?v:'';}
 function inferType(uri:string){const path=uri.toLowerCase().split('?')[0];if(path.endsWith('.jpg')||path.endsWith('.jpeg'))return'image/jpeg';if(path.endsWith('.png'))return'image/png';if(path.endsWith('.webp'))return'image/webp';if(path.endsWith('.mp4'))return'video/mp4';if(path.endsWith('.mov'))return'video/quicktime';return'';}
-export async function pendingNeedCount(){return(await loadQueue()).length;
+export async function pendingNeedCount(){return withQueueOperation(async()=>(await loadQueue()).length);
 }

@@ -28,6 +28,7 @@ export default function ReportNeed() {
   const [loadingQueuedReview, setLoadingQueuedReview] = useState(route.reviewQueue === '1');
   const [retryingQueuedReview, setRetryingQueuedReview] = useState(false);
   const queuedRetryInFlight = useRef(false);
+  const captureInFlight = useRef(false);
   const coordinates = parseInterventionCoordinates(latitudeText, longitudeText);
 
   useEffect(() => {
@@ -66,6 +67,9 @@ export default function ReportNeed() {
   }
 
   async function captureLocation() {
+    if (captureInFlight.current) return;
+    captureInFlight.current = true;
+    setLocationConfirmed(false);
     setCapturingLocation(true);
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
@@ -83,6 +87,7 @@ export default function ReportNeed() {
     } catch {
       Alert.alert('Unable to capture location', 'Check that location services are on, or enter the intervention coordinates manually.');
     } finally {
+      captureInFlight.current = false;
       setCapturingLocation(false);
     }
   }
@@ -100,6 +105,10 @@ export default function ReportNeed() {
   }
 
   async function continueReport() {
+    if (captureInFlight.current) {
+      Alert.alert('Location capture in progress', 'Wait for the replacement coordinates or location error before confirming and continuing.');
+      return;
+    }
     if (!title.trim() || !description.trim()) {
       Alert.alert('Add more detail', 'A short title and description help the community understand what needs attention.');
       return;
@@ -172,7 +181,7 @@ export default function ReportNeed() {
       <FieldLabel>Description</FieldLabel><TextInput style={[s.input, s.textarea, queuedReview && s.readOnly]} editable={!queuedReview && !loadingQueuedReview} value={description} onChangeText={setDescription} multiline placeholder="Describe the issue and its impact…" placeholderTextColor="#6D7580"/>
       <FieldLabel>Primary area of impact</FieldLabel><View accessibilityRole="radiogroup" accessibilityLabel="Primary area of impact"><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>{categories.map(item => <Pressable key={item} disabled={Boolean(queuedReview || loadingQueuedReview)} accessibilityRole="radio" accessibilityState={{ checked: item === category, disabled: Boolean(queuedReview || loadingQueuedReview) }} accessibilityLabel={item} onPress={() => setCategory(item)} style={[s.chip, item === category && s.chipOn, queuedReview && s.readOnly]}><Ionicons name={item === 'Infrastructure' ? 'construct-outline' : item === 'Health' ? 'shield-checkmark-outline' : item === 'Environment' ? 'leaf-outline' : item === 'Education' ? 'school-outline' : 'people-outline'} size={18} color={item === category ? Stitch.color.primaryFixed : Stitch.color.onSurface}/><Text style={[s.chipText, item === category && s.chipTextOn]}>{item}</Text></Pressable>)}</ScrollView></View>
       <View style={s.truth}><Text style={s.truthTitle}>Observation first</Text><Text style={s.truthBody}>Submitting creates an observation. Verification, project approval and fundraising are separate governed states.</Text></View>
-      <Pressable style={[s.primary, (retryingQueuedReview || loadingQueuedReview) && s.disabled]} disabled={retryingQueuedReview || loadingQueuedReview} accessibilityState={{ disabled: retryingQueuedReview || loadingQueuedReview, busy: retryingQueuedReview }} onPress={() => void continueReport()}><Ionicons name={queuedReview ? 'sync-outline' : 'send-outline'} size={22} color={Stitch.color.primary}/><Text style={s.primaryText}>{retryingQueuedReview ? 'Confirming location & retrying…' : queuedReview ? 'Confirm location & retry sync' : 'Save draft & add evidence'}</Text></Pressable>
+      <Pressable style={[s.primary, (capturingLocation || retryingQueuedReview || loadingQueuedReview) && s.disabled]} disabled={capturingLocation || retryingQueuedReview || loadingQueuedReview} accessibilityState={{ disabled: capturingLocation || retryingQueuedReview || loadingQueuedReview, busy: capturingLocation || retryingQueuedReview }} onPress={() => void continueReport()}><Ionicons name={queuedReview ? 'sync-outline' : 'send-outline'} size={22} color={Stitch.color.primary}/><Text style={s.primaryText}>{retryingQueuedReview ? 'Confirming location & retrying…' : capturingLocation ? 'Waiting for coordinates…' : queuedReview ? 'Confirm location & retry sync' : 'Save draft & add evidence'}</Text></Pressable>
     </View>
   </ScrollView><StitchBottomNav/></View></SafeAreaView>;
 }
