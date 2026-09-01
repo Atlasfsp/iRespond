@@ -8,6 +8,7 @@ on:
       - 'docs/frontend/**'
       - 'tools/docs-sync/**'
       - 'docs/documentation-system/**'
+      - 'docs/screenshots/current/**'
       - '.github/workflows/docs-baseline-ownership.yml'
       - '.github/workflows/docs-interface-sync.yml'
   push:

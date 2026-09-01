@@ -223,6 +223,22 @@ test('accepted baseline changes are owned by the publication workflow', async ()
     pullRequestAuthor: 'github-actions[bot]',
     sameRepository: false,
   }), /may change the accepted baseline/);
+  assert.throws(() => validateBaselineOwnership({
+    baselineChanged: false,
+    screenshotsChanged: true,
+    acceptedBaselineExists: true,
+    headRef: 'feature/replace-accepted-image',
+    pullRequestAuthor: 'contributor',
+    sameRepository: true,
+  }), /accepted baseline or screenshots/);
+  assert.doesNotThrow(() => validateBaselineOwnership({
+    baselineChanged: false,
+    screenshotsChanged: true,
+    acceptedBaselineExists: true,
+    headRef: 'docs-sync/0123456789ab-123456789',
+    pullRequestAuthor: 'github-actions[bot]',
+    sameRepository: true,
+  }));
 });
 
 test('screen manifest rejects duplicate normalized screenshot targets', async () => {
@@ -590,14 +606,18 @@ test('capture dependencies run outside the repository-write publication job', as
   );
   const captureStart = workflow.indexOf('  capture-on-main:');
   const publishStart = workflow.indexOf('  sync-on-main:');
+  const pullRequestStart = workflow.indexOf('  pull_request:');
   const pushStart = workflow.indexOf('  push:');
   const dispatchStart = workflow.indexOf('  workflow_dispatch:');
   assert.notEqual(captureStart, -1);
   assert.ok(publishStart > captureStart);
   assert.ok(pushStart !== -1 && dispatchStart > pushStart);
+  assert.ok(pullRequestStart !== -1 && pushStart > pullRequestStart);
+  const pullRequestTrigger = workflow.slice(pullRequestStart, pushStart);
   const pushTrigger = workflow.slice(pushStart, dispatchStart);
   const captureJob = workflow.slice(captureStart, publishStart);
   const publishJob = workflow.slice(publishStart);
+  assert.match(pullRequestTrigger, /docs\/screenshots\/current\/\*\*/);
   assert.match(pushTrigger, /docs\/documentation-system\/screen-manifest\.json/);
   assert.match(pushTrigger, /tools\/docs-sync\/\*\*/);
   assert.match(pushTrigger, /\.github\/workflows\/docs-baseline-ownership\.yml/);
