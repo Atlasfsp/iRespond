@@ -26,6 +26,8 @@ After attempting all registered screens, the capture command exits successfully 
 npm install --ignore-scripts --no-audit --no-fund
 npm run fingerprint -- ../..
 node src/mock-api.mjs &
+DOCS_CAPTURE_EXPECTED_REVISION=0123456789abcdef0123456789abcdef01234567 \
+DOCS_CAPTURE_REVISION_URL=http://127.0.0.1:8081/version \
 DOCS_CAPTURE_BASE_URL=http://127.0.0.1:8081 npm run capture -- ../..
 npm run compare -- ../..
 npm run manual-index -- ../..

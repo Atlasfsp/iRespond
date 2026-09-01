@@ -44,16 +44,33 @@ const sourceChanges=frontendSourceChanges.filter(change=>change.screens.length>0
 const unmappedFrontendChanges=frontendSourceChanges.filter(change=>change.screens.length===0);
 
 const previousScreenshots=baseline.screenshots||{};
+const previousScreenshotPaths=baseline.screenshotPaths||{};
 const priorScreenshotRevision=baseline.screenshotSourceRevision
   || (Object.keys(previousScreenshots).length?baseline.sourceRevision:null);
-const screenshotState=runtimeAttempt?{}:{...previousScreenshots};
+const manifestScreens=new Map(manifest.screens.map(screen=>[screen.id,screen]));
+const screenshotState={};
+const screenshotPaths={};
 let screenshotSourceRevision=runtime?sourceRevision:runtimeAttempt?null:priorScreenshotRevision;
 const screenshotEvidence={};
 const screenshotChanges=[];
+for(const [id,previous] of Object.entries(previousScreenshots)){
+  const currentScreen=manifestScreens.get(id);
+  const previousPath=previousScreenshotPaths[id]||currentScreen?.screenshot;
+  if(!currentScreen){
+    if(!previousPath) throw new Error(`Cannot prune screenshot ${id}: its accepted baseline path is missing.`);
+    screenshotChanges.push({id,screenshot:previousPath,previous,current:null,reason:'removed-screen-registration'});
+  }else if(previousPath!==currentScreen.screenshot){
+    screenshotChanges.push({id,screenshot:previousPath,previous,current:null,reason:'moved-screen-screenshot'});
+  }else if(!runtimeAttempt){
+    screenshotState[id]=previous;
+    screenshotPaths[id]=currentScreen.screenshot;
+  }
+}
 const runtimeResults=new Map((runtime?.results||[]).map(result=>[result.id,result]));
 for(const screen of manifest.screens){
   const p=path.join(root,screen.screenshot);
-  const prior=previousScreenshots[screen.id]||null;
+  const previousPath=previousScreenshotPaths[screen.id]||screen.screenshot;
+  const prior=previousPath===screen.screenshot?(previousScreenshots[screen.id]||null):null;
   let current=null;
   try{
     const bytes=await readFile(p);
@@ -63,22 +80,27 @@ for(const screen of manifest.screens){
     const result=runtimeResults.get(screen.id);
     if(result?.status==='captured'&&current&&result.sha256===current){
       screenshotState[screen.id]=current;
+      screenshotPaths[screen.id]=screen.screenshot;
       screenshotEvidence[screen.id]={status:'current',sourceRevision,screenshot:screen.screenshot,sha256:current};
       if(prior!==current) screenshotChanges.push({id:screen.id,screenshot:screen.screenshot,previous:prior,current,reason:prior?'updated-runtime-image':'new-runtime-image'});
     }else{
       delete screenshotState[screen.id];
+      delete screenshotPaths[screen.id];
       if(prior||current) screenshotChanges.push({id:screen.id,screenshot:screen.screenshot,previous:prior,current:null,observed:current,reason:result?.status==='captured'?'runtime-digest-mismatch':'missing-current-image'});
     }
   }else if(runtimeAttempt){
     delete screenshotState[screen.id];
+    delete screenshotPaths[screen.id];
     if(prior||current) screenshotChanges.push({id:screen.id,screenshot:screen.screenshot,previous:prior,current:null,observed:current,reason:'runtime-capture-unverified'});
   }else if(prior&&current===prior){
     screenshotEvidence[screen.id]={status:'predecessor',sourceRevision:priorScreenshotRevision,screenshot:screen.screenshot,sha256:prior};
   }else if(current){
     delete screenshotState[screen.id];
+    delete screenshotPaths[screen.id];
     screenshotChanges.push({id:screen.id,screenshot:screen.screenshot,previous:prior,current:null,observed:current,reason:'unverified-image-change'});
   }else if(prior){
     delete screenshotState[screen.id];
+    delete screenshotPaths[screen.id];
     screenshotChanges.push({id:screen.id,screenshot:screen.screenshot,previous:prior,current:null,reason:'missing-current-image'});
   }
 }
@@ -110,7 +132,7 @@ await writeFile(path.join(root,'docs/documentation-system/ui-change-report.gener
 // branch after a frontend change lands on main. Replacing the source map rather
 // than merging it ensures deleted frontend files cannot linger as accepted UI.
 if(process.env.DOCS_SYNC_UPDATE_BASELINE==='1'){
-  const next={...baseline,sourceRevision:report.sourceRevision,capturedAt:new Date().toISOString(),sources:currentSources,screenshotSourceRevision,screenshots:screenshotState};
+  const next={...baseline,sourceRevision:report.sourceRevision,capturedAt:new Date().toISOString(),sources:currentSources,screenshotSourceRevision,screenshots:screenshotState,screenshotPaths};
   await writeFile(baselinePath,`${JSON.stringify(next,null,2)}\n`);
 }
 if(process.env.GITHUB_OUTPUT){

@@ -298,6 +298,52 @@ test('source-only runs label matching screenshots as predecessor evidence', asyn
   assert.doesNotMatch(manual, /home current interface/);
 });
 
+test('source-only runs prune screenshots for removed manifest entries', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const screenshot = 'docs/screenshots/current/obsolete.png';
+  await jsonFile(path.join(root, 'docs/documentation-system/screen-manifest.json'), { screens: [] });
+  await jsonFile(path.join(root, 'docs/documentation-system/current-baseline.json'), {
+    sourceRevision: 'baseline-head',
+    screenshotSourceRevision: 'screenshot-head',
+    sources: {},
+    screenshots: { obsolete: 'predecessor-image-hash' },
+    screenshotPaths: { obsolete: screenshot },
+  });
+  await jsonFile(path.join(root, 'docs/documentation-system/ui-fingerprint.generated.json'), {
+    sourceRevision: 'current-head',
+    sources: {},
+  });
+  const target = path.join(root, screenshot);
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, 'obsolete predecessor image');
+
+  await run('compare-and-plan.mjs', root, {
+    GITHUB_SHA: 'current-head',
+    DOCS_SYNC_UPDATE_BASELINE: '1',
+  });
+  await run('apply-screenshot-removals.mjs', root);
+
+  const report = JSON.parse(await readFile(
+    path.join(root, 'docs/documentation-system/ui-change-report.generated.json'),
+    'utf8',
+  ));
+  const baseline = JSON.parse(await readFile(
+    path.join(root, 'docs/documentation-system/current-baseline.json'),
+    'utf8',
+  ));
+  assert.deepEqual(report.screenshotChanges, [{
+    id: 'obsolete',
+    screenshot,
+    previous: 'predecessor-image-hash',
+    current: null,
+    reason: 'removed-screen-registration',
+  }]);
+  assert.deepEqual(baseline.screenshots, {});
+  assert.deepEqual(baseline.screenshotPaths, {});
+  await assert.rejects(readFile(target), { code: 'ENOENT' });
+});
+
 test('capture dependencies run outside the repository-write publication job', async () => {
   const workflow = await readFile(
     path.join(repositoryRoot, '.github/workflows/docs-interface-sync.yml'),
@@ -325,4 +371,5 @@ test('README documents report-based runtime-capture review signaling', async () 
     readme,
     /exits successfully after writing the capture report.*route or text-anchor review signal/s,
   );
+  assert.match(readme, /DOCS_CAPTURE_EXPECTED_REVISION=.*DOCS_CAPTURE_REVISION_URL=.*npm run capture/s);
 });

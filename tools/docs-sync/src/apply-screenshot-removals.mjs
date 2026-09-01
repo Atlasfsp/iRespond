@@ -13,19 +13,20 @@ const report = JSON.parse(await readFile(
 const registered = new Map(manifest.screens.map((screen) => [screen.id, screen.screenshot]));
 const screenshotRoot = path.resolve(root, 'docs/screenshots/current');
 const removed = [];
+const retiredReasons = new Set(['removed-screen-registration', 'moved-screen-screenshot']);
 
 for (const change of report.screenshotChanges || []) {
   if (change.current !== null) continue;
   const registeredPath = registered.get(change.id);
-  if (!registeredPath || registeredPath !== change.screenshot) {
+  if (registeredPath !== change.screenshot && !retiredReasons.has(change.reason)) {
     throw new Error(`Refusing unregistered screenshot removal for ${change.id || 'unknown'}.`);
   }
-  const target = path.resolve(root, registeredPath);
+  const target = path.resolve(root, change.screenshot);
   if (target !== screenshotRoot && !target.startsWith(`${screenshotRoot}${path.sep}`)) {
     throw new Error(`Refusing screenshot removal outside ${screenshotRoot}.`);
   }
   await rm(target, { force: true });
-  removed.push(registeredPath);
+  removed.push(change.screenshot);
 }
 
 console.log(JSON.stringify({ removed }));

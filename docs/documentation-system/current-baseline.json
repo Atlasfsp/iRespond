@@ -5,6 +5,7 @@
   "interfaceMode": "source-faithful-baseline",
   "screenshotSourceRevision": null,
   "screenshots": {},
+  "screenshotPaths": {},
   "trackedFrontendRoots": ["apps/mobile", "apps/web"],
   "sources": {
     "apps/mobile/app.json": "702d3dd235a4b0d157948e09342764bb988d3ca3",
