@@ -1,0 +1,314 @@
+name: docs-interface-sync
+
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+      - 'apps/web/**'
+      - 'docs/frontend/**'
+      - 'tools/docs-sync/**'
+      - 'docs/documentation-system/**'
+      - 'docs/screenshots/current/**'
+      - '.github/workflows/docs-baseline-ownership.yml'
+      - '.github/workflows/docs-interface-sync.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'apps/web/**'
+      - 'docs/frontend/**'
+      - 'docs/documentation-system/screen-manifest.json'
+      - 'tools/docs-sync/**'
+      - '.github/workflows/docs-baseline-ownership.yml'
+      - '.github/workflows/docs-interface-sync.yml'
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: Generated documentation pull request to verify
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  source-monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve authoritative synchronization context
+        id: context
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          EVENT_SHA: ${{ github.sha }}
+          EVENT_REPOSITORY: ${{ github.repository }}
+          EVENT_ACCEPTED_REVISION: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'push' && github.event.before || github.sha }}
+          INPUT_PR_NUMBER: ${{ inputs.pull_request_number }}
+        run: |
+          set -euo pipefail
+          accepted_revision="$EVENT_ACCEPTED_REVISION"
+          source_revision="$EVENT_SHA"
+          publication_verification=false
+          if test "$EVENT_NAME" = "workflow_dispatch" && test -n "$INPUT_PR_NUMBER"; then
+            [[ "$INPUT_PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+            pr_json=$(gh api "repos/${EVENT_REPOSITORY}/pulls/${INPUT_PR_NUMBER}")
+            base_sha=$(jq -r '.base.sha' <<< "$pr_json")
+            base_ref=$(jq -r '.base.ref' <<< "$pr_json")
+            base_repository=$(jq -r '.base.repo.full_name' <<< "$pr_json")
+            head_sha=$(jq -r '.head.sha' <<< "$pr_json")
+            head_ref=$(jq -r '.head.ref' <<< "$pr_json")
+            head_repository=$(jq -r '.head.repo.full_name' <<< "$pr_json")
+            [[ "$base_sha" =~ ^[0-9a-f]{40}$ ]]
+            test "$base_ref" = "main"
+            test "$base_repository" = "$EVENT_REPOSITORY"
+            test "$head_repository" = "$EVENT_REPOSITORY"
+            test "$head_sha" = "$EVENT_SHA"
+            [[ "$head_ref" =~ ^docs-sync/([0-9a-f]{40})-([1-9][0-9]*)-([0-9a-f]{40})$ ]]
+            source_revision=${BASH_REMATCH[1]}
+            test "${BASH_REMATCH[3]}" = "$head_sha"
+            accepted_revision="$base_sha"
+            publication_verification=true
+          elif test "$EVENT_NAME" = "workflow_dispatch"; then
+            test "$EVENT_REF" = "refs/heads/main"
+          fi
+          [[ "$accepted_revision" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$source_revision" =~ ^[0-9a-f]{40}$ ]]
+          {
+            echo "accepted_revision=$accepted_revision"
+            echo "source_revision=$source_revision"
+            echo "publication_verification=$publication_verification"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select accepted base-branch documentation baseline
+        env:
+          DOCS_SYNC_ACCEPTED_REVISION: ${{ steps.context.outputs.accepted_revision }}
+        run: |
+          set -euo pipefail
+          accepted="$RUNNER_TEMP/docs-sync-accepted-baseline.json"
+          if [[ "$DOCS_SYNC_ACCEPTED_REVISION" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "${DOCS_SYNC_ACCEPTED_REVISION}:docs/documentation-system/current-baseline.json"; then
+            git show "${DOCS_SYNC_ACCEPTED_REVISION}:docs/documentation-system/current-baseline.json" > "$accepted"
+          else
+            echo "Accepted revision has no documentation baseline; comparing against an empty bootstrap baseline."
+            printf '%s\n' '{"schema":"irespond.documentation-baseline.v2","sourceRevision":"bootstrap","bootstrap":true,"sources":{},"synchronizationContract":{},"screenshots":{},"screenshotPaths":{}}' > "$accepted"
+          fi
+          echo "DOCS_SYNC_BASELINE_PATH=$accepted" >> "$GITHUB_ENV"
+      - name: Bind deterministic source metadata
+        env:
+          SOURCE_REVISION: ${{ steps.context.outputs.source_revision }}
+        run: |
+          set -euo pipefail
+          git cat-file -e "${SOURCE_REVISION}^{commit}"
+          echo "DOCS_SYNC_SOURCE_REVISION=$SOURCE_REVISION" >> "$GITHUB_ENV"
+          echo "DOCS_SYNC_CAPTURED_AT=$(git show -s --format=%cI "$SOURCE_REVISION")" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Verify documentation synchronization regressions
+        run: node --test tools/docs-sync/src/docs-sync.test.mjs
+      - name: Fingerprint canonical mobile and web interface
+        run: node tools/docs-sync/src/fingerprint.mjs .
+      - name: Compare accepted documentation baseline
+        id: compare
+        env:
+          DOCS_SYNC_UPDATE_BASELINE: ${{ steps.context.outputs.publication_verification == 'true' && '1' || '' }}
+        run: node tools/docs-sync/src/compare-and-plan.mjs .
+      - name: Regenerate interface manual index
+        run: node tools/docs-sync/src/regenerate-manual-index.mjs .
+      - name: Verify generated publication matches regeneration
+        if: steps.context.outputs.publication_verification == 'true'
+        run: |
+          git diff --exit-code -- \
+            docs/documentation-system/current-baseline.json \
+            docs/documentation-system/ui-fingerprint.generated.json \
+            docs/documentation-system/ui-change-report.generated.json \
+            docs/documentation-system/runtime-capture.generated.json \
+            docs/manuals/generated/ui-interface-baseline.md \
+            docs/screenshots/current
+          test -z "$(git status --porcelain --untracked-files=all -- \
+            docs/documentation-system/current-baseline.json \
+            docs/documentation-system/ui-fingerprint.generated.json \
+            docs/documentation-system/ui-change-report.generated.json \
+            docs/documentation-system/runtime-capture.generated.json \
+            docs/manuals/generated/ui-interface-baseline.md \
+            docs/screenshots/current)"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: documentation-ui-change-report
+          path: |
+            docs/documentation-system/ui-fingerprint.generated.json
+            docs/documentation-system/ui-change-report.generated.json
+            docs/manuals/generated/ui-interface-baseline.md
+          if-no-files-found: error
+      - name: Summarize documentation impact
+        run: |
+          echo "Canonical frontend changed: ${{ steps.compare.outputs.changed }}"
+          echo "Changed registered screen count: ${{ steps.compare.outputs.changed_count }}"
+          echo "Changed frontend source count: ${{ steps.compare.outputs.frontend_change_count }}"
+          echo "Changed synchronization contract input count: ${{ steps.compare.outputs.contract_change_count }}"
+          echo "Changed sources without manual screen mapping: ${{ steps.compare.outputs.unmapped_change_count }}"
+
+  capture-on-main:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Bind deterministic source metadata
+        run: |
+          set -euo pipefail
+          echo "DOCS_SYNC_SOURCE_REVISION=$GITHUB_SHA" >> "$GITHUB_ENV"
+          echo "DOCS_SYNC_CAPTURED_AT=$(git show -s --format=%cI "$GITHUB_SHA")" >> "$GITHUB_ENV"
+      - name: Select accepted pre-push documentation baseline
+        env:
+          DOCS_SYNC_ACCEPTED_REVISION: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          accepted="$RUNNER_TEMP/docs-sync-accepted-baseline.json"
+          if [[ "$DOCS_SYNC_ACCEPTED_REVISION" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "${DOCS_SYNC_ACCEPTED_REVISION}:docs/documentation-system/current-baseline.json"; then
+            git show "${DOCS_SYNC_ACCEPTED_REVISION}:docs/documentation-system/current-baseline.json" > "$accepted"
+          else
+            echo "Accepted revision has no documentation baseline; comparing against an empty bootstrap baseline."
+            printf '%s\n' '{"schema":"irespond.documentation-baseline.v2","sourceRevision":"bootstrap","bootstrap":true,"sources":{},"synchronizationContract":{},"screenshots":{},"screenshotPaths":{}}' > "$accepted"
+          fi
+          echo "DOCS_SYNC_BASELINE_PATH=$accepted" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Fingerprint landed frontend
+        run: node tools/docs-sync/src/fingerprint.mjs .
+      - name: Optional runtime capture from documentation-safe previews
+        if: vars.IRESPOND_DOCS_CAPTURE_BASE_URL != '' || vars.IRESPOND_DOCS_MOBILE_CAPTURE_BASE_URL != '' || vars.IRESPOND_DOCS_WEB_CAPTURE_BASE_URL != ''
+        env:
+          DOCS_CAPTURE_BASE_URL: ${{ vars.IRESPOND_DOCS_CAPTURE_BASE_URL }}
+          DOCS_CAPTURE_MOBILE_BASE_URL: ${{ vars.IRESPOND_DOCS_MOBILE_CAPTURE_BASE_URL }}
+          DOCS_CAPTURE_WEB_BASE_URL: ${{ vars.IRESPOND_DOCS_WEB_CAPTURE_BASE_URL }}
+          DOCS_CAPTURE_REVISION_URL: ${{ vars.IRESPOND_DOCS_CAPTURE_REVISION_URL }}
+          DOCS_CAPTURE_MOBILE_REVISION_URL: ${{ vars.IRESPOND_DOCS_MOBILE_CAPTURE_REVISION_URL }}
+          DOCS_CAPTURE_WEB_REVISION_URL: ${{ vars.IRESPOND_DOCS_WEB_CAPTURE_REVISION_URL }}
+        run: |
+          npm install --prefix tools/docs-sync --ignore-scripts --no-audit --no-fund
+          npx --prefix tools/docs-sync playwright install chromium
+          node tools/docs-sync/src/capture.mjs .
+      - name: Compare and stage reviewed baseline candidate
+        id: compare
+        env:
+          DOCS_SYNC_UPDATE_BASELINE: '1'
+        run: node tools/docs-sync/src/compare-and-plan.mjs .
+      - name: Regenerate interface manual index
+        run: node tools/docs-sync/src/regenerate-manual-index.mjs .
+      - name: Transfer documentation synchronization candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: documentation-sync-candidate-${{ github.sha }}
+          path: |
+            docs/documentation-system/current-baseline.json
+            docs/documentation-system/ui-fingerprint.generated.json
+            docs/documentation-system/ui-change-report.generated.json
+            docs/documentation-system/runtime-capture.generated.json
+            docs/manuals/generated/ui-interface-baseline.md
+            docs/screenshots/current
+          if-no-files-found: error
+
+  sync-on-main:
+    needs: capture-on-main
+    if: needs.capture-on-main.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download reviewed synchronization candidate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: documentation-sync-candidate-${{ github.sha }}
+          path: docs
+      - name: Apply manifest-constrained screenshot removals
+        run: node tools/docs-sync/src/apply-screenshot-removals.mjs .
+      - name: Open documentation synchronization PR
+        id: publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          staging_branch="docs-sync-staging/${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}"
+          git checkout -b "$staging_branch"
+          git config user.name "iRespond Documentation Bot"
+          git config user.email "documentation-bot@users.noreply.github.com"
+
+          # Required source-only evidence must always be staged. Optional runtime
+          # files are added independently so their absence cannot suppress a PR.
+          git add docs/documentation-system/current-baseline.json \
+                  docs/documentation-system/ui-fingerprint.generated.json \
+                  docs/documentation-system/ui-change-report.generated.json \
+                  docs/manuals/generated/ui-interface-baseline.md
+          if test -f docs/documentation-system/runtime-capture.generated.json; then
+            git add docs/documentation-system/runtime-capture.generated.json
+          fi
+          if test -d docs/screenshots/current; then
+            git add docs/screenshots/current
+          fi
+
+          if git diff --cached --quiet; then
+            echo "No documentation changes to publish."
+            exit 0
+          fi
+          git commit -m "docs: refresh manuals for frontend ${GITHUB_SHA:0:12}"
+          publication_sha=$(git rev-parse HEAD)
+          branch="docs-sync/${GITHUB_SHA}-${GITHUB_RUN_ID}-${publication_sha}"
+          git branch -m "$branch"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$branch"
+          pr_url=$(gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "docs: refresh interface manuals for ${GITHUB_SHA:0:12}" \
+            --body "Automated documentation synchronization for canonical frontend revision \`${GITHUB_SHA}\`. Review changed mobile/web UI anchors, newly added or unmapped frontend sources, screenshots and training steps before merge. Runtime screenshots are included only from configured documentation-safe previews; changed text anchors are preserved as review signals rather than silently accepted. No production credentials or data were used.")
+          pr_number=${pr_url##*/}
+          [[ "$pr_number" =~ ^[1-9][0-9]*$ ]]
+          provenance_dir="$RUNNER_TEMP/docs-sync-publication-provenance"
+          mkdir -p "$provenance_dir"
+          jq -n \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg workflowPath ".github/workflows/docs-interface-sync.yml" \
+            --arg sourceSha "$GITHUB_SHA" \
+            --arg baseSha "$GITHUB_SHA" \
+            --arg runId "$GITHUB_RUN_ID" \
+            --arg branch "$branch" \
+            --arg publicationSha "$publication_sha" \
+            --argjson pullRequestNumber "$pr_number" \
+            '{repository: $repository, workflowPath: $workflowPath, sourceSha: $sourceSha, baseSha: $baseSha, runId: $runId, branch: $branch, publicationSha: $publicationSha, pullRequestNumber: $pullRequestNumber}' \
+            > "$provenance_dir/publication.json"
+          {
+            echo "branch=$branch"
+            echo "pull_request_number=$pr_number"
+          } >> "$GITHUB_OUTPUT"
+      - name: Upload immutable publication provenance
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: documentation-publication-provenance-${{ github.run_id }}
+          path: ${{ runner.temp }}/docs-sync-publication-provenance/publication.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Dispatch exact-head publication verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLICATION_BRANCH: ${{ steps.publication.outputs.branch }}
+          PUBLICATION_PR_NUMBER: ${{ steps.publication.outputs.pull_request_number }}
+        run: |
+          gh workflow run docs-baseline-ownership.yml --ref main -f pull_request_number="$PUBLICATION_PR_NUMBER"
+          gh workflow run docs-interface-sync.yml --ref "$PUBLICATION_BRANCH" -f pull_request_number="$PUBLICATION_PR_NUMBER"

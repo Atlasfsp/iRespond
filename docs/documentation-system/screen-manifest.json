@@ -1,0 +1,17 @@
+{
+  "schema": "irespond.documentation-screen-manifest.v2",
+  "baselineRevision": "6484873c8a0c3306a5972247bcc9981da4051bc6",
+  "trackedFrontendRoots": ["apps/mobile", "apps/web"],
+  "viewport": {"width": 390, "height": 844, "deviceScaleFactor": 2},
+  "screens": [
+    {"id":"home","surface":"mobile","route":"/","source":"apps/mobile/app/index.tsx","expectedText":"What can you change where you are?","auth":false,"screenshot":"docs/screenshots/current/01-home.png"},
+    {"id":"report-need","surface":"mobile","route":"/report","source":"apps/mobile/app/report.tsx","expectedText":"Put a spotlight on something your community can change.","auth":false,"screenshot":"docs/screenshots/current/02-report-need.png"},
+    {"id":"evidence","surface":"mobile","route":"/evidence","source":"apps/mobile/app/evidence.tsx","expectedText":"Show the situation without exploiting the people affected.","auth":false,"screenshot":"docs/screenshots/current/03-evidence.png"},
+    {"id":"needmap","surface":"mobile","route":"/needmap","source":"apps/mobile/app/needmap.tsx","expectedText":"See what needs attention around you.","auth":false,"screenshot":"docs/screenshots/current/04-needmap.png"},
+    {"id":"project-room","surface":"mobile","route":"/project/project-water-001","source":"apps/mobile/app/project/[id].tsx","expectedText":"ACTION PROJECT","auth":false,"screenshot":"docs/screenshots/current/05-project-room.png"},
+    {"id":"funding","surface":"mobile","route":"/project/funding?projectId=project-water-001","source":"apps/mobile/app/project/funding.tsx","expectedText":"Shared responsibility, transparent support","auth":true,"screenshot":"docs/screenshots/current/06-funding.png"},
+    {"id":"impact-passport","surface":"mobile","route":"/impact","source":"apps/mobile/app/impact.tsx","expectedText":"Your response, evidenced.","auth":true,"screenshot":"docs/screenshots/current/07-impact-passport.png"},
+    {"id":"privacy","surface":"mobile","route":"/privacy","source":"apps/mobile/app/privacy.tsx","expectedText":"Your data, your choices","auth":true,"screenshot":"docs/screenshots/current/08-privacy.png"},
+    {"id":"safety","surface":"mobile","route":"/report-safety?subjectType=platform&subjectId=general","source":"apps/mobile/app/report-safety.tsx","expectedText":"Report a safety concern","auth":true,"screenshot":"docs/screenshots/current/09-safety.png"}
+  ]
+}
