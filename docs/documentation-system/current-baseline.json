@@ -3,6 +3,8 @@
   "sourceRevision": "6484873c8a0c3306a5972247bcc9981da4051bc6",
   "capturedAt": "2026-08-27",
   "interfaceMode": "source-faithful-baseline",
+  "screenshotSourceRevision": null,
+  "screenshots": {},
   "trackedFrontendRoots": ["apps/mobile", "apps/web"],
   "sources": {
     "apps/mobile/app.json": "702d3dd235a4b0d157948e09342764bb988d3ca3",

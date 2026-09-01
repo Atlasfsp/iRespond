@@ -47,6 +47,37 @@ export async function verifyPreviewRevision(revisionURL, expectedRevision, fetch
   }
 }
 
+export async function confirmPreviewRevision(
+  revisionURL,
+  expectedRevision,
+  before,
+  fetchImpl = globalThis.fetch,
+) {
+  if (!before?.verified) {
+    return {
+      verified: false,
+      beforeObservedRevision: before?.observedRevision || null,
+      afterObservedRevision: null,
+      error: before?.error || 'Preview revision was not verified before capture.',
+    };
+  }
+  const after = await verifyPreviewRevision(revisionURL, expectedRevision, fetchImpl);
+  if (!after.verified) {
+    return {
+      verified: false,
+      beforeObservedRevision: before.observedRevision,
+      afterObservedRevision: after.observedRevision,
+      error: `Preview revision changed during capture. ${after.error}`,
+    };
+  }
+  return {
+    verified: true,
+    beforeObservedRevision: before.observedRevision,
+    afterObservedRevision: after.observedRevision,
+    error: null,
+  };
+}
+
 export async function resetCaptureTarget(target) {
   await mkdir(path.dirname(target), { recursive: true });
   await rm(target, { force: true });

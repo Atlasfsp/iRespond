@@ -154,7 +154,7 @@ test('compare removes a missing current screenshot from the next baseline', asyn
 });
 
 test('preview revision must be externally verified before capture is current', async () => {
-  const { verifyPreviewRevision } = await import('./capture-support.mjs');
+  const { confirmPreviewRevision, verifyPreviewRevision } = await import('./capture-support.mjs');
   const expected = '8140824caa417363961ef332eb251313c9fa9ad3';
   const current = await verifyPreviewRevision(
     'https://preview.invalid/version',
@@ -174,6 +174,17 @@ test('preview revision must be externally verified before capture is current', a
   assert.match(stale.error, /does not match expected revision/);
   assert.equal(absent.verified, false);
   assert.match(absent.error, /revision URL is required/);
+
+  const changedAfterCapture = await confirmPreviewRevision(
+    'https://preview.invalid/version',
+    expected,
+    current,
+    async () => new Response(JSON.stringify({ sourceRevision: 'successor-head' }), { status: 200 }),
+  );
+  assert.equal(changedAfterCapture.verified, false);
+  assert.equal(changedAfterCapture.beforeObservedRevision, expected);
+  assert.equal(changedAfterCapture.afterObservedRevision, 'successor-head');
+  assert.match(changedAfterCapture.error, /changed during capture/);
 });
 
 test('capture resets a predecessor screenshot before attempting replacement', async (t) => {
@@ -224,6 +235,67 @@ test('publication applies only manifest-registered screenshot removals', async (
   });
   await assert.rejects(run('apply-screenshot-removals.mjs', root));
   assert.equal(await readFile(target, 'utf8'), 'restored predecessor image');
+});
+
+test('source-only runs label matching screenshots as predecessor evidence', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const screenshot = 'docs/screenshots/current/home.png';
+  const screenshotBytes = Buffer.from('accepted predecessor image');
+  const { createHash } = await import('node:crypto');
+  const screenshotHash = createHash('sha256').update(screenshotBytes).digest('hex');
+  await jsonFile(path.join(root, 'docs/documentation-system/screen-manifest.json'), {
+    screens: [{
+      id: 'home',
+      surface: 'mobile',
+      route: '/',
+      source: 'apps/mobile/app/index.tsx',
+      screenshot,
+    }],
+  });
+  await jsonFile(path.join(root, 'docs/documentation-system/current-baseline.json'), {
+    sourceRevision: 'baseline-head',
+    screenshotSourceRevision: 'screenshot-head',
+    sources: {},
+    screenshots: { home: screenshotHash },
+  });
+  await jsonFile(path.join(root, 'docs/documentation-system/ui-fingerprint.generated.json'), {
+    sourceRevision: 'current-head',
+    sources: {},
+  });
+  const target = path.join(root, screenshot);
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, screenshotBytes);
+
+  await run('compare-and-plan.mjs', root, {
+    GITHUB_SHA: 'current-head',
+    DOCS_SYNC_UPDATE_BASELINE: '1',
+  });
+  await run('regenerate-manual-index.mjs', root);
+
+  const report = JSON.parse(await readFile(
+    path.join(root, 'docs/documentation-system/ui-change-report.generated.json'),
+    'utf8',
+  ));
+  const baseline = JSON.parse(await readFile(
+    path.join(root, 'docs/documentation-system/current-baseline.json'),
+    'utf8',
+  ));
+  const manual = await readFile(
+    path.join(root, 'docs/manuals/generated/ui-interface-baseline.md'),
+    'utf8',
+  );
+  assert.deepEqual(report.screenshotEvidence.home, {
+    status: 'predecessor',
+    sourceRevision: 'screenshot-head',
+    screenshot,
+    sha256: screenshotHash,
+  });
+  assert.equal(baseline.sourceRevision, 'current-head');
+  assert.equal(baseline.screenshotSourceRevision, 'screenshot-head');
+  assert.equal(baseline.screenshots.home, screenshotHash);
+  assert.match(manual, /Screenshot evidence: predecessor revision `screenshot-head`/);
+  assert.doesNotMatch(manual, /home current interface/);
 });
 
 test('capture dependencies run outside the repository-write publication job', async () => {

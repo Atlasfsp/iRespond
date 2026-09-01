@@ -17,7 +17,8 @@ const lines=[
 ];
 for(const screen of manifest.screens){
   const changed=report.changed.includes(screen.id)?' **Changed in this revision.**':'';
-  lines.push(
+  const screenshotEvidence=report.screenshotEvidence?.[screen.id];
+  const screenLines=[
     `### ${screen.id}${changed}`,
     '',
     `- Surface: \`${screen.surface||'mobile'}\``,
@@ -25,11 +26,24 @@ for(const screen of manifest.screens){
     `- Source: \`${screen.source}\``,
     `- Source git-blob SHA-1: \`${fingerprint.sources[screen.source]||'unavailable'}\``,
     `- Expected UI anchor: “${screen.expectedText||'none'}”`,
-    `- Screenshot: \`${screen.screenshot}\``,
-    '',
-    `![${screen.id} current interface](/${screen.screenshot})`,
-    ''
-  );
+    `- Screenshot target: \`${screen.screenshot}\``,
+  ];
+  if(screenshotEvidence){
+    screenLines.push(
+      `- Screenshot evidence: ${screenshotEvidence.status} revision \`${screenshotEvidence.sourceRevision}\` (SHA-256 \`${screenshotEvidence.sha256}\`)`,
+      '',
+      `![${screen.id} ${screenshotEvidence.status} interface evidence](/${screen.screenshot})`,
+      ''
+    );
+  }else{
+    screenLines.push(
+      `- Screenshot evidence: unavailable for source revision \`${report.sourceRevision}\``,
+      '',
+      '_No revision-bound runtime screenshot is available for this source revision._',
+      ''
+    );
+  }
+  lines.push(...screenLines);
 }
 
 lines.push('## Newly changed or unmapped frontend sources','');

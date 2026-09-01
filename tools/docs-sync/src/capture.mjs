@@ -3,7 +3,11 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
 
-import { resetCaptureTarget, verifyPreviewRevision } from './capture-support.mjs';
+import {
+  confirmPreviewRevision,
+  resetCaptureTarget,
+  verifyPreviewRevision,
+} from './capture-support.mjs';
 
 const root = path.resolve(process.argv[2] || '.');
 const defaultBaseURL = process.env.DOCS_CAPTURE_BASE_URL || '';
@@ -21,17 +25,15 @@ const manifest = JSON.parse(await readFile(path.join(root, 'docs/documentation-s
 const baseURLs = { mobile: mobileBaseURL, web: webBaseURL };
 const revisionURLs = { mobile: mobileRevisionURL, web: webRevisionURL };
 const requiredSurfaces = [...new Set(manifest.screens.map((screen) => screen.surface || 'mobile'))];
-const revisionChecks = {};
+const initialRevisionChecks = {};
 for (const surface of requiredSurfaces) {
   if (!baseURLs[surface]) {
-    revisionChecks[surface] = { verified: false, observedRevision: null, error: `No documentation-safe ${surface} preview URL configured.` };
+    initialRevisionChecks[surface] = { verified: false, observedRevision: null, error: `No documentation-safe ${surface} preview URL configured.` };
     continue;
   }
-  revisionChecks[surface] = await verifyPreviewRevision(revisionURLs[surface], expectedRevision);
+  initialRevisionChecks[surface] = await verifyPreviewRevision(revisionURLs[surface], expectedRevision);
 }
-const anyVerifiedSurface = Object.values(revisionChecks).some((check) => check.verified);
-const allRevisionsVerified = requiredSurfaces.length > 0
-  && requiredSurfaces.every((surface) => revisionChecks[surface]?.verified);
+const anyVerifiedSurface = Object.values(initialRevisionChecks).some((check) => check.verified);
 const browser = anyVerifiedSurface ? await chromium.launch({headless:true}) : null;
 const context = browser ? await browser.newContext({
   viewport:{width:manifest.viewport.width,height:manifest.viewport.height},
@@ -56,7 +58,7 @@ for (const screen of manifest.screens) {
     results.push({id:screen.id,surface,route:screen.route,status:'failed',error:`No documentation-safe ${surface} preview URL configured.`});
     continue;
   }
-  const revisionCheck=revisionChecks[surface];
+  const revisionCheck=initialRevisionChecks[surface];
   if(!revisionCheck?.verified){
     results.push({id:screen.id,surface,route:screen.route,status:'failed',error:revisionCheck?.error||`The ${surface} preview revision could not be verified.`});
     continue;
@@ -87,6 +89,33 @@ for (const screen of manifest.screens) {
   }
 }
 if (browser) await browser.close();
+const revisionChecks = {};
+for (const surface of requiredSurfaces) {
+  revisionChecks[surface] = await confirmPreviewRevision(
+    revisionURLs[surface],
+    expectedRevision,
+    initialRevisionChecks[surface],
+  );
+  if (!revisionChecks[surface].verified && initialRevisionChecks[surface]?.verified) {
+    for (const screen of manifest.screens.filter((candidate) => (candidate.surface || 'mobile') === surface)) {
+      await resetCaptureTarget(path.join(root, screen.screenshot));
+    }
+    for (let index = 0; index < results.length; index += 1) {
+      const result = results[index];
+      if (result.surface === surface && result.status === 'captured') {
+        results[index] = {
+          id: result.id,
+          surface: result.surface,
+          route: result.route,
+          status: 'failed',
+          error: revisionChecks[surface].error,
+        };
+      }
+    }
+  }
+}
+const allRevisionsVerified = requiredSurfaces.length > 0
+  && requiredSurfaces.every((surface) => revisionChecks[surface]?.verified);
 const report={
   schema:'irespond.documentation-runtime-capture.v2',
   sourceRevision:allRevisionsVerified?expectedRevision:null,
