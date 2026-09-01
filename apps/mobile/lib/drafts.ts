@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import type { CoordinateSource } from './coordinates';
 
 const DRAFT_KEY = 'irespond.need-draft.v1';
 const PROFILE_KEY = 'irespond.ability-profile.v1';
@@ -11,6 +12,10 @@ export type NeedDraft = {
   locationLabel?: string;
   latitude?: number;
   longitude?: number;
+  locationSource?: CoordinateSource;
+  locationAccuracyMeters?: number;
+  locationCapturedAt?: string;
+  locationConfirmedAt?: string;
   evidenceUris: string[];
   updatedAt: string;
 };

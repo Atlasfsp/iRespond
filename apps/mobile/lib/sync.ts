@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import type { NeedDraft } from './drafts';
+import { parseInterventionCoordinates } from './coordinates';
 import { getAccessToken } from './session';
 
 const QUEUE_KEY = 'irespond.sync-queue.v1';
@@ -32,7 +33,9 @@ async function loadQueue(): Promise<QueuedNeed[]> { const raw=await AsyncStorage
 async function saveQueue(items: QueuedNeed[]) { await AsyncStorage.setItem(QUEUE_KEY,JSON.stringify(items)); }
 
 export async function queueNeedForSync(draft: NeedDraft) {
-  const queue=await loadQueue();const item:QueuedNeed={idempotencyKey:makeId('need'),draft,queuedAt:new Date().toISOString(),attempts:0,uploadedEvidenceUris:[]};await saveQueue([...queue,item]);return item;
+  const coordinates=parseInterventionCoordinates(draft.latitude,draft.longitude);
+  if(!coordinates||!draft.locationConfirmedAt)throw new Error('A confirmed intervention location is required before this report can sync.');
+  const queue=await loadQueue();const item:QueuedNeed={idempotencyKey:makeId('need'),draft:{...draft,...coordinates},queuedAt:new Date().toISOString(),attempts:0,uploadedEvidenceUris:[]};await saveQueue([...queue,item]);return item;
 }
 
 export type SyncResult={synced:number;remaining:number;offline:boolean;syncedKeys:string[]};
@@ -41,7 +44,8 @@ export async function flushNeedQueue():Promise<SyncResult>{
   const baseUrl=process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/,'');const queue=await loadQueue();if(!baseUrl||queue.length===0)return{synced:0,remaining:queue.length,offline:!baseUrl,syncedKeys:[]};
   const actorId=await getLocalActorId();const token=await getAccessToken();const remaining:QueuedNeed[]=[];const syncedKeys:string[]=[];let synced=0;
   for(const original of queue){let item={...original,uploadedEvidenceUris:[...(original.uploadedEvidenceUris??[])]};try{
-      if(!item.serverNeedId){const response=await fetch(`${baseUrl}/v1/needs`,{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':item.idempotencyKey},body:JSON.stringify({title:item.draft.title,description:item.draft.description,category:item.draft.category??'community',latitude:item.draft.latitude??0,longitude:item.draft.longitude??0,reporterId:actorId,sdgTags:[]})});if(!response.ok)throw new Error(`need sync ${response.status}`);const created=(await response.json()) as CreatedNeed;item.serverNeedId=created.id;}
+      const coordinates=parseInterventionCoordinates(item.draft.latitude,item.draft.longitude);if(!coordinates||!item.draft.locationConfirmedAt){remaining.push(item);continue;}
+      if(!item.serverNeedId){const response=await fetch(`${baseUrl}/v1/needs`,{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':item.idempotencyKey},body:JSON.stringify({title:item.draft.title,description:item.draft.description,category:item.draft.category??'community',latitude:coordinates.latitude,longitude:coordinates.longitude,reporterId:actorId,sdgTags:[]})});if(!response.ok)throw new Error(`need sync ${response.status}`);const created=(await response.json()) as CreatedNeed;item.serverNeedId=created.id;}
       const pendingEvidence=item.draft.evidenceUris.filter((uri)=>!item.uploadedEvidenceUris?.includes(uri));
       if(pendingEvidence.length>0&&!token){remaining.push(item);continue;}
       for(const uri of pendingEvidence){if(!token)break;await uploadEvidence(baseUrl,item.serverNeedId!,uri,token);item.uploadedEvidenceUris=[...(item.uploadedEvidenceUris??[]),uri];}
