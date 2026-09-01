@@ -2,7 +2,7 @@ name: docs-baseline-ownership
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
   workflow_dispatch:
     inputs:
       pull_request_number:
@@ -42,6 +42,8 @@ jobs:
           {
             echo "number=$pr_number"
             echo "base_sha=$base_sha"
+            echo "base_ref=$(jq -r '.base.ref' <<< "$pr_json")"
+            echo "base_repository=$(jq -r '.base.repo.full_name' <<< "$pr_json")"
             echo "head_sha=$head_sha"
             echo "head_ref=$(jq -r '.head.ref' <<< "$pr_json")"
             echo "author=$(jq -r '.user.login' <<< "$pr_json")"
@@ -65,6 +67,8 @@ jobs:
       - name: Enforce accepted baseline ownership from base-controlled code
         env:
           DOCS_SYNC_ACCEPTED_REVISION: ${{ steps.pr.outputs.base_sha }}
+          DOCS_SYNC_BASE_REF: ${{ steps.pr.outputs.base_ref }}
+          DOCS_SYNC_BASE_REPOSITORY: ${{ steps.pr.outputs.base_repository }}
           DOCS_SYNC_HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
           DOCS_SYNC_HEAD_REF: ${{ steps.pr.outputs.head_ref }}
           DOCS_SYNC_PR_AUTHOR: ${{ steps.pr.outputs.author }}

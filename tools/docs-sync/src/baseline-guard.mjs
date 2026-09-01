@@ -18,11 +18,17 @@ const publicationBranchPattern = /^docs-sync\/[0-9a-f]{12}-[1-9][0-9]*-([0-9a-f]
 export function validateBaselineOwnership({
   publicationArtifactsChanged,
   acceptedBaselineExists,
+  baseRef,
+  baseRepository,
+  repository,
   headRef,
   headRevision,
   pullRequestAuthor,
   sameRepository = false,
 }) {
+  if (baseRef !== 'main' || baseRepository !== repository) {
+    throw new Error(`Documentation ownership verification must target ${repository}:main.`);
+  }
   if (!publicationArtifactsChanged || !acceptedBaselineExists) return;
   const publicationBranchMatch = publicationBranchPattern.exec(headRef || '');
   const publicationOwned = pullRequestAuthor === 'github-actions[bot]'
@@ -75,6 +81,9 @@ async function main() {
   validateBaselineOwnership({
     publicationArtifactsChanged,
     acceptedBaselineExists,
+    baseRef: process.env.DOCS_SYNC_BASE_REF || '',
+    baseRepository: process.env.DOCS_SYNC_BASE_REPOSITORY || '',
+    repository: process.env.GITHUB_REPOSITORY || '',
     headRef: process.env.DOCS_SYNC_HEAD_REF || '',
     headRevision,
     pullRequestAuthor: process.env.DOCS_SYNC_PR_AUTHOR || '',

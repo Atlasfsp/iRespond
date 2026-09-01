@@ -194,19 +194,27 @@ test('all synchronized publication artifacts are owned by the publication workfl
     'docs/manuals/generated/ui-interface-baseline.md',
     'docs/screenshots/current',
   ]);
+  const protectedBase = {
+    baseRef: 'main',
+    baseRepository: 'Atlasfsp/iRespond',
+    repository: 'Atlasfsp/iRespond',
+  };
   assert.doesNotThrow(() => validateBaselineOwnership({
+    ...protectedBase,
     publicationArtifactsChanged: false,
     acceptedBaselineExists: true,
     headRef: 'feature/no-baseline-change',
     pullRequestAuthor: 'contributor',
   }));
   assert.doesNotThrow(() => validateBaselineOwnership({
+    ...protectedBase,
     publicationArtifactsChanged: true,
     acceptedBaselineExists: false,
     headRef: 'docs/bootstrap-system',
     pullRequestAuthor: 'contributor',
   }));
   assert.doesNotThrow(() => validateBaselineOwnership({
+    ...protectedBase,
     publicationArtifactsChanged: true,
     acceptedBaselineExists: true,
     headRef: publicationRef,
@@ -215,12 +223,14 @@ test('all synchronized publication artifacts are owned by the publication workfl
     sameRepository: true,
   }));
   assert.throws(() => validateBaselineOwnership({
+    ...protectedBase,
     publicationArtifactsChanged: true,
     acceptedBaselineExists: true,
     headRef: 'feature/preaccept-future-hashes',
     pullRequestAuthor: 'contributor',
   }), /may change synchronized publication artifacts/);
   assert.throws(() => validateBaselineOwnership({
+    ...protectedBase,
     publicationArtifactsChanged: true,
     acceptedBaselineExists: true,
     headRef: publicationRef,
@@ -229,6 +239,7 @@ test('all synchronized publication artifacts are owned by the publication workfl
     sameRepository: true,
   }), /may change synchronized publication artifacts/);
   assert.throws(() => validateBaselineOwnership({
+    ...protectedBase,
     publicationArtifactsChanged: true,
     acceptedBaselineExists: true,
     headRef: publicationRef,
@@ -237,6 +248,7 @@ test('all synchronized publication artifacts are owned by the publication workfl
     sameRepository: false,
   }), /may change synchronized publication artifacts/);
   assert.throws(() => validateBaselineOwnership({
+    ...protectedBase,
     publicationArtifactsChanged: true,
     acceptedBaselineExists: true,
     headRef: publicationRef,
@@ -244,6 +256,22 @@ test('all synchronized publication artifacts are owned by the publication workfl
     pullRequestAuthor: 'github-actions[bot]',
     sameRepository: true,
   }), /synchronized publication artifacts/);
+  assert.throws(() => validateBaselineOwnership({
+    ...protectedBase,
+    baseRef: 'feature/unprotected-base',
+    publicationArtifactsChanged: false,
+    acceptedBaselineExists: false,
+    headRef: 'feature/preearn-status',
+    pullRequestAuthor: 'contributor',
+  }), /must target Atlasfsp\/iRespond:main/);
+  assert.throws(() => validateBaselineOwnership({
+    ...protectedBase,
+    baseRepository: 'contributor/fork',
+    publicationArtifactsChanged: false,
+    acceptedBaselineExists: false,
+    headRef: 'feature/preearn-status',
+    pullRequestAuthor: 'contributor',
+  }), /must target Atlasfsp\/iRespond:main/);
 });
 
 test('base-controlled guard rejects deletion of a synchronized publication artifact', async (t) => {
@@ -276,6 +304,8 @@ test('base-controlled guard rejects deletion of a synchronized publication artif
   const commonEnvironment = {
     DOCS_SYNC_ACCEPTED_REVISION: acceptedRevision,
     DOCS_SYNC_HEAD_SHA: headRevision,
+    DOCS_SYNC_BASE_REF: 'main',
+    DOCS_SYNC_BASE_REPOSITORY: 'Atlasfsp/iRespond',
     DOCS_SYNC_HEAD_REPOSITORY: 'Atlasfsp/iRespond',
     GITHUB_REPOSITORY: 'Atlasfsp/iRespond',
   };
@@ -682,9 +712,12 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.doesNotMatch(workflow, /Guard accepted baseline ownership/);
   assert.doesNotMatch(workflow, /run: node tools\/docs-sync\/src\/baseline-guard\.mjs/);
   assert.match(ownershipWorkflow, /pull_request_target:/);
+  assert.match(ownershipWorkflow, /types: \[opened, synchronize, reopened, ready_for_review, edited\]/);
   assert.match(ownershipWorkflow, /workflow_dispatch:/);
   assert.match(ownershipWorkflow, /pull_request_number:/);
   assert.match(ownershipWorkflow, /gh api "repos\/\$\{GITHUB_REPOSITORY\}\/pulls\/\$\{pr_number\}"/);
+  assert.match(ownershipWorkflow, /base_ref=\$\(jq -r '\.base\.ref'/);
+  assert.match(ownershipWorkflow, /base_repository=\$\(jq -r '\.base\.repo\.full_name'/);
   assert.match(ownershipWorkflow, /ref: \$\{\{ steps\.pr\.outputs\.base_sha \}\}/);
   assert.match(ownershipWorkflow, /persist-credentials: false/);
   assert.match(ownershipWorkflow, /git fetch --no-tags origin "pull\/\$\{DOCS_SYNC_PR_NUMBER\}\/head"/);
