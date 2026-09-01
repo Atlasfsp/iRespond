@@ -1,11 +1,14 @@
 import { readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 
+import { validateScreenManifest } from './manifest-support.mjs';
+
 const root = path.resolve(process.argv[2] || '.');
 const manifest = JSON.parse(await readFile(
   path.join(root, 'docs/documentation-system/screen-manifest.json'),
   'utf8',
 ));
+validateScreenManifest(manifest);
 const report = JSON.parse(await readFile(
   path.join(root, 'docs/documentation-system/ui-change-report.generated.json'),
   'utf8',

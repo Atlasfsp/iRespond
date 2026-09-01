@@ -8,6 +8,7 @@ import {
   resetCaptureTarget,
   verifyPreviewRevision,
 } from './capture-support.mjs';
+import { validateScreenManifest } from './manifest-support.mjs';
 
 const root = path.resolve(process.argv[2] || '.');
 const defaultBaseURL = process.env.DOCS_CAPTURE_BASE_URL || '';
@@ -22,6 +23,7 @@ if (!mobileBaseURL && !webBaseURL) {
   process.exit(2);
 }
 const manifest = JSON.parse(await readFile(path.join(root, 'docs/documentation-system/screen-manifest.json'), 'utf8'));
+validateScreenManifest(manifest);
 const baseURLs = { mobile: mobileBaseURL, web: webBaseURL };
 const revisionURLs = { mobile: mobileRevisionURL, web: webRevisionURL };
 const requiredSurfaces = [...new Set(manifest.screens.map((screen) => screen.surface || 'mobile'))];

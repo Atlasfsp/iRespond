@@ -225,6 +225,28 @@ test('accepted baseline changes are owned by the publication workflow', async ()
   }), /may change the accepted baseline/);
 });
 
+test('screen manifest rejects duplicate normalized screenshot targets', async () => {
+  const { validateScreenManifest } = await import('./manifest-support.mjs');
+  assert.doesNotThrow(() => validateScreenManifest({
+    screens: [
+      { id: 'home', screenshot: 'docs/screenshots/current/home.png' },
+      { id: 'map', screenshot: 'docs/screenshots/current/map.png' },
+    ],
+  }));
+  assert.throws(() => validateScreenManifest({
+    screens: [
+      { id: 'home', screenshot: 'docs/screenshots/current/home.png' },
+      { id: 'replacement', screenshot: 'docs/screenshots/current/./home.png' },
+    ],
+  }), /Duplicate screenshot target/);
+  assert.throws(() => validateScreenManifest({
+    screens: [
+      { id: 'home', screenshot: 'docs/screenshots/current/home.png' },
+      { id: 'home', screenshot: 'docs/screenshots/current/other.png' },
+    ],
+  }), /Duplicate screen id/);
+});
+
 test('compare accepts runtime evidence only from the current source revision', async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));

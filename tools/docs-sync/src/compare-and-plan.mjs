@@ -2,8 +2,11 @@ import { createHash } from 'node:crypto';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { validateScreenManifest } from './manifest-support.mjs';
+
 const root=path.resolve(process.argv[2]||'.');
 const manifest=JSON.parse(await readFile(path.join(root,'docs/documentation-system/screen-manifest.json'),'utf8'));
+validateScreenManifest(manifest);
 const fingerprint=JSON.parse(await readFile(path.join(root,'docs/documentation-system/ui-fingerprint.generated.json'),'utf8'));
 const baselinePath=path.join(root,'docs/documentation-system/current-baseline.json');
 const workingBaseline=JSON.parse(await readFile(baselinePath,'utf8'));
