@@ -245,6 +245,12 @@ test('screen manifest rejects duplicate normalized screenshot targets', async ()
       { id: 'home', screenshot: 'docs/screenshots/current/other.png' },
     ],
   }), /Duplicate screen id/);
+  assert.throws(() => validateScreenManifest({
+    screens: [{ id: 'absolute', screenshot: '/docs/screenshots/current/absolute.png' }],
+  }), /repository-relative/);
+  assert.throws(() => validateScreenManifest({
+    screens: [{ id: 'outside', screenshot: 'docs/screenshots/outside.png' }],
+  }), /docs\/screenshots\/current/);
 });
 
 test('compare accepts runtime evidence only from the current source revision', async (t) => {

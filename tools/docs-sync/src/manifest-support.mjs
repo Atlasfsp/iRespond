@@ -15,13 +15,24 @@ export function validateScreenManifest(manifest) {
     if (typeof screen.screenshot !== 'string' || !screen.screenshot) {
       throw new Error(`Registered screen ${screen.id} must have a screenshot target.`);
     }
-    const normalizedScreenshot = path.posix.normalize(screen.screenshot.replaceAll('\\', '/'));
-    const existingOwner = screenshotOwners.get(normalizedScreenshot);
+    const portableScreenshot = screen.screenshot.replaceAll('\\', '/');
+    const normalizedScreenshot = path.posix.normalize(portableScreenshot);
+    const repositoryRelativeScreenshot = normalizedScreenshot.replace(/^\/+/, '');
+    const existingOwner = screenshotOwners.get(repositoryRelativeScreenshot);
     if (existingOwner) {
       throw new Error(
-        `Duplicate screenshot target ${normalizedScreenshot}: ${existingOwner} and ${screen.id}.`,
+        `Duplicate screenshot target ${repositoryRelativeScreenshot}: ${existingOwner} and ${screen.id}.`,
       );
     }
-    screenshotOwners.set(normalizedScreenshot, screen.id);
+    if (path.posix.isAbsolute(portableScreenshot)) {
+      throw new Error(`Screenshot target for ${screen.id} must be repository-relative.`);
+    }
+    if (portableScreenshot !== repositoryRelativeScreenshot) {
+      throw new Error(`Screenshot target for ${screen.id} must use its canonical repository-relative path.`);
+    }
+    if (!repositoryRelativeScreenshot.startsWith('docs/screenshots/current/')) {
+      throw new Error(`Screenshot target for ${screen.id} must be under docs/screenshots/current/.`);
+    }
+    screenshotOwners.set(repositoryRelativeScreenshot, screen.id);
   }
 }
