@@ -5,6 +5,7 @@
   "packageManager": "pnpm@10.15.0",
   "scripts": {
     "mobile:start": "pnpm --filter @irespond/mobile start",
+    "mobile:web": "pnpm --filter @irespond/mobile web",
     "mobile:android": "pnpm --filter @irespond/mobile android",
     "mobile:ios": "pnpm --filter @irespond/mobile ios",
     "mobile:typecheck": "pnpm --filter @irespond/mobile typecheck"
