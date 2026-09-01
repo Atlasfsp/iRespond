@@ -32,9 +32,16 @@ func normalizeWebOrigin(origin string) (string, bool) {
 	origin = strings.TrimSpace(origin)
 	if origin == "" || origin == "*" { return "", false }
 	parsed, err := url.Parse(origin)
-	if err != nil || (parsed.Scheme != "https" && parsed.Scheme != "http") || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" { return "", false }
+	if err != nil { return "", false }
+	scheme := strings.ToLower(parsed.Scheme)
+	if (scheme != "https" && scheme != "http") || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" { return "", false }
 	if parsed.Path != "" && parsed.Path != "/" { return "", false }
-	return parsed.Scheme + "://" + parsed.Host, true
+	hostname, port := strings.ToLower(parsed.Hostname()), parsed.Port()
+	if hostname == "" { return "", false }
+	if (scheme == "https" && port == "443") || (scheme == "http" && port == "80") { port = "" }
+	host := hostname
+	if port != "" { host = net.JoinHostPort(hostname, port) } else if strings.Contains(hostname, ":") { host = "[" + hostname + "]" }
+	return scheme + "://" + host, true
 }
 func validWebOrigin(origin string) bool { _, ok := normalizeWebOrigin(origin); return ok }
 

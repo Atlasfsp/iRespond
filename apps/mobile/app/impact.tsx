@@ -88,7 +88,6 @@ export default function ImpactPassport() {
                   <Text style={s.verifiedText}>SERVER-EVIDENCED PASSPORT</Text>
                 </View>
                 <Text style={s.heroSubject}>{profile?.displayName || 'iRespond contributor'}</Text>
-                <Text style={s.heroLevel}>{impactLevel(data)}</Text>
                 <View style={s.compassRow}>
                   <Compass icon="location-outline" label="Place" value={profile?.place || 'Set profile'} />
                   <Compass icon="people-outline" label="Position" value={profile?.position || 'Set profile'} />
@@ -227,14 +226,6 @@ function Metric({
   );
 }
 
-function impactLevel(data: Passport) {
-  const score = data.projectsCompleted + data.verifications + data.fulfilledContributions;
-  if (score >= 25) return 'Impact level: Expert';
-  if (score >= 10) return 'Impact level: Experienced';
-  if (score >= 3) return 'Impact level: Active';
-  return 'Impact level: Building';
-}
-
 function kindIcon(kind: string): keyof typeof Ionicons.glyphMap {
   if (kind.includes('logistic') || kind.includes('transport')) return 'car-outline';
   if (kind.includes('skill')) return 'construct-outline';
@@ -262,7 +253,6 @@ const s = StyleSheet.create({
   verified: { alignSelf: 'flex-end', paddingHorizontal: Stitch.space.md, paddingVertical: 8, borderRadius: Stitch.radius.full, backgroundColor: Stitch.color.secondary, flexDirection: 'row', alignItems: 'center', gap: 5 },
   verifiedText: { ...Stitch.type.tag, color: Stitch.color.onPrimary },
   heroSubject: { ...Stitch.type.hero, color: Stitch.color.onPrimary },
-  heroLevel: { ...Stitch.type.card, color: Stitch.color.onPrimaryContainer },
   compassRow: { flexDirection: 'row', gap: Stitch.space.sm },
   compass: { flex: 1, minHeight: 78, padding: Stitch.space.sm, borderRadius: Stitch.radius.md, backgroundColor: 'rgba(207,229,255,.12)', alignItems: 'center', justifyContent: 'center' },
   compassLabel: { ...Stitch.type.tag, color: Stitch.color.onPrimaryContainer, marginTop: 3 },

@@ -53,10 +53,11 @@ func TestGatewayAllowsOnlyConfiguredWebOrigin(t *testing.T) {
 }
 
 func TestGatewayCanonicalizesConfiguredWebOriginTrailingSlash(t *testing.T) {
-	t.Setenv("WEB_ALLOWED_ORIGINS", "https://app.irespond.example/")
+	t.Setenv("WEB_ALLOWED_ORIGINS", "https://APP.iRespond.example:443/,http://LOCALHOST:80/")
 	cfg := gatewayConfigFromEnvironment()
 	if _, ok := cfg.AllowedWebOrigins["https://app.irespond.example"]; !ok { t.Fatalf("canonical origin missing: %#v", cfg.AllowedWebOrigins) }
-	if _, ok := cfg.AllowedWebOrigins["https://app.irespond.example/"]; ok { t.Fatalf("non-browser origin retained: %#v", cfg.AllowedWebOrigins) }
+	if _, ok := cfg.AllowedWebOrigins["http://localhost"]; !ok { t.Fatalf("canonical localhost origin missing: %#v", cfg.AllowedWebOrigins) }
+	if len(cfg.AllowedWebOrigins) != 2 { t.Fatalf("non-browser origins retained: %#v", cfg.AllowedWebOrigins) }
 	handler := gatewayMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }))
 	req := httptest.NewRequest(http.MethodGet, "/v1/platform", nil); req.Header.Set("Origin", "https://app.irespond.example")
 	rr := httptest.NewRecorder(); handler.ServeHTTP(rr, req)

@@ -40,6 +40,7 @@ need('mobileApi',"authenticated: boolean | 'optional'",'the API client must expo
 need('mobileApi','authenticated === true','optional authentication must require a token only for protected requests');
 need('mobileApi','if (token)','optional authentication must attach an available token');
 need('projectAdmin','detail?.permissions??none','project admin must consume server permissions');
+for(const reset of ["setCurrency('NGN')","setTarget('')","setCounterpart('')"])need('projectAdmin',reset,`project admin must clear stale funding input with ${reset}`);
 for(const permission of ['canManageProject','canManageMilestones','canValidateMilestones','canManageRoles','canManageContributions','canPublishContributionNeeds','canManageFunding'])need('projectAdmin',permission,`project admin must honor ${permission}`);
 forbid('projectAdmin',/createdBy|projectManagerId/,'mobile must not infer resource authority from record ownership fields');
 
