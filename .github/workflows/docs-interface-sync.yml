@@ -39,10 +39,11 @@ jobs:
           accepted="$RUNNER_TEMP/docs-sync-accepted-baseline.json"
           if [[ "$DOCS_SYNC_ACCEPTED_REVISION" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "${DOCS_SYNC_ACCEPTED_REVISION}:docs/documentation-system/current-baseline.json"; then
             git show "${DOCS_SYNC_ACCEPTED_REVISION}:docs/documentation-system/current-baseline.json" > "$accepted"
-            echo "DOCS_SYNC_BASELINE_PATH=$accepted" >> "$GITHUB_ENV"
           else
-            echo "Accepted revision has no documentation baseline; using the checked-in bootstrap baseline."
+            echo "Accepted revision has no documentation baseline; comparing against an empty bootstrap baseline."
+            printf '%s\n' '{"schema":"irespond.documentation-baseline.v2","sourceRevision":"bootstrap","bootstrap":true,"sources":{},"synchronizationContract":{},"screenshots":{},"screenshotPaths":{}}' > "$accepted"
           fi
+          echo "DOCS_SYNC_BASELINE_PATH=$accepted" >> "$GITHUB_ENV"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
@@ -91,10 +92,11 @@ jobs:
           accepted="$RUNNER_TEMP/docs-sync-accepted-baseline.json"
           if [[ "$DOCS_SYNC_ACCEPTED_REVISION" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "${DOCS_SYNC_ACCEPTED_REVISION}:docs/documentation-system/current-baseline.json"; then
             git show "${DOCS_SYNC_ACCEPTED_REVISION}:docs/documentation-system/current-baseline.json" > "$accepted"
-            echo "DOCS_SYNC_BASELINE_PATH=$accepted" >> "$GITHUB_ENV"
           else
-            echo "Accepted revision has no documentation baseline; using the checked-in bootstrap baseline."
+            echo "Accepted revision has no documentation baseline; comparing against an empty bootstrap baseline."
+            printf '%s\n' '{"schema":"irespond.documentation-baseline.v2","sourceRevision":"bootstrap","bootstrap":true,"sources":{},"synchronizationContract":{},"screenshots":{},"screenshotPaths":{}}' > "$accepted"
           fi
+          echo "DOCS_SYNC_BASELINE_PATH=$accepted" >> "$GITHUB_ENV"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22

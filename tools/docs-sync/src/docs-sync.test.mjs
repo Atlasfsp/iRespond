@@ -118,6 +118,70 @@ test('manifest-only edits are published as synchronization-contract changes', as
   assert.match(await readFile(outputPath, 'utf8'), /changed=true/);
 });
 
+test('bootstrap comparison cannot trust head-controlled accepted hashes', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const contractPath = 'docs/documentation-system/screen-manifest.json';
+  const sourcePath = 'apps/mobile/app/index.tsx';
+  await jsonFile(path.join(root, contractPath), { screens: [] });
+  await jsonFile(path.join(root, 'docs/documentation-system/current-baseline.json'), {
+    schema: 'irespond.documentation-baseline.v2',
+    sourceRevision: 'self-advanced-head',
+    publications: [{ id: 'product' }],
+    unreviewedHeadMetadata: 'must-not-survive-bootstrap',
+    sources: { [sourcePath]: 'current-source-hash' },
+    synchronizationContract: { [contractPath]: 'current-contract-hash' },
+    screenshots: {},
+  });
+  await jsonFile(path.join(root, 'docs/documentation-system/ui-fingerprint.generated.json'), {
+    sourceRevision: 'current-head',
+    sources: { [sourcePath]: 'current-source-hash' },
+    synchronizationContract: { [contractPath]: 'current-contract-hash' },
+  });
+  const bootstrapBaselinePath = path.join(root, 'empty-bootstrap-baseline.json');
+  await jsonFile(bootstrapBaselinePath, {
+    schema: 'irespond.documentation-baseline.v2',
+    sourceRevision: 'bootstrap',
+    bootstrap: true,
+    sources: {},
+    synchronizationContract: {},
+    screenshots: {},
+    screenshotPaths: {},
+  });
+
+  await run('compare-and-plan.mjs', root, {
+    GITHUB_SHA: 'current-head',
+    DOCS_SYNC_UPDATE_BASELINE: '1',
+    DOCS_SYNC_BASELINE_PATH: bootstrapBaselinePath,
+  });
+
+  const report = JSON.parse(await readFile(
+    path.join(root, 'docs/documentation-system/ui-change-report.generated.json'),
+    'utf8',
+  ));
+  const baseline = JSON.parse(await readFile(
+    path.join(root, 'docs/documentation-system/current-baseline.json'),
+    'utf8',
+  ));
+  assert.deepEqual(report.frontendSourceChanges, [{
+    source: sourcePath,
+    previous: null,
+    current: 'current-source-hash',
+    change: 'added',
+    screens: [],
+  }]);
+  assert.deepEqual(report.synchronizationContractChanges, [{
+    source: contractPath,
+    previous: null,
+    current: 'current-contract-hash',
+    change: 'added',
+  }]);
+  assert.equal(report.action, 'regenerate-manual-interface-sections');
+  assert.deepEqual(baseline.publications, [{ id: 'product' }]);
+  assert.equal('bootstrap' in baseline, false);
+  assert.equal('unreviewedHeadMetadata' in baseline, false);
+});
+
 test('compare accepts runtime evidence only from the current source revision', async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -462,6 +526,8 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.match(workflow, /github\.event\.pull_request\.base\.sha/);
   assert.match(workflow, /github\.event\.before/);
   assert.match(workflow, /git show .*docs\/documentation-system\/current-baseline\.json/);
+  assert.match(workflow, /"bootstrap":true/);
+  assert.doesNotMatch(workflow, /using the checked-in bootstrap baseline/);
   assert.match(captureJob, /permissions:\n\s+contents: read/);
   assert.match(captureJob, /npm install --prefix tools\/docs-sync/);
   assert.match(captureJob, /DOCS_CAPTURE_REVISION_URL/);
