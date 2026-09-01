@@ -69,6 +69,17 @@ await assert.rejects(
   webIntegrityDemo.request(`/v1/project-role-invites/${foreignWebInvite.id}/accept`, { method: 'POST', body: '{}' }),
   (error) => error.status === 404 && error.body?.error === 'pending invite not found for this identity',
 );
+const normalizedWebInvite = await webIntegrityDemo.request('/v1/projects/project-water-1/roles/invite', {
+  method: 'POST',
+  body: JSON.stringify({ actorId: '  offline-demo-user  ', role: '  project_manager  ' }),
+});
+assert.equal(normalizedWebInvite.invitedActorId, 'offline-demo-user');
+assert.equal(normalizedWebInvite.role, 'project_manager');
+assert.equal((await webIntegrityDemo.request(`/v1/project-role-invites/${normalizedWebInvite.id}/accept`, { method: 'POST', body: '{}' })).status, 'accepted');
+await assert.rejects(
+  webIntegrityDemo.request('/v1/projects/project-water-1/roles/invite', { method: 'POST', body: JSON.stringify({ actorId: 'offline-demo-user', role: 'root' }) }),
+  (error) => error.status === 400 && error.body?.error === 'unsupported project role',
+);
 
 function payload(path, method = 'GET', requestBody) {
   return createDemoPayload(new URL(path, DEMO_API_BASE_URL), method, requestBody, now);
