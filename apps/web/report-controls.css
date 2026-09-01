@@ -1,0 +1,10 @@
+.sdg-dropdown{border:1px solid #cfd9d3;border-radius:12px;background:#fcfdfc;overflow:hidden}
+.sdg-dropdown summary{min-height:48px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;font-weight:800;list-style:none}
+.sdg-dropdown summary::-webkit-details-marker{display:none}
+.sdg-dropdown[open] summary{border-bottom:1px solid var(--line);background:var(--brand-soft);color:var(--brand-2)}
+.sdg-options{max-height:310px;overflow:auto;padding:6px}
+.sdg-options label{min-height:44px;padding:8px 10px;display:grid;grid-template-columns:auto 28px minmax(0,1fr);align-items:center;gap:8px;border-radius:9px;cursor:pointer;font-size:14px;color:var(--ink)}
+.sdg-options label:hover{background:var(--brand-soft)}
+.sdg-options input{width:18px;height:18px;margin:0;accent-color:var(--brand-2)}
+.sdg-options strong{color:var(--brand-2);text-align:center}
+.field-help{color:var(--muted);line-height:1.4}

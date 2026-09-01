@@ -16,6 +16,7 @@ export type NeedDraft = {
   locationAccuracyMeters?: number;
   locationCapturedAt?: string;
   locationConfirmedAt?: string;
+  sdgTags?: number[];
   evidenceUris: string[];
   updatedAt: string;
 };

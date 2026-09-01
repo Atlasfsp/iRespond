@@ -8,10 +8,25 @@ import {
   createDemoPayload,
   isDemoRequest,
 } from '../apps/mobile/lib/demo-backend.ts';
+import { SDGS, toggleSdg } from '../apps/mobile/lib/sdgs.ts';
+import { createWebDemoBackend } from '../apps/web/demo-backend.js';
 
 const now = new Date('2026-09-01T12:00:00.000Z');
 const apiMap = JSON.parse(await readFile('docs/frontend/frontend-api-map.json', 'utf8'));
 const rootPackage = JSON.parse(await readFile('package.json', 'utf8'));
+
+assert.equal(SDGS.length, 17, 'the selector must expose every UN Sustainable Development Goal');
+assert.deepEqual(SDGS.map(({ id }) => id), Array.from({ length: 17 }, (_, index) => index + 1));
+assert.deepEqual(toggleSdg([6, 11], 17), [6, 11, 17], 'one dropdown must retain multiple selections');
+assert.deepEqual(toggleSdg([6, 11, 17], 11), [6, 17], 'selecting an active SDG must remove only that SDG');
+
+const webDemo = createWebDemoBackend();
+assert.equal((await webDemo.request('/v1/session')).subject, 'offline-demo-user');
+const webNeed = await webDemo.request('/v1/needs', { method: 'POST', body: JSON.stringify({ title: 'Multi-SDG browser report', sdgTags: [3, 6, 11] }) });
+assert.deepEqual(webNeed.sdgTags, [3, 6, 11]);
+const webUpload = await webDemo.request('/v1/needs/need-water-1/evidence/uploads', { method: 'POST', body: '{}' });
+assert.equal(new URL(webUpload.uploadUrl).hostname, 'demo.irespond.local');
+assert.equal(webUpload.method, 'PUT');
 
 function payload(path, method = 'GET', requestBody) {
   return createDemoPayload(new URL(path, DEMO_API_BASE_URL), method, requestBody, now);

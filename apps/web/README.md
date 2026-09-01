@@ -9,9 +9,12 @@ This directory is a dependency-free browser application shell for the iRespond p
 - `apiBaseUrl` — iRespond API origin.
 - `oidcIssuer` — StratoID/OIDC issuer.
 - `oidcClientId` — public browser client ID registered for Authorization Code + PKCE.
+- `demoMode` — explicitly enables the isolated browser demo account. It is also enabled automatically for an unconfigured loopback preview.
 - `scope` — normally `openid profile`.
 
 Never place client secrets, service tokens, provider credentials or user data in this file. Browser authentication uses Authorization Code + PKCE and stores the access token in `sessionStorage`, not a persistent cookie/local-storage credential.
+
+The demo account uses only bundled sample data and stores a non-secret session marker in `sessionStorage`. Keep `demoMode: false` for production; enabling it does not create or bypass a production identity.
 
 The API must explicitly allow the deployed web origin through its CORS allowlist. Wildcard origins are not an acceptable production configuration for authenticated API access.
 

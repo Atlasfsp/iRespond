@@ -7,6 +7,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, Text
 import { StitchBottomNav, StitchTopBar } from '../components/StitchChrome';
 import { formatCoordinate, parseInterventionCoordinates, type CoordinateSource } from '../lib/coordinates';
 import { saveNeedDraft } from '../lib/drafts';
+import { SDGS, toggleSdg } from '../lib/sdgs';
 import { Stitch } from '../lib/stitch-theme';
 import { confirmQueuedNeedLocation, flushNeedQueue, getNextNeedLocationReview, type QueuedNeed } from '../lib/sync';
 
@@ -17,6 +18,8 @@ export default function ReportNeed() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Infrastructure');
+  const [sdgTags, setSdgTags] = useState<number[]>([]);
+  const [sdgOpen, setSdgOpen] = useState(false);
   const [latitudeText, setLatitudeText] = useState('');
   const [longitudeText, setLongitudeText] = useState('');
   const [locationSource, setLocationSource] = useState<CoordinateSource | null>(null);
@@ -45,6 +48,8 @@ export default function ReportNeed() {
       setTitle(item.draft.title);
       setDescription(item.draft.description);
       setCategory(categories.find(value => value.toLowerCase() === item.draft.category?.toLowerCase()) ?? 'Community');
+      setSdgTags(item.draft.sdgTags ?? []);
+      setSdgOpen(false);
       setLatitudeText(savedCoordinates ? formatCoordinate(savedCoordinates.latitude) : '');
       setLongitudeText(savedCoordinates ? formatCoordinate(savedCoordinates.longitude) : '');
       setLocationSource(item.draft.locationSource ?? (savedCoordinates ? 'manual' : null));
@@ -145,6 +150,7 @@ export default function ReportNeed() {
       title: title.trim(),
       description: description.trim(),
       category: category.toLowerCase(),
+      sdgTags,
       locationLabel,
       latitude: coordinates.latitude,
       longitude: coordinates.longitude,
@@ -180,6 +186,11 @@ export default function ReportNeed() {
       <FieldLabel required>Title of need</FieldLabel><TextInput style={[s.input, queuedReview && s.readOnly]} editable={!queuedReview && !loadingQueuedReview} value={title} onChangeText={setTitle} placeholder="e.g. Severe pothole on Main St" placeholderTextColor="#6D7580"/>
       <FieldLabel>Description</FieldLabel><TextInput style={[s.input, s.textarea, queuedReview && s.readOnly]} editable={!queuedReview && !loadingQueuedReview} value={description} onChangeText={setDescription} multiline placeholder="Describe the issue and its impact…" placeholderTextColor="#6D7580"/>
       <FieldLabel>Primary area of impact</FieldLabel><View accessibilityRole="radiogroup" accessibilityLabel="Primary area of impact"><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>{categories.map(item => <Pressable key={item} disabled={Boolean(queuedReview || loadingQueuedReview)} accessibilityRole="radio" accessibilityState={{ checked: item === category, disabled: Boolean(queuedReview || loadingQueuedReview) }} accessibilityLabel={item} onPress={() => setCategory(item)} style={[s.chip, item === category && s.chipOn, queuedReview && s.readOnly]}><Ionicons name={item === 'Infrastructure' ? 'construct-outline' : item === 'Health' ? 'shield-checkmark-outline' : item === 'Environment' ? 'leaf-outline' : item === 'Education' ? 'school-outline' : 'people-outline'} size={18} color={item === category ? Stitch.color.primaryFixed : Stitch.color.onSurface}/><Text style={[s.chipText, item === category && s.chipTextOn]}>{item}</Text></Pressable>)}</ScrollView></View>
+      <FieldLabel>Sustainable Development Goals</FieldLabel>
+      <Pressable style={[s.sdgTrigger, (queuedReview || loadingQueuedReview) && s.readOnly]} disabled={Boolean(queuedReview || loadingQueuedReview)} onPress={() => setSdgOpen(open => !open)} accessibilityRole="button" accessibilityLabel="Select Sustainable Development Goals" accessibilityState={{ expanded: sdgOpen, disabled: Boolean(queuedReview || loadingQueuedReview) }}>
+        <View style={s.flex}><Text style={s.sdgTriggerTitle}>{sdgTags.length ? `${sdgTags.length} SDG${sdgTags.length === 1 ? '' : 's'} selected` : 'Select one or more SDGs'}</Text><Text style={s.sdgTriggerMeta}>{sdgTags.length ? sdgTags.map(id => `SDG ${id}`).join(' · ') : 'Optional · all 17 goals are available in this dropdown'}</Text></View><Ionicons name={sdgOpen ? 'chevron-up' : 'chevron-down'} size={22} color={Stitch.color.primary}/>
+      </Pressable>
+      {sdgOpen && <View style={s.sdgMenu}>{SDGS.map(goal => { const checked = sdgTags.includes(goal.id); return <Pressable key={goal.id} style={s.sdgOption} onPress={() => setSdgTags(current => toggleSdg(current, goal.id))} accessibilityRole="checkbox" accessibilityState={{ checked }} accessibilityLabel={`SDG ${goal.id}: ${goal.name}`}><Ionicons name={checked ? 'checkbox' : 'square-outline'} size={24} color={checked ? Stitch.color.secondary : Stitch.color.onSurfaceVariant}/><Text style={s.sdgNumber}>{goal.id}</Text><Text style={s.sdgName}>{goal.name}</Text></Pressable>; })}</View>}
       <View style={s.truth}><Text style={s.truthTitle}>Observation first</Text><Text style={s.truthBody}>Submitting creates an observation. Verification, project approval and fundraising are separate governed states.</Text></View>
       <Pressable style={[s.primary, (capturingLocation || retryingQueuedReview || loadingQueuedReview) && s.disabled]} disabled={capturingLocation || retryingQueuedReview || loadingQueuedReview} accessibilityState={{ disabled: capturingLocation || retryingQueuedReview || loadingQueuedReview, busy: capturingLocation || retryingQueuedReview }} onPress={() => void continueReport()}><Ionicons name={queuedReview ? 'sync-outline' : 'send-outline'} size={22} color={Stitch.color.primary}/><Text style={s.primaryText}>{retryingQueuedReview ? 'Confirming location & retrying…' : capturingLocation ? 'Waiting for coordinates…' : queuedReview ? 'Confirm location & retry sync' : 'Save draft & add evidence'}</Text></Pressable>
     </View>
@@ -202,5 +213,6 @@ const s = StyleSheet.create({
   readOnly: { opacity: .72 },
   label: { ...Stitch.type.tag, color: Stitch.color.onSurfaceVariant, textTransform: 'uppercase', marginTop: Stitch.space.sm }, required: { color: Stitch.color.error }, input: { minHeight: 52, paddingHorizontal: Stitch.space.base, paddingVertical: 14, borderWidth: 1, borderColor: Stitch.color.outlineVariant, borderRadius: Stitch.radius.md, backgroundColor: Stitch.color.surfaceLowest, color: Stitch.color.onSurface, ...Stitch.type.body }, textarea: { minHeight: 120, textAlignVertical: 'top' },
   chips: { gap: Stitch.space.sm, paddingRight: Stitch.space.screen }, chip: { minHeight: 44, paddingHorizontal: Stitch.space.base, borderRadius: Stitch.radius.full, borderWidth: 1, borderColor: Stitch.color.outlineVariant, backgroundColor: Stitch.color.surfaceLowest, flexDirection: 'row', alignItems: 'center', gap: Stitch.space.sm }, chipOn: { backgroundColor: Stitch.color.primaryContainer, borderColor: Stitch.color.primary }, chipText: { ...Stitch.type.body, color: Stitch.color.onSurface }, chipTextOn: { color: Stitch.color.primaryFixed },
+  sdgTrigger: { minHeight: 62, paddingHorizontal: Stitch.space.base, paddingVertical: Stitch.space.md, borderWidth: 1, borderColor: Stitch.color.outlineVariant, borderRadius: Stitch.radius.md, backgroundColor: Stitch.color.surfaceLowest, flexDirection: 'row', alignItems: 'center', gap: Stitch.space.md }, sdgTriggerTitle: { ...Stitch.type.bodyBold, color: Stitch.color.onSurface }, sdgTriggerMeta: { ...Stitch.type.footnote, color: Stitch.color.onSurfaceVariant, marginTop: 2 }, sdgMenu: { borderWidth: 1, borderColor: Stitch.color.outlineVariant, borderRadius: Stitch.radius.md, backgroundColor: Stitch.color.surfaceLowest, overflow: 'hidden' }, sdgOption: { minHeight: 50, paddingHorizontal: Stitch.space.base, paddingVertical: Stitch.space.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Stitch.color.outlineVariant, flexDirection: 'row', alignItems: 'center', gap: Stitch.space.sm }, sdgNumber: { width: 24, ...Stitch.type.bodyBold, color: Stitch.color.primary, textAlign: 'center' }, sdgName: { flex: 1, ...Stitch.type.body, color: Stitch.color.onSurface },
   truth: { padding: Stitch.space.base, borderRadius: Stitch.radius.md, backgroundColor: Stitch.color.surfaceLow, borderWidth: 1, borderColor: Stitch.color.outlineVariant, gap: 3 }, truthTitle: { ...Stitch.type.bodyBold, color: Stitch.color.primary }, truthBody: { ...Stitch.type.footnote, color: Stitch.color.onSurfaceVariant }, primary: { minHeight: 56, marginTop: Stitch.space.md, paddingHorizontal: Stitch.space.base, borderRadius: Stitch.radius.hero, backgroundColor: Stitch.color.amber, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Stitch.space.sm }, primaryText: { ...Stitch.type.card, color: Stitch.color.primary, fontWeight: '900' },
 });
