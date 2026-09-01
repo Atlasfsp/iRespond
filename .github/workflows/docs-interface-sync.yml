@@ -75,6 +75,9 @@ jobs:
           DOCS_CAPTURE_BASE_URL: ${{ vars.IRESPOND_DOCS_CAPTURE_BASE_URL }}
           DOCS_CAPTURE_MOBILE_BASE_URL: ${{ vars.IRESPOND_DOCS_MOBILE_CAPTURE_BASE_URL }}
           DOCS_CAPTURE_WEB_BASE_URL: ${{ vars.IRESPOND_DOCS_WEB_CAPTURE_BASE_URL }}
+          DOCS_CAPTURE_REVISION_URL: ${{ vars.IRESPOND_DOCS_CAPTURE_REVISION_URL }}
+          DOCS_CAPTURE_MOBILE_REVISION_URL: ${{ vars.IRESPOND_DOCS_MOBILE_CAPTURE_REVISION_URL }}
+          DOCS_CAPTURE_WEB_REVISION_URL: ${{ vars.IRESPOND_DOCS_WEB_CAPTURE_REVISION_URL }}
         run: |
           npm install --prefix tools/docs-sync --ignore-scripts --no-audit --no-fund
           npx --prefix tools/docs-sync playwright install chromium
@@ -116,6 +119,8 @@ jobs:
         with:
           name: documentation-sync-candidate-${{ github.sha }}
           path: .
+      - name: Apply manifest-constrained screenshot removals
+        run: node tools/docs-sync/src/apply-screenshot-removals.mjs .
       - name: Open documentation synchronization PR
         env:
           GH_TOKEN: ${{ github.token }}

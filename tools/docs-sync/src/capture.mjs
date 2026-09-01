@@ -1,43 +1,68 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
+
+import { resetCaptureTarget, verifyPreviewRevision } from './capture-support.mjs';
 
 const root = path.resolve(process.argv[2] || '.');
 const defaultBaseURL = process.env.DOCS_CAPTURE_BASE_URL || '';
 const mobileBaseURL = process.env.DOCS_CAPTURE_MOBILE_BASE_URL || defaultBaseURL;
 const webBaseURL = process.env.DOCS_CAPTURE_WEB_BASE_URL || defaultBaseURL;
+const defaultRevisionURL = process.env.DOCS_CAPTURE_REVISION_URL || '';
+const mobileRevisionURL = process.env.DOCS_CAPTURE_MOBILE_REVISION_URL || defaultRevisionURL;
+const webRevisionURL = process.env.DOCS_CAPTURE_WEB_REVISION_URL || defaultRevisionURL;
+const expectedRevision = process.env.GITHUB_SHA || process.env.DOCS_CAPTURE_EXPECTED_REVISION || '';
 if (!mobileBaseURL && !webBaseURL) {
   console.error('A documentation-safe capture base URL is required for runtime screenshots. Source fingerprinting remains mandatory when no preview exists.');
   process.exit(2);
 }
 const manifest = JSON.parse(await readFile(path.join(root, 'docs/documentation-system/screen-manifest.json'), 'utf8'));
-const browser = await chromium.launch({headless:true});
-const context = await browser.newContext({
+const baseURLs = { mobile: mobileBaseURL, web: webBaseURL };
+const revisionURLs = { mobile: mobileRevisionURL, web: webRevisionURL };
+const requiredSurfaces = [...new Set(manifest.screens.map((screen) => screen.surface || 'mobile'))];
+const revisionChecks = {};
+for (const surface of requiredSurfaces) {
+  if (!baseURLs[surface]) {
+    revisionChecks[surface] = { verified: false, observedRevision: null, error: `No documentation-safe ${surface} preview URL configured.` };
+    continue;
+  }
+  revisionChecks[surface] = await verifyPreviewRevision(revisionURLs[surface], expectedRevision);
+}
+const anyVerifiedSurface = Object.values(revisionChecks).some((check) => check.verified);
+const allRevisionsVerified = requiredSurfaces.length > 0
+  && requiredSurfaces.every((surface) => revisionChecks[surface]?.verified);
+const browser = anyVerifiedSurface ? await chromium.launch({headless:true}) : null;
+const context = browser ? await browser.newContext({
   viewport:{width:manifest.viewport.width,height:manifest.viewport.height},
   deviceScaleFactor:manifest.viewport.deviceScaleFactor || 1,
   geolocation:{latitude:6.5244,longitude:3.3792},
   permissions:['geolocation'],
   locale:'en-CA',
   timezoneId:'America/Moncton'
-});
+}) : null;
 
-if (process.env.DOCS_CAPTURE_INIT_SCRIPT) {
+if (context && process.env.DOCS_CAPTURE_INIT_SCRIPT) {
   await context.addInitScript({content:process.env.DOCS_CAPTURE_INIT_SCRIPT});
 }
 
 const results=[];
 for (const screen of manifest.screens) {
   const surface=screen.surface||'mobile';
-  const baseURL=surface==='web'?webBaseURL:mobileBaseURL;
+  const baseURL=baseURLs[surface];
+  const target = path.join(root, screen.screenshot);
+  await resetCaptureTarget(target);
   if(!baseURL){
     results.push({id:screen.id,surface,route:screen.route,status:'failed',error:`No documentation-safe ${surface} preview URL configured.`});
     continue;
   }
+  const revisionCheck=revisionChecks[surface];
+  if(!revisionCheck?.verified){
+    results.push({id:screen.id,surface,route:screen.route,status:'failed',error:revisionCheck?.error||`The ${surface} preview revision could not be verified.`});
+    continue;
+  }
   const page = await context.newPage();
   const url = new URL(screen.route, baseURL).toString();
-  const target = path.join(root, screen.screenshot);
-  await mkdir(path.dirname(target), {recursive:true});
   try {
     await page.goto(url, {waitUntil:'networkidle', timeout:45000});
     let anchorMatched=true;
@@ -61,8 +86,16 @@ for (const screen of manifest.screens) {
     await page.close();
   }
 }
-await browser.close();
-const report={schema:'irespond.documentation-runtime-capture.v2',sourceRevision:process.env.GITHUB_SHA||'local',baseURLs:{mobile:mobileBaseURL||null,web:webBaseURL||null},results};
+if (browser) await browser.close();
+const report={
+  schema:'irespond.documentation-runtime-capture.v2',
+  sourceRevision:allRevisionsVerified?expectedRevision:null,
+  expectedSourceRevision:expectedRevision||null,
+  baseURLs:{mobile:mobileBaseURL||null,web:webBaseURL||null},
+  revisionURLs:{mobile:mobileRevisionURL||null,web:webRevisionURL||null},
+  revisionChecks,
+  results
+};
 await writeFile(path.join(root,'docs/documentation-system/runtime-capture.generated.json'),`${JSON.stringify(report,null,2)}\n`);
 console.log(JSON.stringify(report));
 const failed=results.filter(result=>result.status==='failed').length;

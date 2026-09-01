@@ -10,10 +10,16 @@ const baseline=JSON.parse(await readFile(baselinePath,'utf8'));
 const runtimePath=path.join(root,'docs/documentation-system/runtime-capture.generated.json');
 const sourceRevision=process.env.GITHUB_SHA||fingerprint.sourceRevision||'local';
 let runtime=null;
+let runtimeAttempt=null;
 try {
   await access(runtimePath);
   const candidate=JSON.parse(await readFile(runtimePath,'utf8'));
-  if(candidate.sourceRevision===sourceRevision) runtime=candidate;
+  if(candidate.sourceRevision===sourceRevision){
+    runtime=candidate;
+    runtimeAttempt=candidate;
+  }else if(candidate.expectedSourceRevision===sourceRevision){
+    runtimeAttempt=candidate;
+  }
 } catch {}
 
 const mappedSources=new Map();
@@ -37,7 +43,7 @@ for(const source of allSourcePaths){
 const sourceChanges=frontendSourceChanges.filter(change=>change.screens.length>0).flatMap(change=>change.screens.map(id=>({id,source:change.source,previous:change.previous,current:change.current,change:change.change})));
 const unmappedFrontendChanges=frontendSourceChanges.filter(change=>change.screens.length===0);
 
-const screenshotState={...(baseline.screenshots||{})};
+const screenshotState={};
 const screenshotChanges=[];
 for(const screen of manifest.screens){
   const p=path.join(root,screen.screenshot);
@@ -48,10 +54,13 @@ for(const screen of manifest.screens){
     screenshotState[screen.id]=current;
     if(prior && prior!==current) screenshotChanges.push({id:screen.id,screenshot:screen.screenshot,previous:prior,current});
     if(!prior) screenshotChanges.push({id:screen.id,screenshot:screen.screenshot,previous:null,current,reason:'new-baseline-image'});
-  }catch{}
+  }catch{
+    const prior=baseline.screenshots?.[screen.id];
+    if(prior) screenshotChanges.push({id:screen.id,screenshot:screen.screenshot,previous:prior,current:null,reason:'missing-current-image'});
+  }
 }
 
-const runtimeFailures=(runtime?.results||[]).filter(result=>result.status==='failed'||result.anchorMatched===false);
+const runtimeFailures=((runtime||runtimeAttempt)?.results||[]).filter(result=>result.status==='failed'||result.anchorMatched===false);
 const changedScreens=[...new Set([...sourceChanges.map(change=>change.id),...screenshotChanges.map(change=>change.id),...runtimeFailures.map(result=>result.id).filter(Boolean)])];
 const hasChanges=frontendSourceChanges.length>0||screenshotChanges.length>0||runtimeFailures.length>0;
 const report={
@@ -59,6 +68,7 @@ const report={
   sourceRevision,
   baselineRevision:baseline.sourceRevision,
   runtimeCaptureAvailable:!!runtime,
+  runtimeCaptureAttempted:!!runtimeAttempt,
   changed:changedScreens,
   frontendSourceChanges,
   sourceChanges,

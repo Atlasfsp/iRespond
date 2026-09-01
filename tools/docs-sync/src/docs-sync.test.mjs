@@ -83,7 +83,22 @@ test('compare accepts runtime evidence only from the current source revision', a
   assert.equal(report.action, 'none');
 
   await jsonFile(runtimePath, {
+    sourceRevision: null,
+    expectedSourceRevision: 'current-head',
+    results: [{ id: 'home', status: 'failed', error: 'current revision was not verified' }],
+  });
+  await run('compare-and-plan.mjs', root, { GITHUB_SHA: 'current-head' });
+  report = JSON.parse(await readFile(
+    path.join(root, 'docs/documentation-system/ui-change-report.generated.json'),
+    'utf8',
+  ));
+  assert.equal(report.runtimeCaptureAvailable, false);
+  assert.equal(report.runtimeCaptureAttempted, true);
+  assert.equal(report.runtimeFailures.length, 1);
+
+  await jsonFile(runtimePath, {
     sourceRevision: 'current-head',
+    expectedSourceRevision: 'current-head',
     results: [{ id: 'home', status: 'failed', error: 'current failure' }],
   });
   await run('compare-and-plan.mjs', root, { GITHUB_SHA: 'current-head' });
@@ -94,6 +109,121 @@ test('compare accepts runtime evidence only from the current source revision', a
   assert.equal(report.runtimeCaptureAvailable, true);
   assert.equal(report.runtimeFailures.length, 1);
   assert.equal(report.action, 'regenerate-manual-interface-sections');
+});
+
+test('compare removes a missing current screenshot from the next baseline', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await jsonFile(path.join(root, 'docs/documentation-system/screen-manifest.json'), {
+    screens: [{
+      id: 'home',
+      source: 'apps/mobile/app/index.tsx',
+      screenshot: 'docs/screenshots/current/home.png',
+    }],
+  });
+  await jsonFile(path.join(root, 'docs/documentation-system/current-baseline.json'), {
+    sourceRevision: 'baseline-head',
+    sources: {},
+    screenshots: { home: 'predecessor-image-hash' },
+  });
+  await jsonFile(path.join(root, 'docs/documentation-system/ui-fingerprint.generated.json'), {
+    sourceRevision: 'current-head',
+    sources: {},
+  });
+
+  await run('compare-and-plan.mjs', root, {
+    GITHUB_SHA: 'current-head',
+    DOCS_SYNC_UPDATE_BASELINE: '1',
+  });
+  const report = JSON.parse(await readFile(
+    path.join(root, 'docs/documentation-system/ui-change-report.generated.json'),
+    'utf8',
+  ));
+  const baseline = JSON.parse(await readFile(
+    path.join(root, 'docs/documentation-system/current-baseline.json'),
+    'utf8',
+  ));
+  assert.deepEqual(report.screenshotChanges, [{
+    id: 'home',
+    screenshot: 'docs/screenshots/current/home.png',
+    previous: 'predecessor-image-hash',
+    current: null,
+    reason: 'missing-current-image',
+  }]);
+  assert.deepEqual(baseline.screenshots, {});
+});
+
+test('preview revision must be externally verified before capture is current', async () => {
+  const { verifyPreviewRevision } = await import('./capture-support.mjs');
+  const expected = '8140824caa417363961ef332eb251313c9fa9ad3';
+  const current = await verifyPreviewRevision(
+    'https://preview.invalid/version',
+    expected,
+    async () => new Response(JSON.stringify({ sourceRevision: expected }), { status: 200 }),
+  );
+  const stale = await verifyPreviewRevision(
+    'https://preview.invalid/version',
+    expected,
+    async () => new Response(JSON.stringify({ sourceRevision: 'predecessor-head' }), { status: 200 }),
+  );
+  const absent = await verifyPreviewRevision('', expected, async () => new Response(expected));
+
+  assert.deepEqual(current, { verified: true, observedRevision: expected, error: null });
+  assert.equal(stale.verified, false);
+  assert.equal(stale.observedRevision, 'predecessor-head');
+  assert.match(stale.error, /does not match expected revision/);
+  assert.equal(absent.verified, false);
+  assert.match(absent.error, /revision URL is required/);
+});
+
+test('capture resets a predecessor screenshot before attempting replacement', async (t) => {
+  const { resetCaptureTarget } = await import('./capture-support.mjs');
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const target = path.join(root, 'docs/screenshots/current/home.png');
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, 'predecessor image');
+
+  await resetCaptureTarget(target);
+
+  await assert.rejects(readFile(target), { code: 'ENOENT' });
+});
+
+test('publication applies only manifest-registered screenshot removals', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const screenshot = 'docs/screenshots/current/home.png';
+  await jsonFile(path.join(root, 'docs/documentation-system/screen-manifest.json'), {
+    screens: [{ id: 'home', screenshot }],
+  });
+  await jsonFile(path.join(root, 'docs/documentation-system/ui-change-report.generated.json'), {
+    screenshotChanges: [{
+      id: 'home',
+      screenshot,
+      previous: 'predecessor-image-hash',
+      current: null,
+      reason: 'missing-current-image',
+    }],
+  });
+  const target = path.join(root, screenshot);
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, 'predecessor image');
+
+  await run('apply-screenshot-removals.mjs', root);
+
+  await assert.rejects(readFile(target), { code: 'ENOENT' });
+
+  await writeFile(target, 'restored predecessor image');
+  await jsonFile(path.join(root, 'docs/documentation-system/ui-change-report.generated.json'), {
+    screenshotChanges: [{
+      id: 'home',
+      screenshot: '../../README.md',
+      previous: 'predecessor-image-hash',
+      current: null,
+    }],
+  });
+  await assert.rejects(run('apply-screenshot-removals.mjs', root));
+  assert.equal(await readFile(target, 'utf8'), 'restored predecessor image');
 });
 
 test('capture dependencies run outside the repository-write publication job', async () => {
@@ -109,8 +239,10 @@ test('capture dependencies run outside the repository-write publication job', as
   const publishJob = workflow.slice(publishStart);
   assert.match(captureJob, /permissions:\n\s+contents: read/);
   assert.match(captureJob, /npm install --prefix tools\/docs-sync/);
+  assert.match(captureJob, /DOCS_CAPTURE_REVISION_URL/);
   assert.match(publishJob, /needs: capture-on-main/);
   assert.match(publishJob, /persist-credentials: false/);
+  assert.match(publishJob, /apply-screenshot-removals\.mjs/);
   assert.doesNotMatch(publishJob, /npm install|playwright install|node tools\/docs-sync\/src\/capture/);
   assert.match(publishJob, /GH_TOKEN: \$\{\{ github\.token \}\}/);
 });
