@@ -182,24 +182,32 @@ test('bootstrap comparison cannot trust head-controlled accepted hashes', async 
   assert.equal('unreviewedHeadMetadata' in baseline, false);
 });
 
-test('accepted baseline changes are owned by the publication workflow', async () => {
-  const { validateBaselineOwnership } = await import('./baseline-guard.mjs');
+test('all synchronized publication artifacts are owned by the publication workflow', async () => {
+  const { protectedPublicationPaths, validateBaselineOwnership } = await import('./baseline-guard.mjs');
   const publicationHead = '0123456789abcdef0123456789abcdef01234567';
   const publicationRef = `docs-sync/0123456789ab-123456789-${publicationHead}`;
+  assert.deepEqual(protectedPublicationPaths, [
+    'docs/documentation-system/current-baseline.json',
+    'docs/documentation-system/ui-fingerprint.generated.json',
+    'docs/documentation-system/ui-change-report.generated.json',
+    'docs/documentation-system/runtime-capture.generated.json',
+    'docs/manuals/generated/ui-interface-baseline.md',
+    'docs/screenshots/current',
+  ]);
   assert.doesNotThrow(() => validateBaselineOwnership({
-    baselineChanged: false,
+    publicationArtifactsChanged: false,
     acceptedBaselineExists: true,
     headRef: 'feature/no-baseline-change',
     pullRequestAuthor: 'contributor',
   }));
   assert.doesNotThrow(() => validateBaselineOwnership({
-    baselineChanged: true,
+    publicationArtifactsChanged: true,
     acceptedBaselineExists: false,
     headRef: 'docs/bootstrap-system',
     pullRequestAuthor: 'contributor',
   }));
   assert.doesNotThrow(() => validateBaselineOwnership({
-    baselineChanged: true,
+    publicationArtifactsChanged: true,
     acceptedBaselineExists: true,
     headRef: publicationRef,
     headRevision: publicationHead,
@@ -207,52 +215,81 @@ test('accepted baseline changes are owned by the publication workflow', async ()
     sameRepository: true,
   }));
   assert.throws(() => validateBaselineOwnership({
-    baselineChanged: true,
+    publicationArtifactsChanged: true,
     acceptedBaselineExists: true,
     headRef: 'feature/preaccept-future-hashes',
     pullRequestAuthor: 'contributor',
-  }), /may change the accepted baseline/);
+  }), /may change synchronized publication artifacts/);
   assert.throws(() => validateBaselineOwnership({
-    baselineChanged: true,
+    publicationArtifactsChanged: true,
     acceptedBaselineExists: true,
     headRef: publicationRef,
     headRevision: publicationHead,
     pullRequestAuthor: 'contributor',
     sameRepository: true,
-  }), /may change the accepted baseline/);
+  }), /may change synchronized publication artifacts/);
   assert.throws(() => validateBaselineOwnership({
-    baselineChanged: true,
+    publicationArtifactsChanged: true,
     acceptedBaselineExists: true,
     headRef: publicationRef,
     headRevision: publicationHead,
     pullRequestAuthor: 'github-actions[bot]',
     sameRepository: false,
-  }), /may change the accepted baseline/);
+  }), /may change synchronized publication artifacts/);
   assert.throws(() => validateBaselineOwnership({
-    baselineChanged: false,
-    screenshotsChanged: true,
-    acceptedBaselineExists: true,
-    headRef: 'feature/replace-accepted-image',
-    pullRequestAuthor: 'contributor',
-    sameRepository: true,
-  }), /accepted baseline or screenshots/);
-  assert.doesNotThrow(() => validateBaselineOwnership({
-    baselineChanged: false,
-    screenshotsChanged: true,
-    acceptedBaselineExists: true,
-    headRef: publicationRef,
-    headRevision: publicationHead,
-    pullRequestAuthor: 'github-actions[bot]',
-    sameRepository: true,
-  }));
-  assert.throws(() => validateBaselineOwnership({
-    baselineChanged: true,
+    publicationArtifactsChanged: true,
     acceptedBaselineExists: true,
     headRef: publicationRef,
     headRevision: 'fedcba9876543210fedcba9876543210fedcba98',
     pullRequestAuthor: 'github-actions[bot]',
     sameRepository: true,
-  }), /accepted baseline or screenshots/);
+  }), /synchronized publication artifacts/);
+});
+
+test('base-controlled guard rejects deletion of a synchronized publication artifact', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const git = (...args) => execFileAsync('git', args, { cwd: root });
+  await git('init');
+  await git('config', 'user.name', 'Documentation Test');
+  await git('config', 'user.email', 'documentation-test@example.invalid');
+  await jsonFile(path.join(root, 'docs/documentation-system/current-baseline.json'), {
+    schema: 'irespond.documentation-baseline.v2',
+  });
+  await jsonFile(path.join(root, 'docs/documentation-system/ui-fingerprint.generated.json'), {});
+  await jsonFile(path.join(root, 'docs/documentation-system/ui-change-report.generated.json'), {});
+  await jsonFile(path.join(root, 'docs/documentation-system/runtime-capture.generated.json'), {});
+  await mkdir(path.join(root, 'docs/manuals/generated'), { recursive: true });
+  await writeFile(path.join(root, 'docs/manuals/generated/ui-interface-baseline.md'), 'accepted\n');
+  await mkdir(path.join(root, 'docs/screenshots/current'), { recursive: true });
+  await writeFile(path.join(root, 'docs/screenshots/current/home.png'), Buffer.from([0, 1, 2]));
+  await git('add', '.');
+  await git('commit', '-m', 'accepted publication');
+  const { stdout: acceptedRevisionOutput } = await git('rev-parse', 'HEAD');
+  const acceptedRevision = acceptedRevisionOutput.trim();
+
+  await rm(path.join(root, 'docs/manuals/generated/ui-interface-baseline.md'));
+  await git('add', '-A');
+  await git('commit', '-m', 'delete generated manual');
+  const { stdout: headRevisionOutput } = await git('rev-parse', 'HEAD');
+  const headRevision = headRevisionOutput.trim();
+  const commonEnvironment = {
+    DOCS_SYNC_ACCEPTED_REVISION: acceptedRevision,
+    DOCS_SYNC_HEAD_SHA: headRevision,
+    DOCS_SYNC_HEAD_REPOSITORY: 'Atlasfsp/iRespond',
+    GITHUB_REPOSITORY: 'Atlasfsp/iRespond',
+  };
+
+  await assert.rejects(run('baseline-guard.mjs', root, {
+    ...commonEnvironment,
+    DOCS_SYNC_HEAD_REF: 'feature/delete-generated-manual',
+    DOCS_SYNC_PR_AUTHOR: 'contributor',
+  }), /synchronized publication artifacts/);
+  await assert.doesNotReject(run('baseline-guard.mjs', root, {
+    ...commonEnvironment,
+    DOCS_SYNC_HEAD_REF: `docs-sync/${acceptedRevision.slice(0, 12)}-123-${headRevision}`,
+    DOCS_SYNC_PR_AUTHOR: 'github-actions[bot]',
+  }));
 });
 
 test('screen manifest rejects duplicate normalized screenshot targets', async () => {

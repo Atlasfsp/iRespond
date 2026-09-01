@@ -5,26 +5,32 @@ import { fileURLToPath } from 'node:url';
 
 const execFileAsync = promisify(execFile);
 const baselinePath = 'docs/documentation-system/current-baseline.json';
-const screenshotPath = 'docs/screenshots/current';
+export const protectedPublicationPaths = Object.freeze([
+  baselinePath,
+  'docs/documentation-system/ui-fingerprint.generated.json',
+  'docs/documentation-system/ui-change-report.generated.json',
+  'docs/documentation-system/runtime-capture.generated.json',
+  'docs/manuals/generated/ui-interface-baseline.md',
+  'docs/screenshots/current',
+]);
 const publicationBranchPattern = /^docs-sync\/[0-9a-f]{12}-[1-9][0-9]*-([0-9a-f]{40})$/;
 
 export function validateBaselineOwnership({
-  baselineChanged,
-  screenshotsChanged = false,
+  publicationArtifactsChanged,
   acceptedBaselineExists,
   headRef,
   headRevision,
   pullRequestAuthor,
   sameRepository = false,
 }) {
-  if ((!baselineChanged && !screenshotsChanged) || !acceptedBaselineExists) return;
+  if (!publicationArtifactsChanged || !acceptedBaselineExists) return;
   const publicationBranchMatch = publicationBranchPattern.exec(headRef || '');
   const publicationOwned = pullRequestAuthor === 'github-actions[bot]'
     && publicationBranchMatch?.[1] === headRevision
     && sameRepository;
   if (!publicationOwned) {
     throw new Error(
-      `Only a github-actions[bot] ${publicationBranchPattern} publication PR may change the accepted baseline or screenshots.`,
+      `Only a github-actions[bot] ${publicationBranchPattern} publication PR may change synchronized publication artifacts.`,
     );
   }
 }
@@ -54,30 +60,20 @@ async function main() {
     ['cat-file', '-e', `${acceptedRevision}:${baselinePath}`],
     root,
   ) === 0;
-  let baselineChanged = true;
-  let screenshotsChanged = true;
+  let publicationArtifactsChanged = true;
   if (acceptedBaselineExists) {
     const diffExit = await gitExitCode(
-      ['diff', '--quiet', `${acceptedRevision}...${headRevision}`, '--', baselinePath],
+      ['diff', '--quiet', `${acceptedRevision}...${headRevision}`, '--', ...protectedPublicationPaths],
       root,
     );
     if (diffExit !== 0 && diffExit !== 1) {
-      throw new Error(`Unable to compare the accepted baseline (git diff exit ${diffExit}).`);
+      throw new Error(`Unable to compare synchronized publication artifacts (git diff exit ${diffExit}).`);
     }
-    baselineChanged = diffExit === 1;
-    const screenshotDiffExit = await gitExitCode(
-      ['diff', '--quiet', `${acceptedRevision}...${headRevision}`, '--', screenshotPath],
-      root,
-    );
-    if (screenshotDiffExit !== 0 && screenshotDiffExit !== 1) {
-      throw new Error(`Unable to compare accepted screenshots (git diff exit ${screenshotDiffExit}).`);
-    }
-    screenshotsChanged = screenshotDiffExit === 1;
+    publicationArtifactsChanged = diffExit === 1;
   }
 
   validateBaselineOwnership({
-    baselineChanged,
-    screenshotsChanged,
+    publicationArtifactsChanged,
     acceptedBaselineExists,
     headRef: process.env.DOCS_SYNC_HEAD_REF || '',
     headRevision,
@@ -88,8 +84,7 @@ async function main() {
     acceptedRevision,
     headRevision,
     acceptedBaselineExists,
-    baselineChanged,
-    screenshotsChanged,
+    publicationArtifactsChanged,
   }));
 }
 
