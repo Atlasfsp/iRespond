@@ -580,14 +580,20 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.doesNotMatch(workflow, /Guard accepted baseline ownership/);
   assert.doesNotMatch(workflow, /run: node tools\/docs-sync\/src\/baseline-guard\.mjs/);
   assert.match(ownershipWorkflow, /pull_request_target:/);
-  assert.match(ownershipWorkflow, /ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/);
+  assert.match(ownershipWorkflow, /workflow_dispatch:/);
+  assert.match(ownershipWorkflow, /pull_request_number:/);
+  assert.match(ownershipWorkflow, /gh api "repos\/\$\{GITHUB_REPOSITORY\}\/pulls\/\$\{pr_number\}"/);
+  assert.match(ownershipWorkflow, /ref: \$\{\{ steps\.pr\.outputs\.base_sha \}\}/);
   assert.match(ownershipWorkflow, /persist-credentials: false/);
   assert.match(ownershipWorkflow, /git fetch --no-tags origin "pull\/\$\{DOCS_SYNC_PR_NUMBER\}\/head"/);
   assert.match(ownershipWorkflow, /node tools\/docs-sync\/src\/baseline-guard\.mjs \./);
+  assert.match(ownershipWorkflow, /statuses: write/);
+  assert.match(ownershipWorkflow, /context=docs-baseline-ownership/);
   assert.match(captureJob, /permissions:\n\s+contents: read/);
   assert.match(captureJob, /npm install --prefix tools\/docs-sync/);
   assert.match(captureJob, /DOCS_CAPTURE_REVISION_URL/);
   assert.match(publishJob, /needs: capture-on-main/);
+  assert.match(publishJob, /actions: write/);
   assert.match(publishJob, /persist-credentials: false/);
   assert.match(
     publishJob,
@@ -596,6 +602,11 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.match(publishJob, /apply-screenshot-removals\.mjs/);
   assert.doesNotMatch(publishJob, /npm install|playwright install|node tools\/docs-sync\/src\/capture/);
   assert.match(publishJob, /GH_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.match(
+    publishJob,
+    /gh workflow run docs-baseline-ownership\.yml --ref main -f pull_request_number="\$pr_number"/,
+  );
+  assert.match(publishJob, /gh workflow run docs-interface-sync\.yml --ref "\$branch"/);
 });
 
 test('README documents report-based runtime-capture review signaling', async () => {

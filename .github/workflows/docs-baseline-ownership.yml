@@ -3,23 +3,59 @@ name: docs-baseline-ownership
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: Pull request number to verify after bot publication
+        required: true
+        type: string
 
 permissions:
   contents: read
+  pull-requests: read
+  statuses: write
 
 jobs:
   baseline-ownership:
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve authoritative pull request metadata
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          INPUT_PR_NUMBER: ${{ inputs.pull_request_number }}
+        run: |
+          set -euo pipefail
+          if test "$EVENT_NAME" = "pull_request_target"; then
+            pr_number="$EVENT_PR_NUMBER"
+          else
+            pr_number="$INPUT_PR_NUMBER"
+          fi
+          [[ "$pr_number" =~ ^[1-9][0-9]*$ ]]
+          pr_json=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}")
+          base_sha=$(jq -r '.base.sha' <<< "$pr_json")
+          head_sha=$(jq -r '.head.sha' <<< "$pr_json")
+          [[ "$base_sha" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$head_sha" =~ ^[0-9a-f]{40}$ ]]
+          {
+            echo "number=$pr_number"
+            echo "base_sha=$base_sha"
+            echo "head_sha=$head_sha"
+            echo "head_ref=$(jq -r '.head.ref' <<< "$pr_json")"
+            echo "author=$(jq -r '.user.login' <<< "$pr_json")"
+            echo "head_repository=$(jq -r '.head.repo.full_name' <<< "$pr_json")"
+          } >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ steps.pr.outputs.base_sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Fetch pull request head as untrusted data
         env:
-          DOCS_SYNC_PR_NUMBER: ${{ github.event.pull_request.number }}
-          DOCS_SYNC_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DOCS_SYNC_PR_NUMBER: ${{ steps.pr.outputs.number }}
+          DOCS_SYNC_HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
         run: |
           set -euo pipefail
           [[ "$DOCS_SYNC_PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
@@ -28,9 +64,24 @@ jobs:
           test "$(git rev-parse FETCH_HEAD)" = "$DOCS_SYNC_HEAD_SHA"
       - name: Enforce accepted baseline ownership from base-controlled code
         env:
-          DOCS_SYNC_ACCEPTED_REVISION: ${{ github.event.pull_request.base.sha }}
-          DOCS_SYNC_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          DOCS_SYNC_HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          DOCS_SYNC_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          DOCS_SYNC_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          DOCS_SYNC_ACCEPTED_REVISION: ${{ steps.pr.outputs.base_sha }}
+          DOCS_SYNC_HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
+          DOCS_SYNC_HEAD_REF: ${{ steps.pr.outputs.head_ref }}
+          DOCS_SYNC_PR_AUTHOR: ${{ steps.pr.outputs.author }}
+          DOCS_SYNC_HEAD_REPOSITORY: ${{ steps.pr.outputs.head_repository }}
         run: node tools/docs-sync/src/baseline-guard.mjs .
+      - name: Publish ownership status on the pull request head
+        if: always() && steps.pr.outputs.head_sha != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DOCS_SYNC_HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
+          JOB_STATUS: ${{ job.status }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          state=failure
+          if test "$JOB_STATUS" = "success"; then state=success; fi
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${DOCS_SYNC_HEAD_SHA}" \
+            -f state="$state" \
+            -f context=docs-baseline-ownership \
+            -f description="Base-controlled documentation baseline ownership check" \
+            -f target_url="$TARGET_URL"

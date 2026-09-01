@@ -142,6 +142,7 @@ jobs:
     if: needs.capture-on-main.outputs.changed == 'true'
     runs-on: ubuntu-latest
     permissions:
+      actions: write
       contents: write
       pull-requests: write
     steps:
@@ -185,8 +186,12 @@ jobs:
           fi
           git commit -m "docs: refresh manuals for frontend ${GITHUB_SHA:0:12}"
           git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$branch"
-          gh pr create \
+          pr_url=$(gh pr create \
             --base main \
             --head "$branch" \
             --title "docs: refresh interface manuals for ${GITHUB_SHA:0:12}" \
-            --body "Automated documentation synchronization for canonical frontend revision \`${GITHUB_SHA}\`. Review changed mobile/web UI anchors, newly added or unmapped frontend sources, screenshots and training steps before merge. Runtime screenshots are included only from configured documentation-safe previews; changed text anchors are preserved as review signals rather than silently accepted. No production credentials or data were used."
+            --body "Automated documentation synchronization for canonical frontend revision \`${GITHUB_SHA}\`. Review changed mobile/web UI anchors, newly added or unmapped frontend sources, screenshots and training steps before merge. Runtime screenshots are included only from configured documentation-safe previews; changed text anchors are preserved as review signals rather than silently accepted. No production credentials or data were used.")
+          pr_number=${pr_url##*/}
+          [[ "$pr_number" =~ ^[1-9][0-9]*$ ]]
+          gh workflow run docs-baseline-ownership.yml --ref main -f pull_request_number="$pr_number"
+          gh workflow run docs-interface-sync.yml --ref "$branch"

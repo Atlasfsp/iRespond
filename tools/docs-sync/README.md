@@ -10,6 +10,8 @@
 
 After bootstrap, `current-baseline.json` may change only in a `docs-sync/<source-sha>-<run-id>` pull request created by `github-actions[bot]` in this repository. A separate `pull_request_target` workflow is evaluated from the base branch, checks out and executes only accepted-base guard code, and treats the fetched pull-request head solely as diff data. The triggering revision therefore cannot weaken or remove its own ownership check; direct baseline edits from every other branch, repository or author are rejected. Manual workflow dispatch compares against the baseline at the dispatched `github.sha`.
 
+GitHub suppresses ordinary workflow events caused by `GITHUB_TOKEN`, so the publication job explicitly uses the supported `workflow_dispatch` exception after creating a bot PR: it dispatches base-controlled ownership verification on `main` and source verification on the generated branch. The ownership workflow resolves pull-request metadata through GitHub's API and publishes a `docs-baseline-ownership` commit status on the exact PR head.
+
 ### 2. Runtime capture — enabled only with a documentation-safe preview
 
 Set `DOCS_CAPTURE_BASE_URL` to a deterministic preview of the current mobile frontend. `npm run capture` uses Playwright Chromium at the viewport pinned in `screen-manifest.json`, grants only deterministic documentation geolocation, verifies an expected text anchor on each route and captures the rendered screen.
