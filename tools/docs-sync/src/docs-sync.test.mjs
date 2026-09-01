@@ -237,6 +237,39 @@ test('publication applies only manifest-registered screenshot removals', async (
   assert.equal(await readFile(target, 'utf8'), 'restored predecessor image');
 });
 
+test('publication preserves retired paths reassigned to a current screen', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const screenshot = 'docs/screenshots/current/reused.png';
+  await jsonFile(path.join(root, 'docs/documentation-system/screen-manifest.json'), {
+    screens: [{ id: 'replacement', screenshot }],
+  });
+  await jsonFile(path.join(root, 'docs/documentation-system/ui-change-report.generated.json'), {
+    screenshotEvidence: {
+      replacement: {
+        status: 'current',
+        sourceRevision: 'current-head',
+        screenshot,
+        sha256: 'replacement-image-hash',
+      },
+    },
+    screenshotChanges: [{
+      id: 'retired',
+      screenshot,
+      previous: 'predecessor-image-hash',
+      current: null,
+      reason: 'removed-screen-registration',
+    }],
+  });
+  const target = path.join(root, screenshot);
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, 'accepted replacement image');
+
+  await run('apply-screenshot-removals.mjs', root);
+
+  assert.equal(await readFile(target, 'utf8'), 'accepted replacement image');
+});
+
 test('source-only runs label matching screenshots as predecessor evidence', async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));
