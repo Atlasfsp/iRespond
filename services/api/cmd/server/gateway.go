@@ -23,18 +23,20 @@ func gatewayConfigFromEnvironment() gatewayConfig {
 	if value, err := strconv.ParseInt(strings.TrimSpace(os.Getenv("MAX_REQUEST_BODY_BYTES")), 10, 64); err == nil && value > 0 { cfg.MaxBodyBytes = value }
 	if value, err := strconv.Atoi(strings.TrimSpace(os.Getenv("REQUESTS_PER_MINUTE"))); err == nil && value > 0 { cfg.RequestsPerMinute = value }
 	for _, raw := range strings.Split(os.Getenv("WEB_ALLOWED_ORIGINS"), ",") {
-		origin := strings.TrimSpace(raw)
-		if validWebOrigin(origin) { cfg.AllowedWebOrigins[origin] = struct{}{} }
+		if origin, ok := normalizeWebOrigin(raw); ok { cfg.AllowedWebOrigins[origin] = struct{}{} }
 	}
 	return cfg
 }
 
-func validWebOrigin(origin string) bool {
-	if origin == "" || origin == "*" { return false }
+func normalizeWebOrigin(origin string) (string, bool) {
+	origin = strings.TrimSpace(origin)
+	if origin == "" || origin == "*" { return "", false }
 	parsed, err := url.Parse(origin)
-	if err != nil || (parsed.Scheme != "https" && parsed.Scheme != "http") || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" { return false }
-	return parsed.Path == "" || parsed.Path == "/"
+	if err != nil || (parsed.Scheme != "https" && parsed.Scheme != "http") || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" { return "", false }
+	if parsed.Path != "" && parsed.Path != "/" { return "", false }
+	return parsed.Scheme + "://" + parsed.Host, true
 }
+func validWebOrigin(origin string) bool { _, ok := normalizeWebOrigin(origin); return ok }
 
 func applyWebCORS(w http.ResponseWriter, r *http.Request, allowed map[string]struct{}) bool {
 	origin := strings.TrimSpace(r.Header.Get("Origin"))

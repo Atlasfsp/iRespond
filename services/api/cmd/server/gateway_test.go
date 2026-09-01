@@ -52,6 +52,17 @@ func TestGatewayAllowsOnlyConfiguredWebOrigin(t *testing.T) {
 	if !strings.Contains(rr.Header().Get("Vary"), "Origin") { t.Fatal("expected Vary: Origin") }
 }
 
+func TestGatewayCanonicalizesConfiguredWebOriginTrailingSlash(t *testing.T) {
+	t.Setenv("WEB_ALLOWED_ORIGINS", "https://app.irespond.example/")
+	cfg := gatewayConfigFromEnvironment()
+	if _, ok := cfg.AllowedWebOrigins["https://app.irespond.example"]; !ok { t.Fatalf("canonical origin missing: %#v", cfg.AllowedWebOrigins) }
+	if _, ok := cfg.AllowedWebOrigins["https://app.irespond.example/"]; ok { t.Fatalf("non-browser origin retained: %#v", cfg.AllowedWebOrigins) }
+	handler := gatewayMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }))
+	req := httptest.NewRequest(http.MethodGet, "/v1/platform", nil); req.Header.Set("Origin", "https://app.irespond.example")
+	rr := httptest.NewRecorder(); handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNoContent { t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String()) }
+}
+
 func TestGatewayRejectsUnconfiguredWebOrigin(t *testing.T) {
 	t.Setenv("WEB_ALLOWED_ORIGINS", "https://app.irespond.example")
 	called := false

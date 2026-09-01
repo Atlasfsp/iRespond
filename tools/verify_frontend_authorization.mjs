@@ -11,6 +11,7 @@ const files={
  safetyOps:await readFile('apps/mobile/app/safety-ops.tsx','utf8'),
  mobileApi:await readFile('apps/mobile/lib/api.ts','utf8'),
  server:await readFile('services/api/cmd/server/main.go','utf8'),
+ projectRoutes:await readFile('services/api/cmd/server/project_routes.go','utf8'),
  apiMap:await readFile('docs/frontend/frontend-api-map.json','utf8')
 };
 const failures=[];
@@ -25,6 +26,10 @@ need('web','p.canValidateMilestones','milestone validation must be permission-ga
 need('web','p.canManageRoles','project role management must be permission-gated');
 need('web','p.canManageProject','project lifecycle management must be permission-gated');
 need('web','p.canManageFunding','funding-plan management must be permission-gated');
+need('web','Promise.all([loadFundingPlan(id),api(`/v1/projects/${encodeURIComponent(id)}`)])','funding must load project permissions even when no plan exists yet');
+need('web','if(error.status===404)return null','a missing funding plan must be treated as an empty first-plan state');
+for(const role of ['project_manager','community_steward','verifier','volunteer_lead','procurement_lead','maintenance_owner'])need('web',`<option>${role}</option>`,`project role selector must offer canonical role ${role}`);
+forbid('web',/<option>technical_reviewer<\/option>/,'project role selector must not offer a server-invalid technical_reviewer role');
 forbid('web',/managerByRecord|createdBy\s*===\s*state\.session|projectManagerId\s*===\s*state\.session/,'client record fields must not be used as project authorization');
 
 // Mobile resource authority must preserve project context then render the same envelope.
@@ -46,6 +51,9 @@ need('webCatalog','Open this capability from a concrete Project Room','web catal
 // Global privileged domains remain centralized in the role/capability boundary.
 for(const role of ['community_verifier','institution_verifier','expert_verifier','impact_auditor','government_verifier','evidence_reviewer','safety_reviewer','trust_safety_admin'])need('capabilities',role,`global capability map must preserve ${role}`);
 for(const capability of ['verification.community','verification.institution','verification.expert','verification.audit','verification.government','evidence.review','project.convert','milestone.validate','safety.review'])need('capabilities',capability,`global capability map must preserve ${capability}`);
+if(!/impact_auditor:\s*\[[^\]]*'milestone\.validate'/.test(files.capabilities))failures.push('capabilities: impact_auditor must receive milestone validation');
+need('projectRoutes','p.HasRole("impact_auditor")','server milestone validation must recognize the canonical impact_auditor role');
+forbid('projectRoutes',/p\.HasRole\("auditor"\)/,'server milestone validation must not depend on the non-canonical auditor role');
 need('safetyOps',"hasCapability(session.roles,'safety.review')",'safety operations must require safety-review capability');
 need('workspace',"caps.has('safety.review')",'workspace must hide safety operations without reviewer authority');
 need('workspace',"v.startsWith('verification.')",'workspace must expose verification only through derived capabilities');

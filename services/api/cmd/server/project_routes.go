@@ -69,7 +69,7 @@ func registerProjectRoutes(mux *http.ServeMux, identity auth.Verifier, manager *
 		return manager.HasAnyProjectRole(r.Context(), r.PathValue("id"), p.Subject, "volunteer_lead")
 	}
 	canValidateMilestones := func(r *http.Request, p auth.Principal) (bool, error) {
-		if p.HasRole("community_verifier") || p.HasRole("institution_verifier") || p.HasRole("expert_verifier") || p.HasRole("auditor") || p.HasRole("trust_safety_admin") {
+		if p.HasRole("community_verifier") || p.HasRole("institution_verifier") || p.HasRole("expert_verifier") || p.HasRole("impact_auditor") || p.HasRole("trust_safety_admin") {
 			return true, nil
 		}
 		return manager.HasAnyProjectRole(r.Context(), r.PathValue("id"), p.Subject, "verifier")
