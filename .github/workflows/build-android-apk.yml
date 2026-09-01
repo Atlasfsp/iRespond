@@ -1,0 +1,99 @@
+name: build-android-apk
+
+on:
+  push:
+    branches:
+      - build/android-apk-20260828
+  pull_request:
+    branches:
+      - feature/stitch-unified-role-ui
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: "1"
+      NODE_ENV: production
+      EXPO_NO_TELEMETRY: "1"
+      EXPO_PUBLIC_DEMO_MODE: "1"
+      EXPO_PUBLIC_API_BASE_URL: "https://demo.irespond.local"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Set up pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.0 --activate
+      - name: Configure Expo pnpm autolinking hoists
+        run: |
+          cat > .npmrc <<'EOF'
+          public-hoist-pattern[]=*expo-modules-autolinking
+          public-hoist-pattern[]=*expo-modules-core
+          public-hoist-pattern[]=*babel-preset-expo
+          EOF
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install canonical workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Align native dependencies to installed Expo SDK
+        working-directory: apps/mobile
+        run: pnpm exec expo install --fix --pnpm
+      - name: Pin Metro-compatible image-size API
+        run: |
+          node <<'NODE'
+          const fs = require('fs'); const p='package.json'; const pkg=JSON.parse(fs.readFileSync(p,'utf8'));
+          pkg.pnpm ??= {}; pkg.pnpm.overrides ??= {}; pkg.pnpm.overrides['image-size']='1.0.2';
+          fs.writeFileSync(p, JSON.stringify(pkg,null,2)+'\n');
+          NODE
+          pnpm install --no-frozen-lockfile
+      - name: Verify Expo and Android autolinking contracts
+        run: |
+          cd apps/mobile
+          pnpm exec expo install --check --pnpm
+          pnpm exec expo-modules-autolinking react-native-config --platform android > /tmp/rn-config.json
+          ! grep -Fq 'expo.core.ExpoModulesPackage' /tmp/rn-config.json
+          grep -Fq 'expo.modules.ExpoModulesPackage' /tmp/rn-config.json
+      - name: Generate native Android project
+        working-directory: apps/mobile
+        run: pnpm exec expo prebuild --platform android --clean --no-install
+      - name: Optimize demo release footprint
+        working-directory: apps/mobile/android
+        run: |
+          printf '\nreactNativeArchitectures=arm64-v8a\nandroid.enableProguardInReleaseBuilds=true\nandroid.enableShrinkResourcesInReleaseBuilds=true\n' >> gradle.properties
+          grep -E 'reactNativeArchitectures|enableProguard|enableShrink' gradle.properties
+      - name: Bundle Android assets smoke test
+        working-directory: apps/mobile
+        run: |
+          rm -rf .apk-export-smoke
+          pnpm exec expo export --platform android --output-dir .apk-export-smoke
+          rm -rf .apk-export-smoke
+      - name: Build compact demo APK
+        working-directory: apps/mobile/android
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+      - name: Verify APK
+        run: |
+          test -s apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          mkdir -p dist
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk dist/iRespond-0.1.0-offline-demo-arm64.apk
+          stat -c '%n %s bytes' dist/iRespond-0.1.0-offline-demo-arm64.apk
+          sha256sum dist/iRespond-0.1.0-offline-demo-arm64.apk | tee dist/iRespond-0.1.0-offline-demo-arm64.apk.sha256
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: iRespond-offline-demo-arm64
+          path: |
+            dist/iRespond-0.1.0-offline-demo-arm64.apk
+            dist/iRespond-0.1.0-offline-demo-arm64.apk.sha256
+          if-no-files-found: error
+          retention-days: 7
