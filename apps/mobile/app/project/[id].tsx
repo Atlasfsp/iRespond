@@ -15,7 +15,7 @@ type ProjectDetail={project:Project;milestones:Milestone[];contributionNeeds:Con
 
 export default function ProjectRoom(){
  const{id}=useLocalSearchParams<{id:string}>();const[detail,setDetail]=useState<ProjectDetail|null>(null);const[error,setError]=useState('');const[loading,setLoading]=useState(true);
- async function load(){if(!id){setError('Project ID is missing.');setLoading(false);return}setLoading(true);setError('');try{setDetail(await apiFetch<ProjectDetail>(`/v1/projects/${encodeURIComponent(id)}`,{},false))}catch(cause){setError(cause instanceof APIError&&cause.status===404?'This Project Room does not exist.':'This Project Room could not be loaded. Check connectivity and try again.')}finally{setLoading(false)}}
+ async function load(){if(!id){setError('Project ID is missing.');setLoading(false);return}setLoading(true);setError('');try{setDetail(await apiFetch<ProjectDetail>(`/v1/projects/${encodeURIComponent(id)}`,{},'optional'))}catch(cause){setError(cause instanceof APIError&&cause.status===404?'This Project Room does not exist.':'This Project Room could not be loaded. Check connectivity and try again.')}finally{setLoading(false)}}
  useEffect(()=>{void load()},[id]);
  const privileged=useMemo(()=>!!detail?.permissions&&Object.values(detail.permissions).some(Boolean),[detail]);
  return <SafeAreaView style={s.safe} edges={['top','left','right']}><View style={s.screen}><StitchTopBar title="Project Room" showBack/><ScrollView contentContainerStyle={s.content}>

@@ -9,6 +9,8 @@ const files={
  projectAdmin:await readFile('apps/mobile/app/project-admin.tsx','utf8'),
  workspace:await readFile('apps/mobile/app/workspace.tsx','utf8'),
  safetyOps:await readFile('apps/mobile/app/safety-ops.tsx','utf8'),
+ mobileApi:await readFile('apps/mobile/lib/api.ts','utf8'),
+ server:await readFile('services/api/cmd/server/main.go','utf8'),
  apiMap:await readFile('docs/frontend/frontend-api-map.json','utf8')
 };
 const failures=[];
@@ -28,6 +30,10 @@ forbid('web',/managerByRecord|createdBy\s*===\s*state\.session|projectManagerId\
 // Mobile resource authority must preserve project context then render the same envelope.
 need('project',"pathname:'/project-admin'",'Project Room must navigate into the resource-authorized control surface');
 need('project','projectId:detail.project.id','Project Room must carry its concrete project ID into controls');
+need('project',"{},'optional'",'public Project Room loading must attach a session token when one is available');
+need('mobileApi',"authenticated: boolean | 'optional'",'the API client must expose optional authenticated loading');
+need('mobileApi','authenticated === true','optional authentication must require a token only for protected requests');
+need('mobileApi','if (token)','optional authentication must attach an available token');
 need('projectAdmin','detail?.permissions??none','project admin must consume server permissions');
 for(const permission of ['canManageProject','canManageMilestones','canValidateMilestones','canManageRoles','canManageContributions','canPublishContributionNeeds','canManageFunding'])need('projectAdmin',permission,`project admin must honor ${permission}`);
 forbid('projectAdmin',/createdBy|projectManagerId/,'mobile must not infer resource authority from record ownership fields');
@@ -43,6 +49,8 @@ for(const capability of ['verification.community','verification.institution','ve
 need('safetyOps',"hasCapability(session.roles,'safety.review')",'safety operations must require safety-review capability');
 need('workspace',"caps.has('safety.review')",'workspace must hide safety operations without reviewer authority');
 need('workspace',"v.startsWith('verification.')",'workspace must expose verification only through derived capabilities');
+if(!/has\('evidence\.review'\)\?`[\s\S]*Approved evidence access[\s\S]*`:\x27\x27}/.test(files.web))failures.push('web: evidence access must be hidden without evidence-review authority');
+if((files.server.match(/auth\.CanReviewEvidence\(principal\)/g)||[]).length<2)failures.push('server: evidence review and signed access routes must share the reviewer authorization policy');
 
 // Service-to-service ingress is deliberately absent from untrusted clients.
 forbid('web',/\/v1\/internal\/notifications/,'internal notification ingress must not be callable by the web client');

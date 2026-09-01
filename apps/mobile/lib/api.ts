@@ -21,7 +21,7 @@ export function apiBaseUrl() {
   return process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '') ?? '';
 }
 
-export async function apiFetch<T>(path: string, init: RequestInit = {}, authenticated = true): Promise<T> {
+export async function apiFetch<T>(path: string, init: RequestInit = {}, authenticated: boolean | 'optional' = true): Promise<T> {
   const base = apiBaseUrl();
   if (!base) throw new APIError(503, 'iRespond API is not configured on this build.');
 
@@ -29,10 +29,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}, authenti
   headers.set('Accept', 'application/json');
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
 
-  if (authenticated) {
+  if (authenticated !== false) {
     const token = await getAccessToken();
-    if (!token) throw new APIError(401, 'Sign in is required.');
-    headers.set('Authorization', `Bearer ${token}`);
+    if (authenticated === true && !token) throw new APIError(401, 'Sign in is required.');
+    if (token) headers.set('Authorization', `Bearer ${token}`);
   }
 
   const response = await fetch(`${base}${path}`, { ...init, headers });
