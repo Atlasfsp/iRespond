@@ -7,6 +7,7 @@ const files={
  capabilities:await readFile('apps/mobile/lib/capabilities.ts','utf8'),
  project:await readFile('apps/mobile/app/project/[id].tsx','utf8'),
  projectAdmin:await readFile('apps/mobile/app/project-admin.tsx','utf8'),
+ projectFunding:await readFile('apps/mobile/app/project/funding.tsx','utf8'),
  evidence:await readFile('apps/mobile/app/evidence.tsx','utf8'),
  mobileSync:await readFile('apps/mobile/lib/sync.ts','utf8'),
  workspace:await readFile('apps/mobile/app/workspace.tsx','utf8'),
@@ -44,6 +45,8 @@ need('mobileApi','authenticated === true','optional authentication must require 
 need('mobileApi','if (token)','optional authentication must attach an available token');
 need('projectAdmin','detail?.permissions??none','project admin must consume server permissions');
 for(const reset of ["setCurrency('NGN')","setTarget('')","setCounterpart('')"])need('projectAdmin',reset,`project admin must clear stale funding input with ${reset}`);
+for(const reset of ["setCurrency('NGN')","setTarget('')","setCounterpart('')"])need('projectFunding',reset,`project funding route must clear stale funding input with ${reset}`);
+need('projectFunding','resetProjectFundingState();try','project funding route must reset project-scoped state before loading another project');
 need('projectAdmin',"m.status==='submitted'&&perms.canValidateMilestones",'mobile verifier controls must be limited to submitted milestones');
 for(const permission of ['canManageProject','canManageMilestones','canValidateMilestones','canManageRoles','canManageContributions','canPublishContributionNeeds','canManageFunding'])need('projectAdmin',permission,`project admin must honor ${permission}`);
 forbid('projectAdmin',/createdBy|projectManagerId/,'mobile must not infer resource authority from record ownership fields');
