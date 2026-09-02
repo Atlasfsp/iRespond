@@ -1,0 +1,32 @@
+:root{
+  --stitch-surface:#f7f9fc;
+  --stitch-surface-lowest:#ffffff;
+  --stitch-surface-low:#f2f4f7;
+  --stitch-surface-container:#eceef1;
+  --stitch-surface-high:#e6e8eb;
+  --stitch-surface-highest:#e0e3e6;
+  --stitch-on-surface:#191c1e;
+  --stitch-on-surface-variant:#42474e;
+  --stitch-outline:#73777e;
+  --stitch-outline-variant:#c3c7ce;
+  --stitch-primary:#002540;
+  --stitch-primary-container:#153b5b;
+  --stitch-on-primary:#ffffff;
+  --stitch-on-primary-container:#84a5cb;
+  --stitch-primary-fixed:#cfe5ff;
+  --stitch-secondary:#1b6b48;
+  --stitch-secondary-container:#a2f0c4;
+  --stitch-secondary-fixed:#a5f3c7;
+  --stitch-secondary-fixed-dim:#8ad6ac;
+  --stitch-tertiary:#312000;
+  --stitch-tertiary-container:#4d3400;
+  --stitch-tertiary-fixed:#ffdeab;
+  --stitch-amber:#f2b544;
+  --stitch-error:#ba1a1a;
+  --stitch-error-container:#ffdad6;
+  --stitch-screen-pad:20px;
+  --stitch-card-pad:16px;
+  --stitch-gutter:14px;
+  --stitch-radius-card:14px;
+  --stitch-radius-hero:24px;
+}

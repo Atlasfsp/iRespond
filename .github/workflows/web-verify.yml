@@ -1,0 +1,50 @@
+name: web-verify
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'apps/mobile/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'patches/**'
+      - 'docs/frontend/**'
+      - 'services/api/openapi.yaml'
+      - 'services/api/cmd/server/**'
+      - 'deploy/helm/irespond/**'
+      - 'tools/verify_web_frontend.mjs'
+      - 'tools/verify_frontend_api_coverage.mjs'
+      - 'tools/verify_frontend_execution.mjs'
+      - 'tools/verify_frontend_reachability.mjs'
+      - 'tools/verify_frontend_authorization.mjs'
+      - 'tools/offline_demo.test.mjs'
+      - '.github/workflows/build-android-demo.yml'
+      - '.github/workflows/web-verify.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  web-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Canonical browser runtime syntax
+        run: node --check apps/web/app.js
+      - name: Stitch catalog runtime syntax
+        run: node --check apps/web/stitch-catalog.js
+      - name: Frontend/API ownership coverage
+        run: node tools/verify_frontend_api_coverage.mjs
+      - name: Frontend/API execution coverage
+        run: node tools/verify_frontend_execution.mjs
+      - name: Frontend route and screen reachability
+        run: node tools/verify_frontend_reachability.mjs
+      - name: Frontend role and resource authorization
+        run: node tools/verify_frontend_authorization.mjs
+      - name: Frontend design and trust boundary contract
+        run: node tools/verify_web_frontend.mjs
+      - name: Offline demo contract
+        run: node --experimental-strip-types tools/offline_demo.test.mjs

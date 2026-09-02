@@ -58,6 +58,17 @@ func TestJWTVerifierRejectsWrongAudience(t *testing.T) {
 	if _, err := verifier.Verify(context.Background(), token); err == nil { t.Fatal("expected wrong audience to fail") }
 }
 
+func TestEvidenceReviewPolicy(t *testing.T) {
+	for _, role := range []string{"community_verifier", "evidence_reviewer", "trust_safety_admin"} {
+		principal := Principal{Subject:"reviewer-1", Roles:map[string]struct{}{role:{}}}
+		if !CanReviewEvidence(principal) { t.Fatalf("%s should be authorized to review and access evidence", role) }
+	}
+	for _, role := range []string{"authenticated", "institution_verifier", "expert_verifier", "impact_auditor", "government_verifier"} {
+		principal := Principal{Subject:"person-1", Roles:map[string]struct{}{role:{}}}
+		if CanReviewEvidence(principal) { t.Fatalf("%s must not receive reviewer-only evidence access", role) }
+	}
+}
+
 func signedToken(t *testing.T, key *rsa.PrivateKey, kid string, claims map[string]any) string {
 	t.Helper()
 	header, _ := json.Marshal(map[string]string{"alg":"RS256","typ":"JWT","kid":kid})

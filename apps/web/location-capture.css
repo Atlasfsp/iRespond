@@ -1,0 +1,51 @@
+.coordinate-capture {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--brand-soft);
+}
+
+.coordinate-capture .button {
+  justify-self: start;
+}
+
+.location-status {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.location-status[data-state="ready"] {
+  color: var(--brand-2);
+  font-weight: 750;
+}
+
+.location-status[data-state="error"] {
+  color: var(--danger);
+  font-weight: 750;
+}
+
+.coordinate-confirmation {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fcfdfc;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.field.coordinate-confirmation input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--brand);
+}

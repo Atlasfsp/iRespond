@@ -40,6 +40,7 @@ spec:
             - {name: OIDC_ISSUER, value: {{ .Values.config.oidcIssuer | quote }}}
             - {name: OIDC_AUDIENCE, value: {{ .Values.config.oidcAudience | quote }}}
             - {name: OIDC_JWKS_URL, value: {{ .Values.config.oidcJwksUrl | quote }}}
+            - {name: WEB_ALLOWED_ORIGINS, value: {{ .Values.config.webAllowedOrigins | quote }}}
             - {name: MAX_REQUEST_BODY_BYTES, value: {{ .Values.config.maxRequestBodyBytes | quote }}}
             - {name: REQUESTS_PER_MINUTE, value: {{ .Values.config.requestsPerMinute | quote }}}
             - name: DATABASE_URL

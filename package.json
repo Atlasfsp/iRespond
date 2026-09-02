@@ -5,14 +5,20 @@
   "packageManager": "pnpm@10.15.0",
   "scripts": {
     "mobile:start": "pnpm --filter @irespond/mobile start",
+    "mobile:web": "pnpm --filter @irespond/mobile web",
     "mobile:android": "pnpm --filter @irespond/mobile android",
     "mobile:ios": "pnpm --filter @irespond/mobile ios",
     "mobile:typecheck": "pnpm --filter @irespond/mobile typecheck"
   },
   "pnpm": {
     "overrides": {
-      "postcss@<=8.5.17": "8.5.18",
+      "postcss@<=8.5.22": "8.5.23",
+      "uuid@<11.1.1": "11.1.1",
+      "decode-uri-component@<=0.4.2": "0.5.0",
       "image-size": "npm:image-size-next@2.1.0"
+    },
+    "patchedDependencies": {
+      "metro@0.82.5": "patches/metro@0.82.5.patch"
     }
   }
 }

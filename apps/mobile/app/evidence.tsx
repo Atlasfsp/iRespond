@@ -1,72 +1,28 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StitchBottomNav, StitchTopBar } from '../components/StitchChrome';
 import { clearNeedDraft, loadNeedDraft, saveNeedDraft } from '../lib/drafts';
+import { Stitch } from '../lib/stitch-theme';
 import { flushNeedQueue, queueNeedForSync } from '../lib/sync';
 
-export default function EvidenceCapture() {
-  const [evidenceUris, setEvidenceUris] = useState<string[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-
-  async function capturePhoto() {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Camera permission not granted', 'You can continue the report without a photo and add evidence later.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8, exif: false });
-    if (result.canceled) return;
-    const uri = result.assets[0]?.uri;
-    if (uri) setEvidenceUris((current) => [...current, uri]);
-  }
-
-  async function saveEvidence() {
-    const current = await loadNeedDraft();
-    if (!current) {
-      Alert.alert('No report draft found', 'Return to the report screen and describe the need first.');
-      return;
-    }
-    await saveNeedDraft({ ...current, evidenceUris, updatedAt: new Date().toISOString() });
-    Alert.alert('Evidence saved', 'Your report remains on this device until you choose to submit it.');
-  }
-
-  async function submitReport() {
-    const current = await loadNeedDraft();
-    if (!current) {
-      Alert.alert('No report draft found', 'Return to the report screen and describe the need first.');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const complete = { ...current, evidenceUris, updatedAt: new Date().toISOString() };
-      await saveNeedDraft(complete);
-      await queueNeedForSync(complete);
-      const result = await flushNeedQueue();
-      await clearNeedDraft();
-      if (result.synced > 0) {
-        Alert.alert('Report submitted', 'Your observation has reached I Respond. It is not verified yet; community verification comes next.', [{ text: 'Done', onPress: () => router.replace('/') }]);
-      } else {
-        Alert.alert('Saved for sync', 'Your report is safely queued on this device and can sync when the API is reachable. It is not yet a verified need.', [{ text: 'Done', onPress: () => router.replace('/') }]);
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return <SafeAreaView style={styles.safe}><ScrollView contentContainerStyle={styles.content}>
-    <Pressable onPress={() => router.back()}><Text style={styles.back}>← Back</Text></Pressable>
-    <Text style={styles.eyebrow}>EVIDENCE</Text>
-    <Text style={styles.title}>Show the situation without exploiting the people affected.</Text>
-    <View style={styles.notice}><Text style={styles.noticeTitle}>Dignity first</Text><Text style={styles.noticeText}>Do not photograph children, private medical information, abuse survivors, or identifiable vulnerable people without appropriate consent. A useful report can focus on the condition, asset, environment, or public-space problem instead.</Text></View>
-    <Pressable style={styles.primary} onPress={capturePhoto}><Text style={styles.primaryText}>Take a photo</Text></Pressable>
-    <View style={styles.grid}>{evidenceUris.map((uri)=><Image key={uri} source={{uri}} style={styles.image} />)}</View>
-    <Pressable style={styles.secondary} onPress={saveEvidence}><Text style={styles.secondaryText}>Save evidence to draft</Text></Pressable>
-    <View style={styles.syncNotice}><Text style={styles.syncTitle}>Offline-first submission</Text><Text style={styles.syncText}>Submitting places the observation in a retry-safe queue first. If connectivity or the API is unavailable, the report can sync later without creating duplicate needs.</Text></View>
-    <Pressable style={[styles.submit, submitting && styles.disabled]} disabled={submitting} onPress={submitReport}><Text style={styles.submitText}>{submitting ? 'Submitting…' : 'Submit observation'}</Text></Pressable>
-    <Text style={styles.footnote}>Photo files remain local in this slice; media upload is not claimed until the object-storage/evidence API is implemented.</Text>
-  </ScrollView></SafeAreaView>;
+export default function EvidenceCapture(){
+ const[evidenceUris,setEvidenceUris]=useState<string[]>([]);const[submitting,setSubmitting]=useState(false);
+ async function capturePhoto(){const permission=await ImagePicker.requestCameraPermissionsAsync();if(!permission.granted){Alert.alert('Camera permission not granted','You can continue the report without a photo and add evidence later.');return}const result=await ImagePicker.launchCameraAsync({mediaTypes:['images'],quality:.8,exif:false});if(result.canceled)return;const uri=result.assets[0]?.uri;if(uri)setEvidenceUris(current=>[...current,uri])}
+ async function saveEvidence(){const current=await loadNeedDraft();if(!current){Alert.alert('No report draft found','Return to the report screen and describe the need first.');return}await saveNeedDraft({...current,evidenceUris,updatedAt:new Date().toISOString()});Alert.alert('Evidence saved','Your evidence is attached to the local report draft until you submit or sync it.')}
+ async function submitReport(){const current=await loadNeedDraft();if(!current){Alert.alert('No report draft found','Return to the report screen and describe the need first.');return}setSubmitting(true);try{const complete={...current,evidenceUris,updatedAt:new Date().toISOString()};await saveNeedDraft(complete);const queued=await queueNeedForSync(complete);const result=await flushNeedQueue();await clearNeedDraft();if(result.syncedKeys.includes(queued.idempotencyKey))Alert.alert('Observation and evidence submitted','The observation reached iRespond. Attached evidence was sent through the signed object-upload flow and remains unavailable until review. The need itself is not verified yet.',[{text:'Done',onPress:()=>router.replace('/')}]);else Alert.alert('Saved for secure sync','The observation and evidence are queued on this device. They will retry safely when the API, sign-in session and object upload path are reachable.',[{text:'Done',onPress:()=>router.replace('/')}])}catch(error){const message=error instanceof Error?error.message:'The report could not be prepared for secure sync.';const locationError=message.includes('confirmed intervention location');Alert.alert(locationError?'Confirm the intervention location':'Unable to submit report',message,locationError?[{text:'Back to report',onPress:()=>router.replace('/report')}]:[{text:'OK'}])}finally{setSubmitting(false)}}
+ return <SafeAreaView style={s.safe} edges={['top','left','right']}><View style={s.screen}><StitchTopBar title="Evidence" showBack/><ScrollView contentContainerStyle={s.content}>
+  <Text style={s.eyebrow}>PROOF WITH DIGNITY</Text><Text style={s.title}>Show the condition without exploiting the people affected.</Text>
+  <View style={s.safetyCard}><View style={s.safetyIcon}><Ionicons name="shield-checkmark-outline" size={25} color={Stitch.color.secondary}/></View><View style={{flex:1}}><Text style={s.safetyTitle}>Safeguarding first</Text><Text style={s.safetyText}>Do not photograph children, private medical information, abuse survivors or identifiable vulnerable people without appropriate consent. Focus on the condition, asset, environment or public-space problem.</Text></View></View>
+  <View style={s.capture}><View style={s.captureFrame}>{evidenceUris.length?<Image source={{uri:evidenceUris[evidenceUris.length-1]}} style={s.heroImage}/>:<><Ionicons name="camera-outline" size={48} color={Stitch.color.onSurfaceVariant}/><Text style={s.captureTitle}>Capture visible evidence</Text><Text style={s.captureText}>Captured photos may retain device metadata. Avoid sensitive locations and review the image before attaching.</Text></>}</View><Pressable style={s.cameraButton} onPress={()=>void capturePhoto()}><View style={s.shutter}><Ionicons name="camera" size={28} color={Stitch.color.primary}/></View><Text style={s.cameraButtonText}>{evidenceUris.length?'Take another photo':'Take a photo'}</Text></Pressable></View>
+  {evidenceUris.length>0&&<View><Text style={s.section}>Evidence attached</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.grid}>{evidenceUris.map((uri,index)=><View key={`${uri}-${index}`} style={s.thumbWrap}><Image source={{uri}} style={s.image}/><View style={s.thumbBadge}><Text style={s.thumbBadgeText}>{index+1}</Text></View></View>)}</ScrollView></View>}
+  <View style={s.pipeline}><Text style={s.section}>What happens on submit</Text>{[['1','Observation queued with an idempotency key'],['2','A server need ID is created or safely replayed'],['3','Each evidence file receives a signed create-only upload'],['4','Stored bytes are integrity-checked before moderation'],['5','Approved evidence becomes available through signed access']].map(([n,label],index)=><View key={n} style={s.step}><View style={[s.stepDot,index===0&&s.stepDotOn]}><Text style={s.stepNumber}>{n}</Text></View><Text style={s.stepText}>{label}</Text></View>)}</View>
+  <Pressable style={s.secondary} onPress={()=>void saveEvidence()}><Ionicons name="save-outline" size={20} color={Stitch.color.primary}/><Text style={s.secondaryText}>Save evidence to draft</Text></Pressable>
+  <Pressable style={[s.submit,submitting&&s.disabled]} disabled={submitting} onPress={()=>void submitReport()}><Ionicons name="send-outline" size={21} color={Stitch.color.onPrimary}/><Text style={s.submitText}>{submitting?'Submitting securely…':'Submit observation'}</Text></Pressable>
+  <Text style={s.footnote}>Evidence upload is real when the API, object store and authenticated session are reachable; otherwise the offline queue retains the files for retry. Submission does not itself make evidence public or the need verified.</Text>
+ </ScrollView><StitchBottomNav/></View></SafeAreaView>
 }
-
-const styles=StyleSheet.create({safe:{flex:1,backgroundColor:'#F6F8FB'},content:{padding:20,gap:14,paddingBottom:40},back:{color:'#2D6E9F',fontWeight:'800'},eyebrow:{color:'#2D7A56',fontWeight:'900',letterSpacing:1.5},title:{color:'#17324D',fontSize:28,lineHeight:34,fontWeight:'900'},notice:{backgroundColor:'#FFF7E7',borderRadius:16,padding:15,gap:5},noticeTitle:{color:'#6D4A14',fontWeight:'900'},noticeText:{color:'#7D6848',lineHeight:20},primary:{backgroundColor:'#153B5B',padding:15,borderRadius:14},primaryText:{color:'white',fontWeight:'900',textAlign:'center'},secondary:{borderWidth:1,borderColor:'#9CB8CD',padding:15,borderRadius:14},secondaryText:{color:'#2D6E9F',fontWeight:'900',textAlign:'center'},grid:{flexDirection:'row',flexWrap:'wrap',gap:10},image:{width:104,height:104,borderRadius:12},syncNotice:{backgroundColor:'#E9F5EF',padding:14,borderRadius:14,gap:4},syncTitle:{color:'#245840',fontWeight:'900'},syncText:{color:'#416A56',lineHeight:19,fontSize:13},submit:{backgroundColor:'#2D7A56',padding:16,borderRadius:14},submitText:{color:'white',fontWeight:'900',textAlign:'center',fontSize:16},disabled:{opacity:.55},footnote:{color:'#748391',fontSize:12,lineHeight:18}});
+const s=StyleSheet.create({safe:{flex:1,backgroundColor:Stitch.color.background},screen:{flex:1},content:{padding:Stitch.space.screen,gap:Stitch.space.md,paddingBottom:Stitch.space.xxl},eyebrow:{...Stitch.type.eyebrow,color:Stitch.color.secondary},title:{...Stitch.type.hero,color:Stitch.color.primary},safetyCard:{padding:Stitch.space.base,borderRadius:Stitch.radius.lg,borderWidth:1,borderColor:Stitch.color.secondaryFixedDim,backgroundColor:'#F0FAF5',flexDirection:'row',gap:Stitch.space.md},safetyIcon:{width:44,height:44,borderRadius:22,backgroundColor:Stitch.color.secondaryContainer,alignItems:'center',justifyContent:'center'},safetyTitle:{...Stitch.type.card,color:Stitch.color.secondary},safetyText:{...Stitch.type.body,color:Stitch.color.onSurfaceVariant,marginTop:2},capture:{borderWidth:1,borderColor:Stitch.color.outlineVariant,borderRadius:Stitch.radius.hero,overflow:'hidden',backgroundColor:Stitch.color.surfaceLowest},captureFrame:{height:250,backgroundColor:Stitch.color.surfaceHigh,alignItems:'center',justifyContent:'center',gap:Stitch.space.sm},heroImage:{width:'100%',height:'100%'},captureTitle:{...Stitch.type.card,color:Stitch.color.onSurface},captureText:{...Stitch.type.footnote,color:Stitch.color.onSurfaceVariant},cameraButton:{minHeight:68,paddingHorizontal:Stitch.space.base,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:Stitch.space.md,backgroundColor:Stitch.color.primaryContainer},shutter:{width:46,height:46,borderRadius:23,borderWidth:4,borderColor:Stitch.color.onPrimary,backgroundColor:Stitch.color.surfaceLowest,alignItems:'center',justifyContent:'center'},cameraButtonText:{...Stitch.type.bodyBold,color:Stitch.color.onPrimary},section:{...Stitch.type.section,color:Stitch.color.onSurface,marginTop:Stitch.space.sm,marginBottom:Stitch.space.sm},grid:{gap:Stitch.space.sm},thumbWrap:{position:'relative'},image:{width:112,height:112,borderRadius:Stitch.radius.md},thumbBadge:{position:'absolute',right:5,top:5,width:24,height:24,borderRadius:12,backgroundColor:Stitch.color.primaryContainer,alignItems:'center',justifyContent:'center'},thumbBadgeText:{...Stitch.type.footnote,color:Stitch.color.onPrimary,fontWeight:'900'},pipeline:{padding:Stitch.space.base,borderRadius:Stitch.radius.lg,backgroundColor:Stitch.color.surfaceLow,borderWidth:1,borderColor:Stitch.color.outlineVariant},step:{minHeight:38,flexDirection:'row',alignItems:'center',gap:Stitch.space.md},stepDot:{width:26,height:26,borderRadius:13,backgroundColor:Stitch.color.surfaceHigh,alignItems:'center',justifyContent:'center'},stepDotOn:{backgroundColor:Stitch.color.secondaryFixed},stepNumber:{...Stitch.type.footnote,color:Stitch.color.primary,fontWeight:'900'},stepText:{flex:1,...Stitch.type.body,color:Stitch.color.onSurfaceVariant},secondary:{minHeight:52,paddingHorizontal:Stitch.space.base,borderRadius:Stitch.radius.md,borderWidth:1,borderColor:Stitch.color.outlineVariant,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:Stitch.space.sm,backgroundColor:Stitch.color.surfaceLowest},secondaryText:{...Stitch.type.bodyBold,color:Stitch.color.primary},submit:{minHeight:56,paddingHorizontal:Stitch.space.base,borderRadius:Stitch.radius.md,backgroundColor:Stitch.color.primaryContainer,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:Stitch.space.sm},submitText:{...Stitch.type.card,color:Stitch.color.onPrimary},disabled:{opacity:.55},footnote:{...Stitch.type.footnote,color:Stitch.color.onSurfaceVariant}})
