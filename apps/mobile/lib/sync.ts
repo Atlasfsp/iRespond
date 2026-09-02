@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
 import type { NeedDraft } from './drafts';
 import { parseInterventionCoordinates, type CoordinateSource } from './coordinates';
+import { getDeviceItem, setDeviceItem } from './device-store';
 import { getAccessToken } from './session';
 
 const QUEUE_KEY = 'irespond.sync-queue.v1';
@@ -23,10 +23,10 @@ type InitiatedUpload = { evidenceId: string; uploadUrl: string; method: string; 
 function makeId(prefix: string) { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,12)}`; }
 
 export async function getLocalActorId() {
-  const existing = await SecureStore.getItemAsync(ACTOR_KEY);
+  const existing = await getDeviceItem(ACTOR_KEY);
   if (existing) return existing;
   const created = makeId('mobile');
-  await SecureStore.setItemAsync(ACTOR_KEY, created);
+  await setDeviceItem(ACTOR_KEY, created);
   return created;
 }
 
