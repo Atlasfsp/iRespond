@@ -23,8 +23,23 @@ async function jsonFile(target, value) {
 }
 
 async function run(script, root, environment = {}) {
+  // These variables are intentionally set at workflow scope for the real
+  // source-monitor job. Fixture subprocesses must not inherit them: doing so
+  // makes a test read the repository baseline or use the workflow merge SHA
+  // instead of the isolated paths and revisions declared by the fixture.
+  const sanitizedEnvironment = { ...process.env };
+  for (const variable of [
+    'DOCS_SYNC_BASELINE_PATH',
+    'DOCS_SYNC_CAPTURED_AT',
+    'DOCS_SYNC_SOURCE_REVISION',
+    'DOCS_SYNC_UPDATE_BASELINE',
+    'GITHUB_OUTPUT',
+    'GITHUB_SHA',
+  ]) {
+    delete sanitizedEnvironment[variable];
+  }
   return execFileAsync(process.execPath, [path.join(sourceDir, script), root], {
-    env: { ...process.env, ...environment },
+    env: { ...sanitizedEnvironment, ...environment },
   });
 }
 
