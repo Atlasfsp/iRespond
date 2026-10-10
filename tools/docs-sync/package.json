@@ -1,0 +1,19 @@
+{
+  "name": "@irespond/docs-sync",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test src/docs-sync.test.mjs",
+    "fingerprint": "node src/fingerprint.mjs",
+    "mock-api": "node src/mock-api.mjs",
+    "capture": "node src/capture.mjs",
+    "compare": "node src/compare-and-plan.mjs",
+    "manual-index": "node src/regenerate-manual-index.mjs",
+    "render-diagrams": "node src/render-diagrams.mjs"
+  },
+  "devDependencies": {
+    "mermaid": "12.1.0",
+    "playwright": "1.55.0"
+  }
+}

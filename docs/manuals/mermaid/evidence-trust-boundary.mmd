@@ -1,0 +1,10 @@
+flowchart LR
+ A[Evidence capture] --> B[Create-only signed upload]
+ B --> C[(RustFS object)]
+ C --> D[Verify bytes + size + SHA-256]
+ D --> E[Pending review]
+ E --> F{Moderation}
+ F -- Available --> G[Short-lived authorized access]
+ F -- Quarantine --> H[Restricted]
+ F -- Reject --> I[Unavailable]
+ G --> J[Outcome / verification workflows]

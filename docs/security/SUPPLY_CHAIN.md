@@ -28,3 +28,9 @@ There is no silent vulnerability ignore mechanism in the repository. A future ex
 ## Tooling
 
 The Go vulnerability lane uses the official Go vulnerability scanner (`govulncheck`) and the Go vulnerability database. JavaScript production dependencies are checked through the pnpm audit interface. Tool versions used by required CI are pinned or otherwise captured in evidence.
+
+## Time-bounded Expo build-tool exceptions
+
+`CVE-2026-85393` (`node-forge`) and `CVE-2026-93687` (`braces`) currently have no patched upstream release. Their dependency paths are confined to Expo CLI, Metro, and React Native build/developer tooling; neither package is imported by iRespond application source or included as an application runtime capability. They are therefore listed in `pnpm.auditConfig.ignoreCves` while all other high and critical findings remain blocking.
+
+Remove each exception as soon as Expo's dependency graph provides a fixed release. Any change that introduces either package into application runtime code invalidates this exception and must fail release review.

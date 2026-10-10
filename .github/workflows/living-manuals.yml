@@ -1,0 +1,104 @@
+name: Living manuals
+
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/**'
+      - 'services/**'
+      - 'deploy/**'
+      - 'docs/manuals/**'
+      - 'tools/docs-sync/**'
+      - '.github/workflows/living-manuals.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/**'
+      - 'services/**'
+      - 'deploy/**'
+      - 'docs/manuals/**'
+      - 'tools/docs-sync/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Check frontend/manual freshness and route coverage
+        run: |
+          python tools/docs-sync/frontend_fingerprint.py \
+            --repo-root . \
+            --routes tools/docs-sync/routes.json \
+            --manifest docs/manuals/ui-screenshot-manifest.json \
+            --out "$RUNNER_TEMP/manual-change-plan.json" \
+            --fail-on-stale
+      - name: Test documentation freshness guard
+        run: python tools/docs-sync/test_frontend_fingerprint.py
+      - name: Upload documentation refresh plan
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: living-manual-change-plan
+          path: ${{ runner.temp }}/manual-change-plan.json
+          if-no-files-found: error
+
+  build-manuals:
+    needs: freshness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install diagram tooling
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @irespond/docs-sync exec playwright install --with-deps chromium
+      - name: Install document tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz libreoffice poppler-utils
+          python -m pip install --disable-pip-version-check -r tools/docs-sync/requirements.txt
+      - name: Regenerate documentation
+        env:
+          IRESPOND_SOURCE_REVISION: ${{ github.sha }}
+        run: python tools/docs-sync/build_manuals.py
+      - name: Verify embedded interface and architecture evidence
+        run: python tools/docs-sync/verify_manual_artifacts.py
+      - name: Convert Word editions to PDF
+        run: |
+          for f in docs/manuals/generated/*.docx; do
+            libreoffice --headless --convert-to pdf --outdir docs/manuals/generated "$f"
+          done
+      - name: Enforce minimum rendered page counts
+        run: python tools/docs-sync/verify_manual_pdfs.py --dir docs/manuals/generated
+      - name: Upload living-document editions
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: irespond-living-manuals-${{ github.sha }}
+          path: |
+            docs/manuals/generated/*.docx
+            docs/manuals/generated/*.pdf
+            docs/manuals/assets/diagrams/*.png
+            docs/manuals/mermaid/*.mmd
+          if-no-files-found: error
