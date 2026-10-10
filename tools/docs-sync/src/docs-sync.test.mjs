@@ -746,10 +746,7 @@ test('capture dependencies run outside the repository-write publication job', as
   const captureJob = workflow.slice(captureStart, publishStart);
   const publishJob = workflow.slice(publishStart);
   assert.match(pullRequestTrigger, /docs\/screenshots\/current\/\*\*/);
-  assert.match(pushTrigger, /docs\/documentation-system\/screen-manifest\.json/);
-  assert.match(pushTrigger, /tools\/docs-sync\/\*\*/);
-  assert.match(pushTrigger, /\.github\/workflows\/docs-baseline-ownership\.yml/);
-  assert.match(pushTrigger, /\.github\/workflows\/docs-interface-sync\.yml/);
+  assert.doesNotMatch(pushTrigger, /\n\s+paths:/);
   assert.match(workflow, /github\.event\.pull_request\.base\.sha/);
   assert.match(workflow, /github\.event\.before/);
   assert.match(workflow, /\|\| github\.sha/);
@@ -785,6 +782,9 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.match(ownershipWorkflow, /SNAPSHOT_HEAD_SHA/);
   assert.match(ownershipWorkflow, /\.base\.sha == \$base_sha/);
   assert.match(ownershipWorkflow, /\.head\.sha == \$head_sha/);
+  assert.match(ownershipWorkflow, /CURRENT_RUN_ID: \$\{\{ github\.run_id \}\}/);
+  assert.match(ownershipWorkflow, /newer_success_run_id/);
+  assert.match(ownershipWorkflow, /newer_success_run_id > CURRENT_RUN_ID/);
   assert.match(ownershipWorkflow, /Revalidate open generated publications after main advances/);
   assert.match(ownershipWorkflow, /-f state=pending/);
   assert.match(captureJob, /permissions:\n\s+contents: read/);

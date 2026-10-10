@@ -140,9 +140,11 @@ jobs:
           DOCS_SYNC_HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
           SNAPSHOT_BASE_SHA: ${{ steps.pr.outputs.base_sha }}
           SNAPSHOT_HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
+          CURRENT_RUN_ID: ${{ github.run_id }}
           JOB_STATUS: ${{ job.status }}
           TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          set -euo pipefail
           state=failure
           if test "$JOB_STATUS" = "success"; then
             current_pr=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${DOCS_SYNC_PR_NUMBER}")
@@ -152,6 +154,18 @@ jobs:
               '.state == "open" and .base.sha == $base_sha and .head.sha == $head_sha' \
               <<< "$current_pr" >/dev/null; then
               state=success
+            fi
+          else
+            newer_success_run_id=$(gh api \
+              "repos/${GITHUB_REPOSITORY}/commits/${DOCS_SYNC_HEAD_SHA}/statuses?per_page=100" | \
+              jq -r '[.[]
+                | select(.context == "docs-baseline-ownership" and .state == "success")
+                | (.target_url | try capture("/actions/runs/(?<id>[0-9]+)$").id catch null)
+                | select(. != null)
+                | tonumber] | max // 0')
+            if (( newer_success_run_id > CURRENT_RUN_ID )); then
+              echo "A newer ownership run already verified this head; preserving its success status."
+              exit 0
             fi
           fi
           gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${DOCS_SYNC_HEAD_SHA}" \
