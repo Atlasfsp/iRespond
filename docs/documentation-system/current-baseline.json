@@ -1,0 +1,42 @@
+{
+  "schema": "irespond.documentation-baseline.v2",
+  "sourceRevision": "6484873c8a0c3306a5972247bcc9981da4051bc6",
+  "capturedAt": "2026-08-27",
+  "interfaceMode": "source-faithful-baseline",
+  "screenshotSourceRevision": null,
+  "screenshots": {},
+  "screenshotPaths": {},
+  "trackedFrontendRoots": ["apps/mobile", "apps/web"],
+  "sources": {
+    "apps/mobile/app.json": "702d3dd235a4b0d157948e09342764bb988d3ca3",
+    "apps/mobile/app/_layout.tsx": "374b16421c10d1325fe381414f009a20ea899858",
+    "apps/mobile/app/contributions.tsx": "4851365923f29e52c0a1444ccaf3899a291c4c5c",
+    "apps/mobile/app/evidence.tsx": "9bdd1af22c8216eb143c63a51772d9afeae6e2a0",
+    "apps/mobile/app/impact.tsx": "8944ded89a2351cb3e28997a34b4a682974d7491",
+    "apps/mobile/app/index.tsx": "2a38c9dac82bd79ce62d5101356b4f5e646ea18d",
+    "apps/mobile/app/need/[id].tsx": "a2433ecab3e5dd1bbe1f4df47a197d73dea0da3a",
+    "apps/mobile/app/needmap.tsx": "953bd6e576fbd95673299a7addc9cbea32de3633",
+    "apps/mobile/app/notifications.tsx": "0a55ea2ad838c3488f3f693106e4899f01d00e0d",
+    "apps/mobile/app/privacy.tsx": "4827e556c107f4ce1e7e16ffb215135490d8e727",
+    "apps/mobile/app/profile.tsx": "07a4433360b98b6786417924a26195b6188ea4b5",
+    "apps/mobile/app/project/[id].tsx": "3be3a0c79849c24dcbc4d915e66edddf580ef316",
+    "apps/mobile/app/project/contribute.tsx": "ea85af6fccb4bbc11a4f72a671a19d7400ce3e8d",
+    "apps/mobile/app/project/funding.tsx": "f959e5dd4411e89fc14338174f09c0f96ae1f2db",
+    "apps/mobile/app/report-safety.tsx": "8a92b565161082b1d9a208129fbe4833252db6a5",
+    "apps/mobile/app/report.tsx": "ed46375aa28c6d886f0bd7215ff53f17d28bca21",
+    "apps/mobile/app/signin.tsx": "7d7fe5fa9737a000dad6822a67e385021970ff47",
+    "apps/mobile/lib/drafts.ts": "c37da6c1859be4375f6cc06ae332d197f4cbf34f",
+    "apps/mobile/lib/session.ts": "78bd79ad01c4a52c2406d8cd6ce256139ca5e52f",
+    "apps/mobile/lib/sync.ts": "e00918bf60157afaf42bf499c4f32bd1eea247f0",
+    "apps/mobile/package.json": "8a6fd80b7dd716c5591cff785f226695a47da63e",
+    "apps/mobile/tsconfig.json": "10925c99bc2a1dbb453696ec81aa75cc0c307377"
+  },
+  "publications": [
+    {"id":"product","name":"iRespond Product Documentation","minimumPages":100,"renderedPages":127},
+    {"id":"technical","name":"iRespond Technical Documentation","minimumPages":100,"renderedPages":127},
+    {"id":"community","name":"Community Member Training & User Manual","minimumPages":100,"renderedPages":118},
+    {"id":"leaders","name":"Project Leader & Organization Training/User Manual","minimumPages":100,"renderedPages":118},
+    {"id":"contributors","name":"Contributor & Funder Training/User Manual","minimumPages":100,"renderedPages":118},
+    {"id":"operations","name":"Verification, Safety & Operations Training/User Manual","minimumPages":100,"renderedPages":118}
+  ]
+}
