@@ -1,0 +1,435 @@
+{
+  "schema": "irespond.documentation-ui-change-report.v2",
+  "sourceRevision": "2e6c11e9358283e7545dbef25148732c57c22079",
+  "baselineRevision": "bootstrap",
+  "runtimeCaptureAvailable": false,
+  "runtimeCaptureAttempted": false,
+  "screenshotSourceRevision": null,
+  "screenshotEvidence": {},
+  "changed": [
+    "evidence",
+    "impact-passport",
+    "home",
+    "needmap",
+    "privacy",
+    "project-room",
+    "funding",
+    "safety",
+    "report-need"
+  ],
+  "frontendSourceChanges": [
+    {
+      "source": "apps/mobile/app.json",
+      "previous": null,
+      "current": "702d3dd235a4b0d157948e09342764bb988d3ca3",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/_layout.tsx",
+      "previous": null,
+      "current": "374b16421c10d1325fe381414f009a20ea899858",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/contributions.tsx",
+      "previous": null,
+      "current": "4851365923f29e52c0a1444ccaf3899a291c4c5c",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/evidence.tsx",
+      "previous": null,
+      "current": "9bdd1af22c8216eb143c63a51772d9afeae6e2a0",
+      "change": "added",
+      "screens": [
+        "evidence"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/impact.tsx",
+      "previous": null,
+      "current": "8944ded89a2351cb3e28997a34b4a682974d7491",
+      "change": "added",
+      "screens": [
+        "impact-passport"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/index.tsx",
+      "previous": null,
+      "current": "2a38c9dac82bd79ce62d5101356b4f5e646ea18d",
+      "change": "added",
+      "screens": [
+        "home"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/need/[id].tsx",
+      "previous": null,
+      "current": "a2433ecab3e5dd1bbe1f4df47a197d73dea0da3a",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/needmap.tsx",
+      "previous": null,
+      "current": "953bd6e576fbd95673299a7addc9cbea32de3633",
+      "change": "added",
+      "screens": [
+        "needmap"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/notifications.tsx",
+      "previous": null,
+      "current": "0a55ea2ad838c3488f3f693106e4899f01d00e0d",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/privacy.tsx",
+      "previous": null,
+      "current": "4827e556c107f4ce1e7e16ffb215135490d8e727",
+      "change": "added",
+      "screens": [
+        "privacy"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/profile.tsx",
+      "previous": null,
+      "current": "07a4433360b98b6786417924a26195b6188ea4b5",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/project/[id].tsx",
+      "previous": null,
+      "current": "3be3a0c79849c24dcbc4d915e66edddf580ef316",
+      "change": "added",
+      "screens": [
+        "project-room"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/project/contribute.tsx",
+      "previous": null,
+      "current": "ea85af6fccb4bbc11a4f72a671a19d7400ce3e8d",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/project/funding.tsx",
+      "previous": null,
+      "current": "f959e5dd4411e89fc14338174f09c0f96ae1f2db",
+      "change": "added",
+      "screens": [
+        "funding"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/report-safety.tsx",
+      "previous": null,
+      "current": "8a92b565161082b1d9a208129fbe4833252db6a5",
+      "change": "added",
+      "screens": [
+        "safety"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/report.tsx",
+      "previous": null,
+      "current": "ed46375aa28c6d886f0bd7215ff53f17d28bca21",
+      "change": "added",
+      "screens": [
+        "report-need"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/signin.tsx",
+      "previous": null,
+      "current": "7d7fe5fa9737a000dad6822a67e385021970ff47",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/drafts.ts",
+      "previous": null,
+      "current": "c37da6c1859be4375f6cc06ae332d197f4cbf34f",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/session.ts",
+      "previous": null,
+      "current": "78bd79ad01c4a52c2406d8cd6ce256139ca5e52f",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/sync.ts",
+      "previous": null,
+      "current": "e00918bf60157afaf42bf499c4f32bd1eea247f0",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/package.json",
+      "previous": null,
+      "current": "8a6fd80b7dd716c5591cff785f226695a47da63e",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/tsconfig.json",
+      "previous": null,
+      "current": "10925c99bc2a1dbb453696ec81aa75cc0c307377",
+      "change": "added",
+      "screens": []
+    }
+  ],
+  "synchronizationContractChanges": [
+    {
+      "source": ".github/workflows/docs-baseline-ownership.yml",
+      "previous": null,
+      "current": "2644e68c47c9eb71a043cf57d9dfcfeb5632ef67",
+      "change": "added"
+    },
+    {
+      "source": ".github/workflows/docs-interface-sync.yml",
+      "previous": null,
+      "current": "55d421556c1032b7d9414893bc5e66658fb3c0b6",
+      "change": "added"
+    },
+    {
+      "source": "docs/documentation-system/screen-manifest.json",
+      "previous": null,
+      "current": "ec96c4178d5025f20b2df728e0fc081eb04884d0",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/package.json",
+      "previous": null,
+      "current": "1901f4de07a0bdf650c23569a4edf51da5322825",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/apply-screenshot-removals.mjs",
+      "previous": null,
+      "current": "42295ebef26e58a46b86ebde89d8a9fe5c72c8ff",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/baseline-guard.mjs",
+      "previous": null,
+      "current": "9b72a794f8ffa7a4d5d192202b8120af0b5a8670",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/capture-support.mjs",
+      "previous": null,
+      "current": "b37104e8689e7abd1bcec2c90937d718f5c7bc06",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/capture.mjs",
+      "previous": null,
+      "current": "0f98f0218de922d5b35e8c7c9e15bf72ad564a67",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/compare-and-plan.mjs",
+      "previous": null,
+      "current": "ae32d9b9ab34049e95f08350de2b9c459e9b7310",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/fingerprint.mjs",
+      "previous": null,
+      "current": "8d63e41521e818ccdd3ac026f0bee6a426cc90ee",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/manifest-support.mjs",
+      "previous": null,
+      "current": "8fa87698e2130ac7cc3bd16d321df1b23758ce68",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/mock-api.mjs",
+      "previous": null,
+      "current": "da820576578e0f5e50c42aab92ad81ef98b81a81",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/regenerate-manual-index.mjs",
+      "previous": null,
+      "current": "872bbdf37da4e0065821d2f169709d0a8da4eee6",
+      "change": "added"
+    }
+  ],
+  "sourceChanges": [
+    {
+      "id": "evidence",
+      "source": "apps/mobile/app/evidence.tsx",
+      "previous": null,
+      "current": "9bdd1af22c8216eb143c63a51772d9afeae6e2a0",
+      "change": "added"
+    },
+    {
+      "id": "impact-passport",
+      "source": "apps/mobile/app/impact.tsx",
+      "previous": null,
+      "current": "8944ded89a2351cb3e28997a34b4a682974d7491",
+      "change": "added"
+    },
+    {
+      "id": "home",
+      "source": "apps/mobile/app/index.tsx",
+      "previous": null,
+      "current": "2a38c9dac82bd79ce62d5101356b4f5e646ea18d",
+      "change": "added"
+    },
+    {
+      "id": "needmap",
+      "source": "apps/mobile/app/needmap.tsx",
+      "previous": null,
+      "current": "953bd6e576fbd95673299a7addc9cbea32de3633",
+      "change": "added"
+    },
+    {
+      "id": "privacy",
+      "source": "apps/mobile/app/privacy.tsx",
+      "previous": null,
+      "current": "4827e556c107f4ce1e7e16ffb215135490d8e727",
+      "change": "added"
+    },
+    {
+      "id": "project-room",
+      "source": "apps/mobile/app/project/[id].tsx",
+      "previous": null,
+      "current": "3be3a0c79849c24dcbc4d915e66edddf580ef316",
+      "change": "added"
+    },
+    {
+      "id": "funding",
+      "source": "apps/mobile/app/project/funding.tsx",
+      "previous": null,
+      "current": "f959e5dd4411e89fc14338174f09c0f96ae1f2db",
+      "change": "added"
+    },
+    {
+      "id": "safety",
+      "source": "apps/mobile/app/report-safety.tsx",
+      "previous": null,
+      "current": "8a92b565161082b1d9a208129fbe4833252db6a5",
+      "change": "added"
+    },
+    {
+      "id": "report-need",
+      "source": "apps/mobile/app/report.tsx",
+      "previous": null,
+      "current": "ed46375aa28c6d886f0bd7215ff53f17d28bca21",
+      "change": "added"
+    }
+  ],
+  "unmappedFrontendChanges": [
+    {
+      "source": "apps/mobile/app.json",
+      "previous": null,
+      "current": "702d3dd235a4b0d157948e09342764bb988d3ca3",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/_layout.tsx",
+      "previous": null,
+      "current": "374b16421c10d1325fe381414f009a20ea899858",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/contributions.tsx",
+      "previous": null,
+      "current": "4851365923f29e52c0a1444ccaf3899a291c4c5c",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/need/[id].tsx",
+      "previous": null,
+      "current": "a2433ecab3e5dd1bbe1f4df47a197d73dea0da3a",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/notifications.tsx",
+      "previous": null,
+      "current": "0a55ea2ad838c3488f3f693106e4899f01d00e0d",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/profile.tsx",
+      "previous": null,
+      "current": "07a4433360b98b6786417924a26195b6188ea4b5",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/project/contribute.tsx",
+      "previous": null,
+      "current": "ea85af6fccb4bbc11a4f72a671a19d7400ce3e8d",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/signin.tsx",
+      "previous": null,
+      "current": "7d7fe5fa9737a000dad6822a67e385021970ff47",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/drafts.ts",
+      "previous": null,
+      "current": "c37da6c1859be4375f6cc06ae332d197f4cbf34f",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/session.ts",
+      "previous": null,
+      "current": "78bd79ad01c4a52c2406d8cd6ce256139ca5e52f",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/sync.ts",
+      "previous": null,
+      "current": "e00918bf60157afaf42bf499c4f32bd1eea247f0",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/package.json",
+      "previous": null,
+      "current": "8a6fd80b7dd716c5591cff785f226695a47da63e",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/tsconfig.json",
+      "previous": null,
+      "current": "10925c99bc2a1dbb453696ec81aa75cc0c307377",
+      "change": "added",
+      "screens": []
+    }
+  ],
+  "screenshotChanges": [],
+  "runtimeFailures": [],
+  "action": "regenerate-manual-interface-sections"
+}
