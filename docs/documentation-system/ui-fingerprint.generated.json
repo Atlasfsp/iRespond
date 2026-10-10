@@ -1,15 +1,12 @@
 {
-  "schema": "irespond.documentation-baseline.v2",
+  "schema": "irespond.documentation-ui-fingerprint.v2",
   "sourceRevision": "c12a4b5b8736700c2fdf2739fcd6f9a41c233521",
-  "capturedAt": "2026-10-10T21:23:40+01:00",
-  "interfaceMode": "source-faithful-baseline",
-  "screenshotSourceRevision": null,
-  "screenshots": {},
-  "screenshotPaths": {},
+  "hashModel": "git-blob-sha1-per-source + sha256-aggregate",
   "trackedFrontendRoots": [
     "apps/mobile",
     "apps/web"
   ],
+  "aggregate": "370af771fcb6021f0b614c9c6d5db429c0801921091a9726b926be85d40566bc",
   "sources": {
     "apps/mobile/app.config.ts": "194e9e766a2893f32e08c768ffdbf2c45a2a01cd",
     "apps/mobile/app.json": "702d3dd235a4b0d157948e09342764bb988d3ca3",
@@ -68,44 +65,7 @@
     "apps/web/stitch.css": "f8f7427edafecaf72fdd3de4c6ab81e896aaca5b",
     "apps/web/styles.css": "be1bcaa8768846310433dcbd718c6c466f56f74e"
   },
-  "publications": [
-    {
-      "id": "product",
-      "name": "iRespond Product Documentation",
-      "minimumPages": 100,
-      "renderedPages": 127
-    },
-    {
-      "id": "technical",
-      "name": "iRespond Technical Documentation",
-      "minimumPages": 100,
-      "renderedPages": 127
-    },
-    {
-      "id": "community",
-      "name": "Community Member Training & User Manual",
-      "minimumPages": 100,
-      "renderedPages": 118
-    },
-    {
-      "id": "leaders",
-      "name": "Project Leader & Organization Training/User Manual",
-      "minimumPages": 100,
-      "renderedPages": 118
-    },
-    {
-      "id": "contributors",
-      "name": "Contributor & Funder Training/User Manual",
-      "minimumPages": 100,
-      "renderedPages": 118
-    },
-    {
-      "id": "operations",
-      "name": "Verification, Safety & Operations Training/User Manual",
-      "minimumPages": 100,
-      "renderedPages": 118
-    }
-  ],
+  "synchronizationContractAggregate": "404f4d9f9e3becd4f963f4e7234af5cf5fa0ac6bdc86d8acebcd065b0d33eb56",
   "synchronizationContract": {
     ".github/workflows/docs-baseline-ownership.yml": "2644e68c47c9eb71a043cf57d9dfcfeb5632ef67",
     ".github/workflows/docs-interface-sync.yml": "55d421556c1032b7d9414893bc5e66658fb3c0b6",

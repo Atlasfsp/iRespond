@@ -1,0 +1,858 @@
+{
+  "schema": "irespond.documentation-ui-change-report.v2",
+  "sourceRevision": "c12a4b5b8736700c2fdf2739fcd6f9a41c233521",
+  "baselineRevision": "6484873c8a0c3306a5972247bcc9981da4051bc6",
+  "runtimeCaptureAvailable": false,
+  "runtimeCaptureAttempted": false,
+  "screenshotSourceRevision": null,
+  "screenshotEvidence": {},
+  "changed": [
+    "evidence",
+    "impact-passport",
+    "home",
+    "needmap",
+    "privacy",
+    "project-room",
+    "funding",
+    "report-need"
+  ],
+  "frontendSourceChanges": [
+    {
+      "source": "apps/mobile/app.config.ts",
+      "previous": null,
+      "current": "194e9e766a2893f32e08c768ffdbf2c45a2a01cd",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/_layout.tsx",
+      "previous": "374b16421c10d1325fe381414f009a20ea899858",
+      "current": "808a03933729e96ea3c223bc57125d84c2e772ec",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/catalog.tsx",
+      "previous": null,
+      "current": "d030e9982977fc1a2a6145583b4e0d37c81da2eb",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/contributions.tsx",
+      "previous": "4851365923f29e52c0a1444ccaf3899a291c4c5c",
+      "current": "5a2bd4744bd19660a071efe12b181b44b282b243",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/evidence.tsx",
+      "previous": "9bdd1af22c8216eb143c63a51772d9afeae6e2a0",
+      "current": "398fe5d51914c5701859adf92b45653f6335c90f",
+      "change": "modified",
+      "screens": [
+        "evidence"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/impact.tsx",
+      "previous": "8944ded89a2351cb3e28997a34b4a682974d7491",
+      "current": "2a28a1d44724ff0dc1f1c857f031632e2be6c00b",
+      "change": "modified",
+      "screens": [
+        "impact-passport"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/index.tsx",
+      "previous": "2a38c9dac82bd79ce62d5101356b4f5e646ea18d",
+      "current": "aaebb18d90a777f6b29a7f7dc2828ec6f21cba06",
+      "change": "modified",
+      "screens": [
+        "home"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/need/[id].tsx",
+      "previous": "a2433ecab3e5dd1bbe1f4df47a197d73dea0da3a",
+      "current": "6d5aba2bb8f536e5587ae28709a8f5ee89102285",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/needmap.tsx",
+      "previous": "953bd6e576fbd95673299a7addc9cbea32de3633",
+      "current": "3555c1e3f9107ff9e2fa61936383a8d4a0a3daf5",
+      "change": "modified",
+      "screens": [
+        "needmap"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/notifications.tsx",
+      "previous": "0a55ea2ad838c3488f3f693106e4899f01d00e0d",
+      "current": "e6378e40848e94d9710413b43968d3a943897049",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/pledges.tsx",
+      "previous": null,
+      "current": "3add043e3f56a1200d47dd5b2608ed81429e1c25",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/privacy.tsx",
+      "previous": "4827e556c107f4ce1e7e16ffb215135490d8e727",
+      "current": "efa10abad831643042e1ef04cc25576fa16755f4",
+      "change": "modified",
+      "screens": [
+        "privacy"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/profile.tsx",
+      "previous": "07a4433360b98b6786417924a26195b6188ea4b5",
+      "current": "13d156f4b2e3dfdb6f9d27dbfc6620733bb7af25",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/project-admin.tsx",
+      "previous": null,
+      "current": "d1804bb78073961ef90d6e30386888d9bb24e067",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/project/[id].tsx",
+      "previous": "3be3a0c79849c24dcbc4d915e66edddf580ef316",
+      "current": "073c2be8d29a655245e852cc2f9b50af7c665207",
+      "change": "modified",
+      "screens": [
+        "project-room"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/project/funding.tsx",
+      "previous": "f959e5dd4411e89fc14338174f09c0f96ae1f2db",
+      "current": "5154c02c2b847e360ef27babb5bc6424555d6251",
+      "change": "modified",
+      "screens": [
+        "funding"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/report.tsx",
+      "previous": "ed46375aa28c6d886f0bd7215ff53f17d28bca21",
+      "current": "b98e8330799309803a2fa50d5a45403aaa08420d",
+      "change": "modified",
+      "screens": [
+        "report-need"
+      ]
+    },
+    {
+      "source": "apps/mobile/app/role-invite.tsx",
+      "previous": null,
+      "current": "f58159f3f01f6adf58f7a1fcee3c7f7e27de5648",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/safety-ops.tsx",
+      "previous": null,
+      "current": "f9c751e9db803408b1c9668f1c2f3f5459ac6c5b",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/safety.tsx",
+      "previous": null,
+      "current": "ec255acb8698b8a6738d1e4182bc9322aa472a96",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/signin.tsx",
+      "previous": "7d7fe5fa9737a000dad6822a67e385021970ff47",
+      "current": "ab267f67b3dbeb765bf28dc81c8a5de06b260519",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/stitch/[screen].tsx",
+      "previous": null,
+      "current": "d49ba1f6158a5e7c21967b9fd5de5493979bf796",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/verify.tsx",
+      "previous": null,
+      "current": "83d0929b74b52cd75f8f4631f9dace80146c1c49",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/workspace.tsx",
+      "previous": null,
+      "current": "793c3dce06933018caac6ebcfd4eb2d1d01d56aa",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/components/StitchChrome.tsx",
+      "previous": null,
+      "current": "b2e9dff7f78d3acb651d1eb30b3a37935047b477",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/api.ts",
+      "previous": null,
+      "current": "a159f9f323f083dd076026ec67fa0fa2e1aad8fe",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/capabilities.ts",
+      "previous": null,
+      "current": "96428f9d5bfc944686a47da5b79b2b6984557e7f",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/coordinates.ts",
+      "previous": null,
+      "current": "a601779c1f980e27fd3a84218512df79a477ea93",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/demo-backend.ts",
+      "previous": null,
+      "current": "6109ec78a38846a426fd0762e95131a9dda1d4d8",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/device-store.ts",
+      "previous": null,
+      "current": "8646e336c5734bbdc7482c808e6e9646b370e665",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/drafts.ts",
+      "previous": "c37da6c1859be4375f6cc06ae332d197f4cbf34f",
+      "current": "0190666dfb9287107401a9331e67e1059b26989d",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/sdgs.ts",
+      "previous": null,
+      "current": "572114cb873980bd914f810b1122eb623ea06d32",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/session.ts",
+      "previous": "78bd79ad01c4a52c2406d8cd6ce256139ca5e52f",
+      "current": "724800d102f0ba825a7fa55fa2062c1928cce6db",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/stitch-screen-catalog.ts",
+      "previous": null,
+      "current": "22c0d958fdd170219dac6f023b3bc13a515ec590",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/stitch-theme.ts",
+      "previous": null,
+      "current": "f9bbf2701bd44e877b5a7534d2d579c92d7f1168",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/sync.ts",
+      "previous": "e00918bf60157afaf42bf499c4f32bd1eea247f0",
+      "current": "417aa745895b646bc5d68fda408368fe633df3d4",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/package.json",
+      "previous": "8a6fd80b7dd716c5591cff785f226695a47da63e",
+      "current": "06e104acc2883d262801b0435e488be00d9cca1f",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/react-native.config.js",
+      "previous": null,
+      "current": "2b9739e9efef7e5d41993269e0e9d8dd0f76f4f6",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/DESIGN_TOKENS.css",
+      "previous": null,
+      "current": "d384df642a7169caf6bcb25d8bbf906655514d90",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/app.js",
+      "previous": null,
+      "current": "974fa81e5f3ccc693a79a774c571c49755a2fbb1",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/catalog.css",
+      "previous": null,
+      "current": "a750ecbe77ae6f637604361d733743d3885ee685",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/config.js",
+      "previous": null,
+      "current": "208c6507eec52a5be1ffe01401631b355e1ec280",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/demo-backend.js",
+      "previous": null,
+      "current": "927f7c7e9406f5f8a3181ebad2234f2d6f483c25",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/demo-routing.js",
+      "previous": null,
+      "current": "23f604c6610d87498bded84476433e68962a8fad",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/index.html",
+      "previous": null,
+      "current": "9b4e8d23590d83cf7912883bcc0fc74271ae50ca",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/location-capture.css",
+      "previous": null,
+      "current": "dea07a892836dfd3f911c31f14c78d01c5cc1b4e",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/location-capture.js",
+      "previous": null,
+      "current": "eaf2e04fd3c56517b897f023f0549fe02a502ab1",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/report-controls.css",
+      "previous": null,
+      "current": "e4557707ee10ccb2e8ec3571cf0e3edb41db0c7c",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/stitch-catalog.js",
+      "previous": null,
+      "current": "0761bd06fc83140456330ac7ca50fb2aff83d6a3",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/stitch-screen-catalog.json",
+      "previous": null,
+      "current": "3aea16b814567bb6cfb766d5c245321ee486dc00",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/stitch.css",
+      "previous": null,
+      "current": "f8f7427edafecaf72fdd3de4c6ab81e896aaca5b",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/styles.css",
+      "previous": null,
+      "current": "be1bcaa8768846310433dcbd718c6c466f56f74e",
+      "change": "added",
+      "screens": []
+    }
+  ],
+  "synchronizationContractChanges": [
+    {
+      "source": ".github/workflows/docs-baseline-ownership.yml",
+      "previous": null,
+      "current": "2644e68c47c9eb71a043cf57d9dfcfeb5632ef67",
+      "change": "added"
+    },
+    {
+      "source": ".github/workflows/docs-interface-sync.yml",
+      "previous": null,
+      "current": "55d421556c1032b7d9414893bc5e66658fb3c0b6",
+      "change": "added"
+    },
+    {
+      "source": "docs/documentation-system/screen-manifest.json",
+      "previous": null,
+      "current": "ec96c4178d5025f20b2df728e0fc081eb04884d0",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/package.json",
+      "previous": null,
+      "current": "2f39081f43125ae7b4aa56c41722ff6baecc6ae0",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/apply-screenshot-removals.mjs",
+      "previous": null,
+      "current": "42295ebef26e58a46b86ebde89d8a9fe5c72c8ff",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/baseline-guard.mjs",
+      "previous": null,
+      "current": "9b72a794f8ffa7a4d5d192202b8120af0b5a8670",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/capture-support.mjs",
+      "previous": null,
+      "current": "b37104e8689e7abd1bcec2c90937d718f5c7bc06",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/capture.mjs",
+      "previous": null,
+      "current": "0f98f0218de922d5b35e8c7c9e15bf72ad564a67",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/compare-and-plan.mjs",
+      "previous": null,
+      "current": "ae32d9b9ab34049e95f08350de2b9c459e9b7310",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/fingerprint.mjs",
+      "previous": null,
+      "current": "8d63e41521e818ccdd3ac026f0bee6a426cc90ee",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/manifest-support.mjs",
+      "previous": null,
+      "current": "8fa87698e2130ac7cc3bd16d321df1b23758ce68",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/mock-api.mjs",
+      "previous": null,
+      "current": "da820576578e0f5e50c42aab92ad81ef98b81a81",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/regenerate-manual-index.mjs",
+      "previous": null,
+      "current": "872bbdf37da4e0065821d2f169709d0a8da4eee6",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/render-diagrams.mjs",
+      "previous": null,
+      "current": "814d168708c6855314565a054a143309ab876956",
+      "change": "added"
+    }
+  ],
+  "sourceChanges": [
+    {
+      "id": "evidence",
+      "source": "apps/mobile/app/evidence.tsx",
+      "previous": "9bdd1af22c8216eb143c63a51772d9afeae6e2a0",
+      "current": "398fe5d51914c5701859adf92b45653f6335c90f",
+      "change": "modified"
+    },
+    {
+      "id": "impact-passport",
+      "source": "apps/mobile/app/impact.tsx",
+      "previous": "8944ded89a2351cb3e28997a34b4a682974d7491",
+      "current": "2a28a1d44724ff0dc1f1c857f031632e2be6c00b",
+      "change": "modified"
+    },
+    {
+      "id": "home",
+      "source": "apps/mobile/app/index.tsx",
+      "previous": "2a38c9dac82bd79ce62d5101356b4f5e646ea18d",
+      "current": "aaebb18d90a777f6b29a7f7dc2828ec6f21cba06",
+      "change": "modified"
+    },
+    {
+      "id": "needmap",
+      "source": "apps/mobile/app/needmap.tsx",
+      "previous": "953bd6e576fbd95673299a7addc9cbea32de3633",
+      "current": "3555c1e3f9107ff9e2fa61936383a8d4a0a3daf5",
+      "change": "modified"
+    },
+    {
+      "id": "privacy",
+      "source": "apps/mobile/app/privacy.tsx",
+      "previous": "4827e556c107f4ce1e7e16ffb215135490d8e727",
+      "current": "efa10abad831643042e1ef04cc25576fa16755f4",
+      "change": "modified"
+    },
+    {
+      "id": "project-room",
+      "source": "apps/mobile/app/project/[id].tsx",
+      "previous": "3be3a0c79849c24dcbc4d915e66edddf580ef316",
+      "current": "073c2be8d29a655245e852cc2f9b50af7c665207",
+      "change": "modified"
+    },
+    {
+      "id": "funding",
+      "source": "apps/mobile/app/project/funding.tsx",
+      "previous": "f959e5dd4411e89fc14338174f09c0f96ae1f2db",
+      "current": "5154c02c2b847e360ef27babb5bc6424555d6251",
+      "change": "modified"
+    },
+    {
+      "id": "report-need",
+      "source": "apps/mobile/app/report.tsx",
+      "previous": "ed46375aa28c6d886f0bd7215ff53f17d28bca21",
+      "current": "b98e8330799309803a2fa50d5a45403aaa08420d",
+      "change": "modified"
+    }
+  ],
+  "unmappedFrontendChanges": [
+    {
+      "source": "apps/mobile/app.config.ts",
+      "previous": null,
+      "current": "194e9e766a2893f32e08c768ffdbf2c45a2a01cd",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/_layout.tsx",
+      "previous": "374b16421c10d1325fe381414f009a20ea899858",
+      "current": "808a03933729e96ea3c223bc57125d84c2e772ec",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/catalog.tsx",
+      "previous": null,
+      "current": "d030e9982977fc1a2a6145583b4e0d37c81da2eb",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/contributions.tsx",
+      "previous": "4851365923f29e52c0a1444ccaf3899a291c4c5c",
+      "current": "5a2bd4744bd19660a071efe12b181b44b282b243",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/need/[id].tsx",
+      "previous": "a2433ecab3e5dd1bbe1f4df47a197d73dea0da3a",
+      "current": "6d5aba2bb8f536e5587ae28709a8f5ee89102285",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/notifications.tsx",
+      "previous": "0a55ea2ad838c3488f3f693106e4899f01d00e0d",
+      "current": "e6378e40848e94d9710413b43968d3a943897049",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/pledges.tsx",
+      "previous": null,
+      "current": "3add043e3f56a1200d47dd5b2608ed81429e1c25",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/profile.tsx",
+      "previous": "07a4433360b98b6786417924a26195b6188ea4b5",
+      "current": "13d156f4b2e3dfdb6f9d27dbfc6620733bb7af25",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/project-admin.tsx",
+      "previous": null,
+      "current": "d1804bb78073961ef90d6e30386888d9bb24e067",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/role-invite.tsx",
+      "previous": null,
+      "current": "f58159f3f01f6adf58f7a1fcee3c7f7e27de5648",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/safety-ops.tsx",
+      "previous": null,
+      "current": "f9c751e9db803408b1c9668f1c2f3f5459ac6c5b",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/safety.tsx",
+      "previous": null,
+      "current": "ec255acb8698b8a6738d1e4182bc9322aa472a96",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/signin.tsx",
+      "previous": "7d7fe5fa9737a000dad6822a67e385021970ff47",
+      "current": "ab267f67b3dbeb765bf28dc81c8a5de06b260519",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/stitch/[screen].tsx",
+      "previous": null,
+      "current": "d49ba1f6158a5e7c21967b9fd5de5493979bf796",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/verify.tsx",
+      "previous": null,
+      "current": "83d0929b74b52cd75f8f4631f9dace80146c1c49",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/app/workspace.tsx",
+      "previous": null,
+      "current": "793c3dce06933018caac6ebcfd4eb2d1d01d56aa",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/components/StitchChrome.tsx",
+      "previous": null,
+      "current": "b2e9dff7f78d3acb651d1eb30b3a37935047b477",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/api.ts",
+      "previous": null,
+      "current": "a159f9f323f083dd076026ec67fa0fa2e1aad8fe",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/capabilities.ts",
+      "previous": null,
+      "current": "96428f9d5bfc944686a47da5b79b2b6984557e7f",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/coordinates.ts",
+      "previous": null,
+      "current": "a601779c1f980e27fd3a84218512df79a477ea93",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/demo-backend.ts",
+      "previous": null,
+      "current": "6109ec78a38846a426fd0762e95131a9dda1d4d8",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/device-store.ts",
+      "previous": null,
+      "current": "8646e336c5734bbdc7482c808e6e9646b370e665",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/drafts.ts",
+      "previous": "c37da6c1859be4375f6cc06ae332d197f4cbf34f",
+      "current": "0190666dfb9287107401a9331e67e1059b26989d",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/sdgs.ts",
+      "previous": null,
+      "current": "572114cb873980bd914f810b1122eb623ea06d32",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/session.ts",
+      "previous": "78bd79ad01c4a52c2406d8cd6ce256139ca5e52f",
+      "current": "724800d102f0ba825a7fa55fa2062c1928cce6db",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/stitch-screen-catalog.ts",
+      "previous": null,
+      "current": "22c0d958fdd170219dac6f023b3bc13a515ec590",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/stitch-theme.ts",
+      "previous": null,
+      "current": "f9bbf2701bd44e877b5a7534d2d579c92d7f1168",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/lib/sync.ts",
+      "previous": "e00918bf60157afaf42bf499c4f32bd1eea247f0",
+      "current": "417aa745895b646bc5d68fda408368fe633df3d4",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/package.json",
+      "previous": "8a6fd80b7dd716c5591cff785f226695a47da63e",
+      "current": "06e104acc2883d262801b0435e488be00d9cca1f",
+      "change": "modified",
+      "screens": []
+    },
+    {
+      "source": "apps/mobile/react-native.config.js",
+      "previous": null,
+      "current": "2b9739e9efef7e5d41993269e0e9d8dd0f76f4f6",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/DESIGN_TOKENS.css",
+      "previous": null,
+      "current": "d384df642a7169caf6bcb25d8bbf906655514d90",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/app.js",
+      "previous": null,
+      "current": "974fa81e5f3ccc693a79a774c571c49755a2fbb1",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/catalog.css",
+      "previous": null,
+      "current": "a750ecbe77ae6f637604361d733743d3885ee685",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/config.js",
+      "previous": null,
+      "current": "208c6507eec52a5be1ffe01401631b355e1ec280",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/demo-backend.js",
+      "previous": null,
+      "current": "927f7c7e9406f5f8a3181ebad2234f2d6f483c25",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/demo-routing.js",
+      "previous": null,
+      "current": "23f604c6610d87498bded84476433e68962a8fad",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/index.html",
+      "previous": null,
+      "current": "9b4e8d23590d83cf7912883bcc0fc74271ae50ca",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/location-capture.css",
+      "previous": null,
+      "current": "dea07a892836dfd3f911c31f14c78d01c5cc1b4e",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/location-capture.js",
+      "previous": null,
+      "current": "eaf2e04fd3c56517b897f023f0549fe02a502ab1",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/report-controls.css",
+      "previous": null,
+      "current": "e4557707ee10ccb2e8ec3571cf0e3edb41db0c7c",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/stitch-catalog.js",
+      "previous": null,
+      "current": "0761bd06fc83140456330ac7ca50fb2aff83d6a3",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/stitch-screen-catalog.json",
+      "previous": null,
+      "current": "3aea16b814567bb6cfb766d5c245321ee486dc00",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/stitch.css",
+      "previous": null,
+      "current": "f8f7427edafecaf72fdd3de4c6ab81e896aaca5b",
+      "change": "added",
+      "screens": []
+    },
+    {
+      "source": "apps/web/styles.css",
+      "previous": null,
+      "current": "be1bcaa8768846310433dcbd718c6c466f56f74e",
+      "change": "added",
+      "screens": []
+    }
+  ],
+  "screenshotChanges": [],
+  "runtimeFailures": [],
+  "action": "regenerate-manual-interface-sections"
+}
