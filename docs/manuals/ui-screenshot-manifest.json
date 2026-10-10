@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "source_revision": "506579558d15682117956e36d51d7980f2a1aec7",
+  "capture_class": "source-faithful-reference-baseline",
+  "shared_fingerprints": {
+    "apps/mobile/app/_layout.tsx": "374b16421c10d1325fe381414f009a20ea899858",
+    "apps/mobile/app.json": "702d3dd235a4b0d157948e09342764bb988d3ca3",
+    "apps/mobile/package.json": "237dad8f3bd71b52738d45cc138dff46a562f0e5",
+    "apps/mobile/lib/drafts.ts": "c37da6c1859be4375f6cc06ae332d197f4cbf34f",
+    "apps/mobile/lib/session.ts": "78bd79ad01c4a52c2406d8cd6ce256139ca5e52f",
+    "apps/mobile/lib/sync.ts": "e00918bf60157afaf42bf499c4f32bd1eea247f0"
+  },
+  "watch_only_fingerprints": {
+    "apps/mobile/app/signin.tsx": "7d7fe5fa9737a000dad6822a67e385021970ff47",
+    "apps/mobile/app/project/contribute.tsx": "ea85af6fccb4bbc11a4f72a671a19d7400ce3e8d",
+    "apps/mobile/app/project/funding.tsx": "f959e5dd4411e89fc14338174f09c0f96ae1f2db"
+  },
+  "screens": {
+    "home-impact-feed": {
+      "screenshot_file": "01-home-impact-feed.png",
+      "screenshot_sha256": "a6709531026a80dc456ad0372b4a01c8b8c3c4a8626f6656c8fb0633e5acf530",
+      "source_fingerprints": {
+        "apps/mobile/app/index.tsx": "2a38c9dac82bd79ce62d5101356b4f5e646ea18d"
+      },
+      "manuals": [
+        "product",
+        "user",
+        "training"
+      ],
+      "capture_class": "approved-runtime-demo-fixture"
+    },
+    "report-need": {
+      "screenshot_file": "02-report-need.png",
+      "screenshot_sha256": "10a5c7e164fba013f750971211413d4923a1d8f7a07e20efc3464587e670ce2b",
+      "source_fingerprints": {
+        "apps/mobile/app/report.tsx": "ed46375aa28c6d886f0bd7215ff53f17d28bca21"
+      },
+      "manuals": [
+        "product",
+        "user",
+        "training"
+      ],
+      "capture_class": "approved-runtime-demo-fixture"
+    },
+    "evidence-capture": {
+      "screenshot_file": "03-evidence-capture.png",
+      "screenshot_sha256": "d4482a22ca33675b5420f2c4659006b5e16380cc178ec5feab61ac5661f21dea",
+      "source_fingerprints": {
+        "apps/mobile/app/evidence.tsx": "9bdd1af22c8216eb143c63a51772d9afeae6e2a0"
+      },
+      "manuals": [
+        "product",
+        "user",
+        "training"
+      ],
+      "capture_class": "approved-runtime-demo-fixture"
+    },
+    "needmap": {
+      "screenshot_file": "04-needmap.png",
+      "screenshot_sha256": "e91d19b096318c63abbb1235c6f2b6aff93d8c5888b76e59791c090373df8a10",
+      "source_fingerprints": {
+        "apps/mobile/app/needmap.tsx": "953bd6e576fbd95673299a7addc9cbea32de3633"
+      },
+      "manuals": [
+        "product",
+        "user",
+        "training"
+      ],
+      "capture_class": "approved-runtime-demo-fixture"
+    },
+    "need-detail": {
+      "screenshot_file": "05-need-detail.png",
+      "screenshot_sha256": "c28038f1ca652b947a4148cc59d8310bb86bb1ab2eba3c62f9ff34f88810e38c",
+      "source_fingerprints": {
+        "apps/mobile/app/need/[id].tsx": "a2433ecab3e5dd1bbe1f4df47a197d73dea0da3a"
+      },
+      "manuals": [
+        "product",
+        "user",
+        "training"
+      ],
+      "capture_class": "approved-runtime-demo-fixture"
+    },
+    "project-room": {
+      "screenshot_file": "06-project-room.png",
+      "screenshot_sha256": "028bcbd3fa89959efca37b02173b49aac0c487e37f5c0720d663eb9810328a06",
+      "source_fingerprints": {
+        "apps/mobile/app/project/[id].tsx": "3be3a0c79849c24dcbc4d915e66edddf580ef316"
+      },
+      "manuals": [
+        "product",
+        "user",
+        "training"
+      ],
+      "capture_class": "approved-runtime-demo-fixture"
+    },
+    "my-contribution-offers": {
+      "screenshot_file": "07-my-contribution-offers.png",
+      "screenshot_sha256": "03fff16ee216c344fdb0b4abcb5e7a9bfbe3b9650adb7e64968f0546e17dd5ac",
+      "source_fingerprints": {
+        "apps/mobile/app/contributions.tsx": "4851365923f29e52c0a1444ccaf3899a291c4c5c"
+      },
+      "manuals": [
+        "product",
+        "user",
+        "training"
+      ],
+      "capture_class": "approved-runtime-demo-fixture"
+    },
+    "impact-passport": {
+      "screenshot_file": "08-impact-passport.png",
+      "screenshot_sha256": "ee1ac713737fab4d93582d18bc34dfacd7b147b37a6c540cf5ce301c329dc0b7",
+      "source_fingerprints": {
+        "apps/mobile/app/impact.tsx": "8944ded89a2351cb3e28997a34b4a682974d7491"
+      },
+      "manuals": [
+        "product",
+        "user",
+        "training"
+      ],
+      "capture_class": "approved-runtime-demo-fixture"
+    },
+    "privacy-data-rights": {
+      "screenshot_file": "09-privacy-data-rights.png",
+      "screenshot_sha256": "1c16d32cc701f3e7f5b2bc246aa9a0133fbd89209746c7b702f2551e3516106e",
+      "source_fingerprints": {
+        "apps/mobile/app/privacy.tsx": "4827e556c107f4ce1e7e16ffb215135490d8e727"
+      },
+      "manuals": [
+        "product",
+        "user",
+        "training"
+      ],
+      "capture_class": "approved-runtime-demo-fixture"
+    },
+    "notifications": {
+      "screenshot_file": "10-notifications.png",
+      "screenshot_sha256": "d9109a5375f6996bf0b2f2c0f6c1805ca241edd2c5700a725fa95179dbf91665",
+      "source_fingerprints": {
+        "apps/mobile/app/notifications.tsx": "0a55ea2ad838c3488f3f693106e4899f01d00e0d"
+      },
+      "manuals": [
+        "product",
+        "user",
+        "training"
+      ],
+      "capture_class": "approved-runtime-demo-fixture"
+    },
+    "ability-profile": {
+      "screenshot_file": "11-ability-profile.png",
+      "screenshot_sha256": "6ab74d3e86df056d2419e47fd20650d835bcfb27dfce324f184c14760d171c8a",
+      "source_fingerprints": {
+        "apps/mobile/app/profile.tsx": "07a4433360b98b6786417924a26195b6188ea4b5"
+      },
+      "manuals": [
+        "product",
+        "user",
+        "training"
+      ],
+      "capture_class": "approved-runtime-demo-fixture"
+    },
+    "trust-safety-report": {
+      "screenshot_file": "12-trust-safety-report.png",
+      "screenshot_sha256": "3a45d44a540d4ee692cdae7e0b37dc1f53fab0988bac118333cab0a886f05f87",
+      "source_fingerprints": {
+        "apps/mobile/app/report-safety.tsx": "8a92b565161082b1d9a208129fbe4833252db6a5"
+      },
+      "manuals": [
+        "product",
+        "user",
+        "training"
+      ],
+      "capture_class": "approved-runtime-demo-fixture"
+    }
+  }
+}

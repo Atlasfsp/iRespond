@@ -1,8 +1,8 @@
 # TigerBeetle decision scope for iRespond and the Nvuto payment plane
 
-Status: **PROPOSED — decision required before runtime implementation**  
-Scope owner: iRespond product boundary + SS-22 PayCore / Nvuto-Pay architecture  
-Frozen iRespond GA candidate: `6484873c8a0c3306a5972247bcc9981da4051bc6`  
+Status: **PROPOSED — decision required before runtime implementation**
+Scope owner: iRespond product boundary + SS-22 PayCore / Nvuto-Pay architecture
+Frozen iRespond GA candidate: `6484873c8a0c3306a5972247bcc9981da4051bc6`
 
 ## Executive decision
 

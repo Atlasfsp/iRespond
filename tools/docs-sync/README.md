@@ -2,6 +2,8 @@
 
 `tools/docs-sync` keeps interface-dependent training material synchronized with the versioned mobile frontend without giving documentation jobs access to production data or credentials.
 
+The long-form living-manual refresh contract and screenshot-provider boundary are documented in [`LIVING_MANUALS.md`](LIVING_MANUALS.md).
+
 ## Operating modes
 
 ### 1. Source monitor — always available
