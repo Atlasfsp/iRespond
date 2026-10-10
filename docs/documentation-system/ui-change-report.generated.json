@@ -1,0 +1,118 @@
+{
+  "schema": "irespond.documentation-ui-change-report.v2",
+  "sourceRevision": "713669e0bd9dde823d751e39f5c9bae07d85e6c8",
+  "baselineRevision": "6484873c8a0c3306a5972247bcc9981da4051bc6",
+  "runtimeCaptureAvailable": false,
+  "runtimeCaptureAttempted": false,
+  "screenshotSourceRevision": null,
+  "screenshotEvidence": {},
+  "changed": [],
+  "frontendSourceChanges": [
+    {
+      "source": "apps/mobile/package.json",
+      "previous": "8a6fd80b7dd716c5591cff785f226695a47da63e",
+      "current": "237dad8f3bd71b52738d45cc138dff46a562f0e5",
+      "change": "modified",
+      "screens": []
+    }
+  ],
+  "synchronizationContractChanges": [
+    {
+      "source": ".github/workflows/docs-baseline-ownership.yml",
+      "previous": null,
+      "current": "2644e68c47c9eb71a043cf57d9dfcfeb5632ef67",
+      "change": "added"
+    },
+    {
+      "source": ".github/workflows/docs-interface-sync.yml",
+      "previous": null,
+      "current": "55d421556c1032b7d9414893bc5e66658fb3c0b6",
+      "change": "added"
+    },
+    {
+      "source": "docs/documentation-system/screen-manifest.json",
+      "previous": null,
+      "current": "ec96c4178d5025f20b2df728e0fc081eb04884d0",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/package.json",
+      "previous": null,
+      "current": "2f39081f43125ae7b4aa56c41722ff6baecc6ae0",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/apply-screenshot-removals.mjs",
+      "previous": null,
+      "current": "42295ebef26e58a46b86ebde89d8a9fe5c72c8ff",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/baseline-guard.mjs",
+      "previous": null,
+      "current": "9b72a794f8ffa7a4d5d192202b8120af0b5a8670",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/capture-support.mjs",
+      "previous": null,
+      "current": "b37104e8689e7abd1bcec2c90937d718f5c7bc06",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/capture.mjs",
+      "previous": null,
+      "current": "0f98f0218de922d5b35e8c7c9e15bf72ad564a67",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/compare-and-plan.mjs",
+      "previous": null,
+      "current": "ae32d9b9ab34049e95f08350de2b9c459e9b7310",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/fingerprint.mjs",
+      "previous": null,
+      "current": "8d63e41521e818ccdd3ac026f0bee6a426cc90ee",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/manifest-support.mjs",
+      "previous": null,
+      "current": "8fa87698e2130ac7cc3bd16d321df1b23758ce68",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/mock-api.mjs",
+      "previous": null,
+      "current": "da820576578e0f5e50c42aab92ad81ef98b81a81",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/regenerate-manual-index.mjs",
+      "previous": null,
+      "current": "872bbdf37da4e0065821d2f169709d0a8da4eee6",
+      "change": "added"
+    },
+    {
+      "source": "tools/docs-sync/src/render-diagrams.mjs",
+      "previous": null,
+      "current": "814d168708c6855314565a054a143309ab876956",
+      "change": "added"
+    }
+  ],
+  "sourceChanges": [],
+  "unmappedFrontendChanges": [
+    {
+      "source": "apps/mobile/package.json",
+      "previous": "8a6fd80b7dd716c5591cff785f226695a47da63e",
+      "current": "237dad8f3bd71b52738d45cc138dff46a562f0e5",
+      "change": "modified",
+      "screens": []
+    }
+  ],
+  "screenshotChanges": [],
+  "runtimeFailures": [],
+  "action": "regenerate-manual-interface-sections"
+}

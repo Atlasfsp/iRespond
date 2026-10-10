@@ -1,15 +1,12 @@
 {
-  "schema": "irespond.documentation-baseline.v2",
+  "schema": "irespond.documentation-ui-fingerprint.v2",
   "sourceRevision": "713669e0bd9dde823d751e39f5c9bae07d85e6c8",
-  "capturedAt": "2026-10-10T20:51:58+01:00",
-  "interfaceMode": "source-faithful-baseline",
-  "screenshotSourceRevision": null,
-  "screenshots": {},
-  "screenshotPaths": {},
+  "hashModel": "git-blob-sha1-per-source + sha256-aggregate",
   "trackedFrontendRoots": [
     "apps/mobile",
     "apps/web"
   ],
+  "aggregate": "365a89ff3bfbcce463e81d5bab490f2323b075c04cc505c78f0a66d0e92177ea",
   "sources": {
     "apps/mobile/app.json": "702d3dd235a4b0d157948e09342764bb988d3ca3",
     "apps/mobile/app/_layout.tsx": "374b16421c10d1325fe381414f009a20ea899858",
@@ -34,44 +31,7 @@
     "apps/mobile/package.json": "237dad8f3bd71b52738d45cc138dff46a562f0e5",
     "apps/mobile/tsconfig.json": "10925c99bc2a1dbb453696ec81aa75cc0c307377"
   },
-  "publications": [
-    {
-      "id": "product",
-      "name": "iRespond Product Documentation",
-      "minimumPages": 100,
-      "renderedPages": 127
-    },
-    {
-      "id": "technical",
-      "name": "iRespond Technical Documentation",
-      "minimumPages": 100,
-      "renderedPages": 127
-    },
-    {
-      "id": "community",
-      "name": "Community Member Training & User Manual",
-      "minimumPages": 100,
-      "renderedPages": 118
-    },
-    {
-      "id": "leaders",
-      "name": "Project Leader & Organization Training/User Manual",
-      "minimumPages": 100,
-      "renderedPages": 118
-    },
-    {
-      "id": "contributors",
-      "name": "Contributor & Funder Training/User Manual",
-      "minimumPages": 100,
-      "renderedPages": 118
-    },
-    {
-      "id": "operations",
-      "name": "Verification, Safety & Operations Training/User Manual",
-      "minimumPages": 100,
-      "renderedPages": 118
-    }
-  ],
+  "synchronizationContractAggregate": "404f4d9f9e3becd4f963f4e7234af5cf5fa0ac6bdc86d8acebcd065b0d33eb56",
   "synchronizationContract": {
     ".github/workflows/docs-baseline-ownership.yml": "2644e68c47c9eb71a043cf57d9dfcfeb5632ef67",
     ".github/workflows/docs-interface-sync.yml": "55d421556c1032b7d9414893bc5e66658fb3c0b6",
