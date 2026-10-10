@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>iRespond · Community action, evidenced</title>
+  <link rel="stylesheet" href="./DESIGN_TOKENS.css" />
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./location-capture.css" />
+  <link rel="stylesheet" href="./report-controls.css" />
+  <link rel="stylesheet" href="./stitch.css" />
+  <link rel="stylesheet" href="./catalog.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#home" aria-label="iRespond home">
+        <span class="brand-mark">iR</span>
+        <span><strong>iRespond</strong><small>Community action, evidenced.</small></span>
+      </a>
+      <nav id="primary-nav" class="primary-nav" aria-label="Primary navigation"></nav>
+      <div id="identity-actions" class="identity-actions"></div>
+    </header>
+    <main id="main" tabindex="-1"></main>
+    <footer class="footer"><span>See it. Own it. Solve it. Prove the impact.</span><span>Reports are observations until verified.</span></footer>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="./config.js"></script>
+  <script src="./location-capture.js" defer></script>
+  <script type="module" src="./app.js?v=20260901-sdg-demo-6"></script>
+  <script type="module" src="./stitch-catalog.js?v=20260901-demo-session"></script>
+</body>
+</html>

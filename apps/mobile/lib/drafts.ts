@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
+import type { CoordinateSource } from './coordinates';
+import { getDeviceItem, setDeviceItem } from './device-store';
 
 const DRAFT_KEY = 'irespond.need-draft.v1';
 const PROFILE_KEY = 'irespond.ability-profile.v1';
@@ -7,9 +8,15 @@ const PROFILE_KEY = 'irespond.ability-profile.v1';
 export type NeedDraft = {
   title: string;
   description: string;
+  category?: string;
   locationLabel?: string;
   latitude?: number;
   longitude?: number;
+  locationSource?: CoordinateSource;
+  locationAccuracyMeters?: number;
+  locationCapturedAt?: string;
+  locationConfirmedAt?: string;
+  sdgTags?: number[];
   evidenceUris: string[];
   updatedAt: string;
 };
@@ -35,10 +42,10 @@ export async function clearNeedDraft() {
 }
 
 export async function saveAbilityProfile(profile: AbilityProfile) {
-  await SecureStore.setItemAsync(PROFILE_KEY, JSON.stringify(profile));
+  await setDeviceItem(PROFILE_KEY, JSON.stringify(profile));
 }
 
 export async function loadAbilityProfile(): Promise<AbilityProfile | null> {
-  const value = await SecureStore.getItemAsync(PROFILE_KEY);
+  const value = await getDeviceItem(PROFILE_KEY);
   return value ? (JSON.parse(value) as AbilityProfile) : null;
 }

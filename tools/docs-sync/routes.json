@@ -2,12 +2,16 @@
   "schema_version": 1,
   "frontend_roots": [
     "apps/mobile/app",
+    "apps/mobile/components",
     "apps/mobile/lib"
   ],
   "shared_paths": [
+    "apps/mobile/app.config.ts",
     "apps/mobile/app/_layout.tsx",
     "apps/mobile/app.json",
+    "apps/mobile/components/StitchChrome.tsx",
     "apps/mobile/package.json",
+    "apps/mobile/react-native.config.js",
     "apps/mobile/lib/drafts.ts",
     "apps/mobile/lib/session.ts",
     "apps/mobile/lib/sync.ts"
@@ -29,6 +33,23 @@
   "watch_only_paths": [
     "apps/mobile/app/signin.tsx",
     "apps/mobile/app/project/contribute.tsx",
-    "apps/mobile/app/project/funding.tsx"
+    "apps/mobile/app/project/funding.tsx",
+    "apps/mobile/app/catalog.tsx",
+    "apps/mobile/app/pledges.tsx",
+    "apps/mobile/app/project-admin.tsx",
+    "apps/mobile/app/role-invite.tsx",
+    "apps/mobile/app/safety-ops.tsx",
+    "apps/mobile/app/safety.tsx",
+    "apps/mobile/app/stitch/[screen].tsx",
+    "apps/mobile/app/verify.tsx",
+    "apps/mobile/app/workspace.tsx",
+    "apps/mobile/lib/api.ts",
+    "apps/mobile/lib/capabilities.ts",
+    "apps/mobile/lib/coordinates.ts",
+    "apps/mobile/lib/demo-backend.ts",
+    "apps/mobile/lib/device-store.ts",
+    "apps/mobile/lib/sdgs.ts",
+    "apps/mobile/lib/stitch-screen-catalog.ts",
+    "apps/mobile/lib/stitch-theme.ts"
   ]
 }

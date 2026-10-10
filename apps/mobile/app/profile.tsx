@@ -1,63 +1,28 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StitchBottomNav, StitchTopBar } from '../components/StitchChrome';
 import { AbilityProfile, loadAbilityProfile, saveAbilityProfile } from '../lib/drafts';
+import { Stitch } from '../lib/stitch-theme';
 
-const abilityOptions = ['Time', 'Skills', 'Materials', 'Equipment', 'Knowledge', 'Access', 'Influence', 'Care', 'Money'];
-
-export default function Profile() {
-  const [displayName, setDisplayName] = useState('');
-  const [place, setPlace] = useState('');
-  const [position, setPosition] = useState('');
-  const [abilities, setAbilities] = useState<string[]>([]);
-
-  useEffect(() => {
-    loadAbilityProfile().then((profile) => {
-      if (!profile) return;
-      setDisplayName(profile.displayName);
-      setPlace(profile.place);
-      setPosition(profile.position);
-      setAbilities(profile.abilities);
-    });
-  }, []);
-
-  function toggleAbility(value: string) {
-    setAbilities((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
-  }
-
-  async function save() {
-    if (!displayName.trim() || !place.trim()) {
-      Alert.alert('Complete your profile', 'Add a name and a place so iRespond can personalise nearby action.');
-      return;
-    }
-    const profile: AbilityProfile = { displayName: displayName.trim(), place: place.trim(), position: position.trim(), abilities };
-    await saveAbilityProfile(profile);
-    Alert.alert('Ability Profile saved', 'Your profile now reflects what you can contribute, not only who you follow.');
-  }
-
-  return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Pressable onPress={() => router.back()}><Text style={styles.back}>← Back</Text></Pressable>
-        <Text style={styles.eyebrow}>ABILITY PROFILE</Text>
-        <Text style={styles.title}>What can you contribute where you are?</Text>
-        <Text style={styles.help}>Build your profile around the 3P Action Compass: your place, your position, and the abilities or resources you possess.</Text>
-        <View style={styles.panel}>
-          <Text style={styles.label}>Display name</Text>
-          <TextInput value={displayName} onChangeText={setDisplayName} style={styles.input} placeholder="Your name" />
-          <Text style={styles.label}>Place</Text>
-          <TextInput value={place} onChangeText={setPlace} style={styles.input} placeholder="Community, school, workplace or city" />
-          <Text style={styles.label}>Position</Text>
-          <TextInput value={position} onChangeText={setPosition} style={styles.input} placeholder="Student, engineer, parent, pastor, volunteer..." />
-          <Text style={styles.label}>What can you contribute?</Text>
-          <View style={styles.chips}>{abilityOptions.map((ability) => <Pressable key={ability} onPress={() => toggleAbility(ability)} style={[styles.chip, abilities.includes(ability) && styles.chipActive]}><Text style={[styles.chipText, abilities.includes(ability) && styles.chipTextActive]}>{ability}</Text></Pressable>)}</View>
-          <Pressable style={styles.primary} onPress={save}><Text style={styles.primaryText}>Save Ability Profile</Text></Pressable>
-        </View>
-        <Pressable style={styles.privacy} onPress={() => router.push('/privacy')}><View style={{flex:1}}><Text style={styles.privacyTitle}>Privacy & data rights</Text><Text style={styles.help}>Control optional data uses and request access, export, correction or deletion.</Text></View><Text style={styles.chevron}>›</Text></Pressable>
-      </ScrollView>
-    </SafeAreaView>
-  );
+const abilityOptions=['Time','Skills','Materials','Equipment','Knowledge','Access','Influence','Care','Money'];
+export default function Profile(){
+ const[displayName,setDisplayName]=useState('');const[place,setPlace]=useState('');const[position,setPosition]=useState('');const[abilities,setAbilities]=useState<string[]>([]);
+ useEffect(()=>{loadAbilityProfile().then(profile=>{if(!profile)return;setDisplayName(profile.displayName);setPlace(profile.place);setPosition(profile.position);setAbilities(profile.abilities)})},[]);
+ function toggleAbility(value:string){setAbilities(current=>current.includes(value)?current.filter(item=>item!==value):[...current,value])}
+ async function save(){if(!displayName.trim()||!place.trim()){Alert.alert('Complete your profile','Add a name and a place so iRespond can personalise nearby action.');return}const profile:AbilityProfile={displayName:displayName.trim(),place:place.trim(),position:position.trim(),abilities};await saveAbilityProfile(profile);Alert.alert('Ability Profile saved','Your local profile now reflects what you can contribute, not only who you follow.')}
+ const completeness=Math.round(([displayName,place,position].filter(Boolean).length+(abilities.length?1:0))/4*100);
+ return <SafeAreaView style={s.safe} edges={['top','left','right']}><View style={s.screen}><StitchTopBar/><ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+  <View style={s.identityCard}><View style={s.fingerprint}><Ionicons name="finger-print-outline" size={86} color={Stitch.color.surfaceHighest}/></View><View style={s.avatar}><Ionicons name="person" size={48} color={Stitch.color.primaryFixed}/></View><Text style={s.name}>{displayName||'Build your Ability Profile'}</Text><Text style={s.position}>{position||'Your position in the community'}</Text><View style={s.profileStatus}><View style={s.statusDot}/><Text style={s.profileStatusText}>{completeness}% profile complete</Text></View><View style={s.heroAbilities}>{abilities.slice(0,3).map(value=><View key={value} style={s.heroChip}><Ionicons name={abilityIcon(value)} size={15} color={Stitch.color.onSurfaceVariant}/><Text style={s.heroChipText}>{value}</Text></View>)}</View></View>
+  <View style={s.card}><View style={s.sectionHead}><Ionicons name="compass-outline" size={23} color={Stitch.color.primary}/><View style={{flex:1}}><Text style={s.section}>3P Action Compass</Text><Text style={s.muted}>Your place, position and possessions/capabilities guide matching.</Text></View></View><Label>Display name</Label><TextInput style={s.input} value={displayName} onChangeText={setDisplayName} placeholder="Your name" placeholderTextColor="#6D7580"/><Label>Place</Label><TextInput style={s.input} value={place} onChangeText={setPlace} placeholder="Community, school, workplace or city" placeholderTextColor="#6D7580"/><Label>Position</Label><TextInput style={s.input} value={position} onChangeText={setPosition} placeholder="Student, engineer, parent, pastor, volunteer…" placeholderTextColor="#6D7580"/></View>
+  <View style={s.card}><View style={s.sectionHead}><Ionicons name="apps-outline" size={23} color={Stitch.color.primary}/><View style={{flex:1}}><Text style={s.section}>Operational Assets</Text><Text style={s.muted}>Select the contribution types you can realistically bring to community action.</Text></View></View><View style={s.abilityGrid}>{abilityOptions.map(value=>{const active=abilities.includes(value);return <Pressable key={value} onPress={()=>toggleAbility(value)} style={[s.ability,active&&s.abilityOn]}><View style={[s.abilityIcon,active&&s.abilityIconOn]}><Ionicons name={abilityIcon(value)} size={21} color={active?Stitch.color.secondary:Stitch.color.onSurfaceVariant}/></View><Text style={[s.abilityText,active&&s.abilityTextOn]}>{value}</Text><Ionicons name={active?'checkmark-circle':'add-circle-outline'} size={20} color={active?Stitch.color.secondary:Stitch.color.outline}/></Pressable>})}</View></View>
+  <Pressable style={s.save} onPress={()=>void save()}><Ionicons name="save-outline" size={22} color={Stitch.color.onPrimary}/><Text style={s.saveText}>Save Ability Profile</Text></Pressable>
+  <View style={s.links}><Pressable style={s.linkCard} onPress={()=>router.push('/impact')}><View style={s.linkIcon}><Ionicons name="ribbon-outline" size={24} color={Stitch.color.primary}/></View><View style={{flex:1}}><Text style={s.linkTitle}>Impact Passport</Text><Text style={s.muted}>See server-evidenced contributions, roles and SDGs.</Text></View><Ionicons name="chevron-forward" size={22} color={Stitch.color.primary}/></Pressable><Pressable style={s.linkCard} onPress={()=>router.push('/privacy')}><View style={s.linkIcon}><Ionicons name="shield-checkmark-outline" size={24} color={Stitch.color.primary}/></View><View style={{flex:1}}><Text style={s.linkTitle}>Settings & Privacy</Text><Text style={s.muted}>Control optional data uses and exercise data rights.</Text></View><Ionicons name="chevron-forward" size={22} color={Stitch.color.primary}/></Pressable><Pressable style={s.linkCard} onPress={()=>router.push('/workspace')}><View style={s.linkIcon}><Ionicons name="briefcase-outline" size={24} color={Stitch.color.primary}/></View><View style={{flex:1}}><Text style={s.linkTitle}>Role-aware workspace</Text><Text style={s.muted}>Open operational tools attached to your trusted identity and project roles.</Text></View><Ionicons name="chevron-forward" size={22} color={Stitch.color.primary}/></Pressable></View>
+  <View style={s.truth}><Ionicons name="information-circle-outline" size={22} color={Stitch.color.primary}/><Text style={s.truthText}>This profile currently stores your self-declared 3P ability data securely on the device. Verified skills, physical-asset attestations and deployment availability shown in broader Stitch concepts require separate backend verification contracts before they can be claimed here.</Text></View>
+ </ScrollView><StitchBottomNav/></View></SafeAreaView>
 }
-
-const styles = StyleSheet.create({ safe:{flex:1,backgroundColor:'#F6F8FB'},content:{padding:20,gap:14},back:{color:'#2D6E9F',fontWeight:'800'},eyebrow:{color:'#2D7A56',fontWeight:'900',letterSpacing:1.5},title:{color:'#17324D',fontSize:28,lineHeight:34,fontWeight:'900'},help:{color:'#5E6F7E',lineHeight:21},panel:{backgroundColor:'white',borderRadius:20,padding:17,gap:10},label:{color:'#17324D',fontWeight:'800'},input:{borderWidth:1,borderColor:'#D5DEE6',backgroundColor:'#FBFCFD',borderRadius:13,padding:12},chips:{flexDirection:'row',flexWrap:'wrap',gap:8},chip:{borderWidth:1,borderColor:'#B8C8D5',paddingHorizontal:12,paddingVertical:9,borderRadius:99},chipActive:{backgroundColor:'#E9F5EF',borderColor:'#4B9270'},chipText:{color:'#526778',fontWeight:'700'},chipTextActive:{color:'#245840'},primary:{backgroundColor:'#153B5B',padding:15,borderRadius:14,marginTop:8},primaryText:{color:'white',fontWeight:'900',textAlign:'center'},privacy:{backgroundColor:'white',borderRadius:18,padding:16,flexDirection:'row',alignItems:'center',gap:10},privacyTitle:{fontSize:17,fontWeight:'900',color:'#17324D',marginBottom:3},chevron:{fontSize:30,color:'#5E7890'} });
+function Label({children}:{children:string}){return <Text style={s.label}>{children.toUpperCase()}</Text>}
+function abilityIcon(value:string):keyof typeof Ionicons.glyphMap{return({Time:'time-outline',Skills:'construct-outline',Materials:'cube-outline',Equipment:'car-outline',Knowledge:'book-outline',Access:'key-outline',Influence:'megaphone-outline',Care:'heart-outline',Money:'wallet-outline'} as Record<string,keyof typeof Ionicons.glyphMap>)[value]??'ellipse-outline'}
+const s=StyleSheet.create({safe:{flex:1,backgroundColor:Stitch.color.background},screen:{flex:1},content:{padding:Stitch.space.screen,gap:Stitch.space.base,paddingBottom:Stitch.space.xxl},identityCard:{minHeight:260,padding:Stitch.space.xl,borderRadius:Stitch.radius.hero,borderWidth:1,borderColor:Stitch.color.outlineVariant,backgroundColor:Stitch.color.surfaceLowest,alignItems:'center',overflow:'hidden',position:'relative'},fingerprint:{position:'absolute',right:18,top:18,opacity:.8},avatar:{width:104,height:104,borderRadius:52,borderWidth:3,borderColor:Stitch.color.primary,backgroundColor:Stitch.color.primaryContainer,alignItems:'center',justifyContent:'center'},name:{...Stitch.type.headline,color:Stitch.color.primary,marginTop:Stitch.space.base,textAlign:'center'},position:{...Stitch.type.body,color:Stitch.color.onSurfaceVariant,marginTop:3,textAlign:'center'},profileStatus:{marginTop:Stitch.space.sm,paddingHorizontal:Stitch.space.md,paddingVertical:6,borderRadius:Stitch.radius.full,backgroundColor:Stitch.color.secondaryFixed,flexDirection:'row',alignItems:'center',gap:5},statusDot:{width:8,height:8,borderRadius:4,backgroundColor:Stitch.color.secondary},profileStatusText:{...Stitch.type.tag,color:Stitch.color.secondary},heroAbilities:{marginTop:Stitch.space.md,flexDirection:'row',flexWrap:'wrap',justifyContent:'center',gap:6},heroChip:{paddingHorizontal:9,paddingVertical:6,borderRadius:Stitch.radius.full,backgroundColor:Stitch.color.surfaceLow,borderWidth:1,borderColor:Stitch.color.outlineVariant,flexDirection:'row',alignItems:'center',gap:4},heroChipText:{...Stitch.type.footnote,color:Stitch.color.onSurface},card:{padding:Stitch.space.card,borderRadius:Stitch.radius.lg,borderWidth:1,borderColor:Stitch.color.outlineVariant,backgroundColor:Stitch.color.surfaceLowest,gap:Stitch.space.sm},sectionHead:{flexDirection:'row',gap:Stitch.space.md,alignItems:'flex-start',marginBottom:4},section:{...Stitch.type.section,color:Stitch.color.primary},muted:{...Stitch.type.body,color:Stitch.color.onSurfaceVariant},label:{...Stitch.type.eyebrow,color:Stitch.color.onSurfaceVariant,marginTop:Stitch.space.sm},input:{minHeight:52,paddingHorizontal:Stitch.space.base,borderWidth:1,borderColor:Stitch.color.outlineVariant,borderRadius:Stitch.radius.md,backgroundColor:Stitch.color.surfaceLowest,...Stitch.type.body,color:Stitch.color.onSurface},abilityGrid:{gap:Stitch.space.sm},ability:{minHeight:54,paddingHorizontal:Stitch.space.md,borderRadius:Stitch.radius.md,borderWidth:1,borderColor:Stitch.color.outlineVariant,backgroundColor:Stitch.color.surfaceLow,flexDirection:'row',alignItems:'center',gap:Stitch.space.md},abilityOn:{backgroundColor:'#F0FAF5',borderColor:Stitch.color.secondaryFixedDim},abilityIcon:{width:36,height:36,borderRadius:18,backgroundColor:Stitch.color.surfaceHigh,alignItems:'center',justifyContent:'center'},abilityIconOn:{backgroundColor:Stitch.color.secondaryContainer},abilityText:{flex:1,...Stitch.type.bodyBold,color:Stitch.color.onSurface},abilityTextOn:{color:Stitch.color.secondary},save:{minHeight:56,borderRadius:Stitch.radius.md,backgroundColor:Stitch.color.primaryContainer,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:Stitch.space.sm},saveText:{...Stitch.type.card,color:Stitch.color.onPrimary},links:{gap:Stitch.space.md},linkCard:{minHeight:88,padding:Stitch.space.base,borderRadius:Stitch.radius.lg,borderWidth:1,borderColor:Stitch.color.outlineVariant,backgroundColor:Stitch.color.surfaceLowest,flexDirection:'row',alignItems:'center',gap:Stitch.space.md},linkIcon:{width:44,height:44,borderRadius:22,backgroundColor:Stitch.color.primaryFixed,alignItems:'center',justifyContent:'center'},linkTitle:{...Stitch.type.card,color:Stitch.color.primary},truth:{padding:Stitch.space.base,borderRadius:Stitch.radius.md,backgroundColor:Stitch.color.surfaceLow,borderWidth:1,borderColor:Stitch.color.outlineVariant,flexDirection:'row',alignItems:'flex-start',gap:Stitch.space.md},truthText:{flex:1,...Stitch.type.footnote,color:Stitch.color.onSurfaceVariant}})

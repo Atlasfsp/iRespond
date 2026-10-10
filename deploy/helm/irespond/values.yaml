@@ -34,6 +34,7 @@ config:
   oidcIssuer: ""
   oidcAudience: ""
   oidcJwksUrl: ""
+  webAllowedOrigins: ""
   natsSubjectPrefix: "irespond.events"
   maxRequestBodyBytes: "1048576"
   requestsPerMinute: "240"

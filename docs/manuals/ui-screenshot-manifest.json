@@ -1,26 +1,46 @@
 {
   "schema_version": 1,
-  "source_revision": "506579558d15682117956e36d51d7980f2a1aec7",
+  "source_revision": "99c548846b5d1bfebfe1f82235ec8a076f258e24",
   "capture_class": "source-faithful-reference-baseline",
   "shared_fingerprints": {
-    "apps/mobile/app/_layout.tsx": "374b16421c10d1325fe381414f009a20ea899858",
+    "apps/mobile/app.config.ts": "194e9e766a2893f32e08c768ffdbf2c45a2a01cd",
+    "apps/mobile/app/_layout.tsx": "808a03933729e96ea3c223bc57125d84c2e772ec",
     "apps/mobile/app.json": "702d3dd235a4b0d157948e09342764bb988d3ca3",
-    "apps/mobile/package.json": "237dad8f3bd71b52738d45cc138dff46a562f0e5",
-    "apps/mobile/lib/drafts.ts": "c37da6c1859be4375f6cc06ae332d197f4cbf34f",
-    "apps/mobile/lib/session.ts": "78bd79ad01c4a52c2406d8cd6ce256139ca5e52f",
-    "apps/mobile/lib/sync.ts": "e00918bf60157afaf42bf499c4f32bd1eea247f0"
+    "apps/mobile/components/StitchChrome.tsx": "b2e9dff7f78d3acb651d1eb30b3a37935047b477",
+    "apps/mobile/package.json": "06e104acc2883d262801b0435e488be00d9cca1f",
+    "apps/mobile/react-native.config.js": "2b9739e9efef7e5d41993269e0e9d8dd0f76f4f6",
+    "apps/mobile/lib/drafts.ts": "0190666dfb9287107401a9331e67e1059b26989d",
+    "apps/mobile/lib/session.ts": "724800d102f0ba825a7fa55fa2062c1928cce6db",
+    "apps/mobile/lib/sync.ts": "417aa745895b646bc5d68fda408368fe633df3d4"
   },
   "watch_only_fingerprints": {
-    "apps/mobile/app/signin.tsx": "7d7fe5fa9737a000dad6822a67e385021970ff47",
+    "apps/mobile/app/signin.tsx": "ab267f67b3dbeb765bf28dc81c8a5de06b260519",
     "apps/mobile/app/project/contribute.tsx": "ea85af6fccb4bbc11a4f72a671a19d7400ce3e8d",
-    "apps/mobile/app/project/funding.tsx": "f959e5dd4411e89fc14338174f09c0f96ae1f2db"
+    "apps/mobile/app/project/funding.tsx": "5154c02c2b847e360ef27babb5bc6424555d6251",
+    "apps/mobile/app/catalog.tsx": "d030e9982977fc1a2a6145583b4e0d37c81da2eb",
+    "apps/mobile/app/pledges.tsx": "3add043e3f56a1200d47dd5b2608ed81429e1c25",
+    "apps/mobile/app/project-admin.tsx": "d1804bb78073961ef90d6e30386888d9bb24e067",
+    "apps/mobile/app/role-invite.tsx": "f58159f3f01f6adf58f7a1fcee3c7f7e27de5648",
+    "apps/mobile/app/safety-ops.tsx": "f9c751e9db803408b1c9668f1c2f3f5459ac6c5b",
+    "apps/mobile/app/safety.tsx": "ec255acb8698b8a6738d1e4182bc9322aa472a96",
+    "apps/mobile/app/stitch/[screen].tsx": "d49ba1f6158a5e7c21967b9fd5de5493979bf796",
+    "apps/mobile/app/verify.tsx": "83d0929b74b52cd75f8f4631f9dace80146c1c49",
+    "apps/mobile/app/workspace.tsx": "793c3dce06933018caac6ebcfd4eb2d1d01d56aa",
+    "apps/mobile/lib/api.ts": "a159f9f323f083dd076026ec67fa0fa2e1aad8fe",
+    "apps/mobile/lib/capabilities.ts": "96428f9d5bfc944686a47da5b79b2b6984557e7f",
+    "apps/mobile/lib/coordinates.ts": "a601779c1f980e27fd3a84218512df79a477ea93",
+    "apps/mobile/lib/demo-backend.ts": "6109ec78a38846a426fd0762e95131a9dda1d4d8",
+    "apps/mobile/lib/device-store.ts": "8646e336c5734bbdc7482c808e6e9646b370e665",
+    "apps/mobile/lib/sdgs.ts": "572114cb873980bd914f810b1122eb623ea06d32",
+    "apps/mobile/lib/stitch-screen-catalog.ts": "22c0d958fdd170219dac6f023b3bc13a515ec590",
+    "apps/mobile/lib/stitch-theme.ts": "f9bbf2701bd44e877b5a7534d2d579c92d7f1168"
   },
   "screens": {
     "home-impact-feed": {
       "screenshot_file": "01-home-impact-feed.png",
-      "screenshot_sha256": "a6709531026a80dc456ad0372b4a01c8b8c3c4a8626f6656c8fb0633e5acf530",
+      "screenshot_sha256": "b10f2a7c2c25bcd1ac2ef0e8562365964fa3333a88ecd797b01a73b8f0a89137",
       "source_fingerprints": {
-        "apps/mobile/app/index.tsx": "2a38c9dac82bd79ce62d5101356b4f5e646ea18d"
+        "apps/mobile/app/index.tsx": "aaebb18d90a777f6b29a7f7dc2828ec6f21cba06"
       },
       "manuals": [
         "product",
@@ -31,9 +51,9 @@
     },
     "report-need": {
       "screenshot_file": "02-report-need.png",
-      "screenshot_sha256": "10a5c7e164fba013f750971211413d4923a1d8f7a07e20efc3464587e670ce2b",
+      "screenshot_sha256": "201de0eea88806d704081db59d07d5b6e0b57ce81e5bc1010023956e1131a498",
       "source_fingerprints": {
-        "apps/mobile/app/report.tsx": "ed46375aa28c6d886f0bd7215ff53f17d28bca21"
+        "apps/mobile/app/report.tsx": "b98e8330799309803a2fa50d5a45403aaa08420d"
       },
       "manuals": [
         "product",
@@ -44,9 +64,9 @@
     },
     "evidence-capture": {
       "screenshot_file": "03-evidence-capture.png",
-      "screenshot_sha256": "d4482a22ca33675b5420f2c4659006b5e16380cc178ec5feab61ac5661f21dea",
+      "screenshot_sha256": "64813afd519fd558daa2ca46c500f4a39b3702a33221d3a3e05f9deeb18883d3",
       "source_fingerprints": {
-        "apps/mobile/app/evidence.tsx": "9bdd1af22c8216eb143c63a51772d9afeae6e2a0"
+        "apps/mobile/app/evidence.tsx": "398fe5d51914c5701859adf92b45653f6335c90f"
       },
       "manuals": [
         "product",
@@ -57,9 +77,9 @@
     },
     "needmap": {
       "screenshot_file": "04-needmap.png",
-      "screenshot_sha256": "e91d19b096318c63abbb1235c6f2b6aff93d8c5888b76e59791c090373df8a10",
+      "screenshot_sha256": "d02b0a3c60e3f2a7b3e3355b68a42a3105151a0e42ba1c879de7b5576418a30d",
       "source_fingerprints": {
-        "apps/mobile/app/needmap.tsx": "953bd6e576fbd95673299a7addc9cbea32de3633"
+        "apps/mobile/app/needmap.tsx": "3555c1e3f9107ff9e2fa61936383a8d4a0a3daf5"
       },
       "manuals": [
         "product",
@@ -70,9 +90,9 @@
     },
     "need-detail": {
       "screenshot_file": "05-need-detail.png",
-      "screenshot_sha256": "c28038f1ca652b947a4148cc59d8310bb86bb1ab2eba3c62f9ff34f88810e38c",
+      "screenshot_sha256": "34cc6734b71229c32c3e7aa1d8ea300a25c72964aedb50bb2547ddab9ae0d71a",
       "source_fingerprints": {
-        "apps/mobile/app/need/[id].tsx": "a2433ecab3e5dd1bbe1f4df47a197d73dea0da3a"
+        "apps/mobile/app/need/[id].tsx": "6d5aba2bb8f536e5587ae28709a8f5ee89102285"
       },
       "manuals": [
         "product",
@@ -83,9 +103,9 @@
     },
     "project-room": {
       "screenshot_file": "06-project-room.png",
-      "screenshot_sha256": "028bcbd3fa89959efca37b02173b49aac0c487e37f5c0720d663eb9810328a06",
+      "screenshot_sha256": "a696511394abbbdde780d9fc34391e16950d855d052e29fdd66e59dc3fc6a2fb",
       "source_fingerprints": {
-        "apps/mobile/app/project/[id].tsx": "3be3a0c79849c24dcbc4d915e66edddf580ef316"
+        "apps/mobile/app/project/[id].tsx": "073c2be8d29a655245e852cc2f9b50af7c665207"
       },
       "manuals": [
         "product",
@@ -96,9 +116,9 @@
     },
     "my-contribution-offers": {
       "screenshot_file": "07-my-contribution-offers.png",
-      "screenshot_sha256": "03fff16ee216c344fdb0b4abcb5e7a9bfbe3b9650adb7e64968f0546e17dd5ac",
+      "screenshot_sha256": "54466bd45a0d6b2b10c1ff822c18a3012f256b21684e220439d0a8f86d2dd375",
       "source_fingerprints": {
-        "apps/mobile/app/contributions.tsx": "4851365923f29e52c0a1444ccaf3899a291c4c5c"
+        "apps/mobile/app/contributions.tsx": "5a2bd4744bd19660a071efe12b181b44b282b243"
       },
       "manuals": [
         "product",
@@ -109,9 +129,9 @@
     },
     "impact-passport": {
       "screenshot_file": "08-impact-passport.png",
-      "screenshot_sha256": "ee1ac713737fab4d93582d18bc34dfacd7b147b37a6c540cf5ce301c329dc0b7",
+      "screenshot_sha256": "875ee4d1b9d17548ae50306bb1054c01de81d73a45d0480d42bbcd20c8d4c324",
       "source_fingerprints": {
-        "apps/mobile/app/impact.tsx": "8944ded89a2351cb3e28997a34b4a682974d7491"
+        "apps/mobile/app/impact.tsx": "2a28a1d44724ff0dc1f1c857f031632e2be6c00b"
       },
       "manuals": [
         "product",
@@ -122,9 +142,9 @@
     },
     "privacy-data-rights": {
       "screenshot_file": "09-privacy-data-rights.png",
-      "screenshot_sha256": "1c16d32cc701f3e7f5b2bc246aa9a0133fbd89209746c7b702f2551e3516106e",
+      "screenshot_sha256": "e2d8366a32b92ed819e2d1094351811be3c8970c8961cb70ba1e04cd44a7b539",
       "source_fingerprints": {
-        "apps/mobile/app/privacy.tsx": "4827e556c107f4ce1e7e16ffb215135490d8e727"
+        "apps/mobile/app/privacy.tsx": "efa10abad831643042e1ef04cc25576fa16755f4"
       },
       "manuals": [
         "product",
@@ -135,9 +155,9 @@
     },
     "notifications": {
       "screenshot_file": "10-notifications.png",
-      "screenshot_sha256": "d9109a5375f6996bf0b2f2c0f6c1805ca241edd2c5700a725fa95179dbf91665",
+      "screenshot_sha256": "8866675ca9b9faa32f9d80d2a5d9f7ece65191bc8ad86c83c3fb6851511adcd2",
       "source_fingerprints": {
-        "apps/mobile/app/notifications.tsx": "0a55ea2ad838c3488f3f693106e4899f01d00e0d"
+        "apps/mobile/app/notifications.tsx": "e6378e40848e94d9710413b43968d3a943897049"
       },
       "manuals": [
         "product",
@@ -148,9 +168,9 @@
     },
     "ability-profile": {
       "screenshot_file": "11-ability-profile.png",
-      "screenshot_sha256": "6ab74d3e86df056d2419e47fd20650d835bcfb27dfce324f184c14760d171c8a",
+      "screenshot_sha256": "b098a9e374e1c4723b983734b56daf26b9a65c944ab7107de5fff2bd5e66d9c2",
       "source_fingerprints": {
-        "apps/mobile/app/profile.tsx": "07a4433360b98b6786417924a26195b6188ea4b5"
+        "apps/mobile/app/profile.tsx": "13d156f4b2e3dfdb6f9d27dbfc6620733bb7af25"
       },
       "manuals": [
         "product",
