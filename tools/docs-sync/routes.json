@@ -1,10 +1,16 @@
 {
   "schema_version": 1,
-  "frontend_root": "apps/mobile/app",
+  "frontend_roots": [
+    "apps/mobile/app",
+    "apps/mobile/lib"
+  ],
   "shared_paths": [
     "apps/mobile/app/_layout.tsx",
     "apps/mobile/app.json",
-    "apps/mobile/package.json"
+    "apps/mobile/package.json",
+    "apps/mobile/lib/drafts.ts",
+    "apps/mobile/lib/session.ts",
+    "apps/mobile/lib/sync.ts"
   ],
   "screens": [
     {"id":"home-impact-feed","source_paths":["apps/mobile/app/index.tsx"],"screenshot_file":"01-home-impact-feed.png","manuals":["product","user","training"]},

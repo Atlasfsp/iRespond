@@ -5,6 +5,8 @@ on:
     paths:
       - 'apps/mobile/**'
       - 'packages/**'
+      - 'services/**'
+      - 'deploy/**'
       - 'docs/manuals/**'
       - 'tools/docs-sync/**'
       - '.github/workflows/living-manuals.yml'
@@ -13,6 +15,8 @@ on:
     paths:
       - 'apps/mobile/**'
       - 'packages/**'
+      - 'services/**'
+      - 'deploy/**'
       - 'docs/manuals/**'
       - 'tools/docs-sync/**'
   workflow_dispatch:
@@ -24,10 +28,10 @@ jobs:
   freshness:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
       - name: Check frontend/manual freshness and route coverage
@@ -38,9 +42,11 @@ jobs:
             --manifest docs/manuals/ui-screenshot-manifest.json \
             --out "$RUNNER_TEMP/manual-change-plan.json" \
             --fail-on-stale
+      - name: Test documentation freshness guard
+        run: python tools/docs-sync/test_frontend_fingerprint.py
       - name: Upload documentation refresh plan
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: living-manual-change-plan
           path: ${{ runner.temp }}/manual-change-plan.json
@@ -50,10 +56,10 @@ jobs:
     needs: freshness
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
       - name: Install document tooling
@@ -73,7 +79,7 @@ jobs:
       - name: Enforce minimum rendered page counts
         run: python tools/docs-sync/verify_manual_pdfs.py --dir docs/manuals/generated
       - name: Upload living-document editions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: irespond-living-manuals-${{ github.sha }}
           path: |

@@ -10,9 +10,15 @@ def git_blob_sha(path: Path) -> str:
     return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
 
 
+def file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def head_revision(root: Path) -> str:
     try:
-        return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=root, text=True, stderr=subprocess.DEVNULL
+        ).strip()
     except Exception:
         return "unknown"
 
@@ -21,16 +27,15 @@ def load(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def scan_routes(root: Path, frontend_root: str) -> list[str]:
-    base = root / frontend_root
-    if not base.exists():
-        return []
+def scan_frontend_sources(root: Path, frontend_roots: list[str]) -> list[str]:
     found=[]
-    for p in base.rglob("*.tsx"):
-        rel=p.relative_to(root).as_posix()
-        if p.name == "_layout.tsx":
+    for frontend_root in frontend_roots:
+        base = root / frontend_root
+        if not base.exists():
             continue
-        found.append(rel)
+        for p in base.rglob("*"):
+            if p.is_file() and p.suffix in {".ts", ".tsx"}:
+                found.append(p.relative_to(root).as_posix())
     return sorted(found)
 
 
@@ -45,11 +50,11 @@ def build_plan(root: Path, routes: dict, manifest: dict) -> dict:
         fp=git_blob_sha(p); current_shared[rel]=fp
         if manifest_shared.get(rel) != fp: changed_shared.append(rel)
 
-    stale=[]
+    stale=[]; invalid_screenshots=[]
     covered=set(shared) | set(routes.get("watch_only_paths", []))
     manifest_screens=manifest.get("screens", {})
     for screen in routes.get("screens", []):
-        sid=screen["id"]; expected=manifest_screens.get(sid, {}).get("source_fingerprints", {})
+        sid=screen["id"]; entry=manifest_screens.get(sid, {}); expected=entry.get("source_fingerprints", {})
         current={}; reasons=[]
         for rel in screen.get("source_paths", []):
             covered.add(rel); p=root/rel
@@ -59,6 +64,15 @@ def build_plan(root: Path, routes: dict, manifest: dict) -> dict:
         if changed_shared: reasons.extend(f"shared_changed:{p}" for p in changed_shared)
         if reasons:
             stale.append({"screen_id":sid,"screenshot_file":screen["screenshot_file"],"manuals":screen.get("manuals",[]),"reasons":reasons,"current_source_fingerprints":current})
+        screenshot_file=entry.get("screenshot_file")
+        screenshot_path=root / "docs/manuals/assets/ui" / str(screenshot_file or "")
+        expected_sha=entry.get("screenshot_sha256")
+        if not screenshot_file or screenshot_file != screen["screenshot_file"]:
+            invalid_screenshots.append({"screen_id":sid,"reason":"manifest_file_mismatch"})
+        elif not screenshot_path.is_file():
+            invalid_screenshots.append({"screen_id":sid,"reason":"asset_missing","path":screenshot_path.relative_to(root).as_posix()})
+        elif not expected_sha or file_sha256(screenshot_path) != expected_sha:
+            invalid_screenshots.append({"screen_id":sid,"reason":"asset_digest_mismatch","path":screenshot_path.relative_to(root).as_posix()})
 
     watch_changed=[]
     watch_expected=manifest.get("watch_only_fingerprints", {})
@@ -69,7 +83,8 @@ def build_plan(root: Path, routes: dict, manifest: dict) -> dict:
         if watch_expected.get(rel) != fp:
             watch_changed.append({"path":rel,"reason":"manual_review_required"})
 
-    actual=set(scan_routes(root, routes.get("frontend_root", "apps/mobile/app")))
+    frontend_roots=routes.get("frontend_roots", [routes.get("frontend_root", "apps/mobile/app")])
+    actual=set(scan_frontend_sources(root, frontend_roots))
     untracked=sorted(actual-covered)
     return {
         "schema_version":1,
@@ -80,7 +95,8 @@ def build_plan(root: Path, routes: dict, manifest: dict) -> dict:
         "changed_shared_paths":changed_shared,
         "untracked_routes":untracked,
         "missing_paths":sorted(set(missing)),
-        "is_fresh":not stale and not watch_changed and not untracked and not missing,
+        "invalid_screenshots":invalid_screenshots,
+        "is_fresh":not stale and not watch_changed and not untracked and not missing and not invalid_screenshots,
         "current_shared_fingerprints":current_shared,
     }
 
