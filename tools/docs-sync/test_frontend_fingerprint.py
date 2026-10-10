@@ -25,6 +25,7 @@ class FrontendFingerprintTests(unittest.TestCase):
                 "id": "home",
                 "source_paths": ["apps/mobile/app/index.tsx"],
                 "screenshot_file": "home.png",
+                "manuals": ["product", "user"],
             }],
         }
         self.manifest = {
@@ -37,6 +38,7 @@ class FrontendFingerprintTests(unittest.TestCase):
                 "source_fingerprints": {
                     "apps/mobile/app/index.tsx": git_blob_sha(self.root / "apps/mobile/app/index.tsx"),
                 },
+                "manuals": ["product", "user"],
             }},
         }
 
@@ -62,6 +64,26 @@ class FrontendFingerprintTests(unittest.TestCase):
         screenshot.write_bytes(b"different-image")
         plan = build_plan(self.root, self.routes, self.manifest)
         self.assertEqual(plan["invalid_screenshots"][0]["reason"], "asset_digest_mismatch")
+
+    def test_route_metadata_change_is_stale(self) -> None:
+        self.routes["screens"][0]["manuals"] = ["product", "training"]
+        plan = build_plan(self.root, self.routes, self.manifest)
+
+        self.assertFalse(plan["is_fresh"])
+        self.assertIn(
+            "manual_mapping_changed",
+            plan["stale_screens"][0]["reasons"],
+        )
+
+    def test_removed_source_mapping_is_stale(self) -> None:
+        self.routes["screens"][0]["source_paths"] = []
+        plan = build_plan(self.root, self.routes, self.manifest)
+
+        self.assertFalse(plan["is_fresh"])
+        self.assertIn(
+            "source_mapping_changed",
+            plan["stale_screens"][0]["reasons"],
+        )
 
 
 if __name__ == "__main__":

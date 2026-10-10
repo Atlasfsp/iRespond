@@ -56,14 +56,19 @@ def build_plan(root: Path, routes: dict, manifest: dict) -> dict:
     for screen in routes.get("screens", []):
         sid=screen["id"]; entry=manifest_screens.get(sid, {}); expected=entry.get("source_fingerprints", {})
         current={}; reasons=[]
-        for rel in screen.get("source_paths", []):
+        source_paths=screen.get("source_paths", [])
+        if set(expected) != set(source_paths):
+            reasons.append("source_mapping_changed")
+        if sorted(entry.get("manuals", [])) != sorted(screen.get("manuals", [])):
+            reasons.append("manual_mapping_changed")
+        if entry.get("screenshot_file") != screen["screenshot_file"]:
+            reasons.append("screenshot_mapping_changed")
+        for rel in source_paths:
             covered.add(rel); p=root/rel
             if not p.exists(): missing.append(rel); continue
             fp=git_blob_sha(p); current[rel]=fp
             if expected.get(rel) != fp: reasons.append(f"source_changed:{rel}")
         if changed_shared: reasons.extend(f"shared_changed:{p}" for p in changed_shared)
-        if reasons:
-            stale.append({"screen_id":sid,"screenshot_file":screen["screenshot_file"],"manuals":screen.get("manuals",[]),"reasons":reasons,"current_source_fingerprints":current})
         screenshot_file=entry.get("screenshot_file")
         screenshot_path=root / "docs/manuals/assets/ui" / str(screenshot_file or "")
         expected_sha=entry.get("screenshot_sha256")
@@ -73,6 +78,8 @@ def build_plan(root: Path, routes: dict, manifest: dict) -> dict:
             invalid_screenshots.append({"screen_id":sid,"reason":"asset_missing","path":screenshot_path.relative_to(root).as_posix()})
         elif not expected_sha or file_sha256(screenshot_path) != expected_sha:
             invalid_screenshots.append({"screen_id":sid,"reason":"asset_digest_mismatch","path":screenshot_path.relative_to(root).as_posix()})
+        if reasons:
+            stale.append({"screen_id":sid,"screenshot_file":screen["screenshot_file"],"manuals":screen.get("manuals",[]),"reasons":reasons,"current_source_fingerprints":current})
 
     watch_changed=[]
     watch_expected=manifest.get("watch_only_fingerprints", {})

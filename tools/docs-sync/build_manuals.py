@@ -19,6 +19,16 @@ REPO=Path(__file__).resolve().parents[2]
 ROOT=REPO/'docs/manuals'; UI=ROOT/'assets/ui'; DIAG=ROOT/'assets/diagrams'; MMD=ROOT/'mermaid'; OUT=ROOT/'generated'
 for p in (UI,DIAG,MMD,OUT): p.mkdir(parents=True,exist_ok=True)
 
+def render_diagrams():
+    subprocess.run(
+        ['pnpm','--filter','@irespond/docs-sync','render-diagrams',str(REPO)],
+        cwd=REPO,
+        check=True,
+    )
+    sources=sorted(MMD.glob('*.mmd')); rendered=sorted(DIAG.glob('*.png'))
+    if not sources or {p.stem for p in sources} != {p.stem for p in rendered}:
+        raise RuntimeError('Every canonical Mermaid source must have a rendered PNG')
+
 def head():
     try: return subprocess.check_output(['git','rev-parse','HEAD'],cwd=REPO,text=True,stderr=subprocess.DEVNULL).strip()
     except Exception: return os.environ.get('IRESPOND_SOURCE_REVISION','unknown')
@@ -56,18 +66,36 @@ def new_doc(title,subtitle,kind):
 def screenshot(d, filename):
     p=UI/filename
     if p.exists():
-        q=d.add_paragraph(); q.alignment=WD_ALIGN_PARAGRAPH.CENTER; q.add_run().add_picture(str(p),width=Inches(3.05)); c=d.add_paragraph(f'Approved interface asset • source {SHORT}'); c.alignment=WD_ALIGN_PARAGRAPH.CENTER; c.runs[0].italic=True; c.runs[0].font.size=Pt(7)
+        q=d.add_paragraph(); q.alignment=WD_ALIGN_PARAGRAPH.CENTER; q.add_run().add_picture(str(p),width=Inches(3.05)); c=d.add_paragraph(f'Approved interface asset • {filename} • source {SHORT}'); c.alignment=WD_ALIGN_PARAGRAPH.CENTER; c.runs[0].italic=True; c.runs[0].font.size=Pt(7)
     else:
         t=d.add_table(rows=2,cols=1); t.style='Table Grid'; t.cell(0,0).text='INTERFACE CAPTURE REQUIRED'; t.cell(0,0).paragraphs[0].runs[0].font.bold=True; t.cell(1,0).text=f'{filename} is not present in this checkout. Supply an approved demo/test runtime capture through refresh_manuals.py before publication.'; header_row(t)
 
-def add_page(d, eyebrow, title, summary, sections, bullets=(), image=None):
+def diagram(d, path):
+    q=d.add_paragraph(); q.alignment=WD_ALIGN_PARAGRAPH.CENTER; q.add_run().add_picture(str(path),width=Inches(6.25))
+    c=d.add_paragraph(f'Canonical architecture diagram • {path.name} • source {SHORT}'); c.alignment=WD_ALIGN_PARAGRAPH.CENTER; c.runs[0].italic=True; c.runs[0].font.size=Pt(7)
+
+def add_page(d, eyebrow, title, summary, sections, bullets=(), image=None, diagram_image=None):
     d.add_paragraph(eyebrow.upper(),style='Heading 3'); d.add_paragraph(title,style='Heading 1'); p=d.add_paragraph(summary); p.runs[0].font.size=Pt(11); p.runs[0].font.color.rgb=MUTED
     if image: screenshot(d,image)
+    if diagram_image: diagram(d,diagram_image)
     for h,b in sections: d.add_paragraph(h,style='Heading 2'); d.add_paragraph(b)
     if bullets:
         d.add_paragraph('Operational checklist',style='Heading 2')
         for x in bullets: d.add_paragraph(x,style='List Bullet')
     d.add_page_break()
+
+def add_diagram_atlas(d, audience):
+    for path in sorted(DIAG.glob('*.png')):
+        title=path.stem.replace('-',' ').title()
+        add_page(
+            d,
+            f'Architecture atlas • {audience}',
+            title,
+            f'This rendered view is generated from the canonical Mermaid source and bound to revision {SHORT}.',
+            [('Review guidance','Use this diagram with the adjacent architecture and operating guidance. Confirm that implementation, ownership and external dependency states still match the current revision.')],
+            ['Trace each trust or data boundary.','Confirm the named decision owner.','Escalate drift between the diagram and runtime behavior.'],
+            diagram_image=path,
+        )
 
 def finalise(d,path):
     for t in d.tables: header_row(t)
@@ -95,6 +123,8 @@ USER_TASKS=['Start from the principal navigation','Understand status labels','Fi
 TRAIN=['Orientation and doctrine','Role boundary and authority','Interface navigation','Need observation and reporting','Evidence dignity and consent','Verification literacy','Project Room coordination','Response to Ability','Funding and counterpart participation','Impact and outcome literacy','Notifications and communication','Privacy and data rights','Trust, safety and safeguarding','Offline and low-bandwidth operation','Troubleshooting and escalation','Scenario practicum','Knowledge check and assessment']
 SCREEN_BY_ROLE={'Community member / reporter':'01-home-impact-feed.png','Responder / volunteer':'11-ability-profile.png','Community organizer / project steward':'06-project-room.png','Eligible verifier':'05-need-detail.png','NGO / institution / donor':'06-project-room.png','Trust & Safety / safeguarding reviewer':'12-trust-safety-report.png','Platform administrator / support operator':'10-notifications.png','Developer / API integrator':'04-needmap.png'}
 
+render_diagrams()
+
 d=new_doc('iRespond Product Documentation','Product definition, journeys, governance, safety, metrics and scale model','Product Documentation')
 for domain in DOMAINS:
   for lens in LENSES:
@@ -104,24 +134,28 @@ for domain in DOMAINS:
     elif domain=='Evidence capture and dignity' and lens==LENSES[0]: img='03-evidence-capture.png'
     elif domain=='NeedMap and geospatial discovery' and lens==LENSES[0]: img='04-needmap.png'
     elif domain=='Action Project conversion' and lens==LENSES[0]: img='06-project-room.png'
+    elif domain=='Contribution offers and fulfillment' and lens==LENSES[0]: img='07-my-contribution-offers.png'
     elif domain=='Impact Passport' and lens==LENSES[0]: img='08-impact-passport.png'
     elif domain=='Privacy consent and data rights' and lens==LENSES[0]: img='09-privacy-data-rights.png'
     elif domain=='Trust and Safety reporting' and lens==LENSES[0]: img='12-trust-safety-report.png'
     add_page(d,f'Product domain • {domain}',f'{domain}: {lens}',common(domain,lens),[('Behavior and policy',common(domain,lens)),('Controls and safe failure',control(domain,lens)),('Evidence and measurement',evidence(domain))],['Confirm current state before acting.','Preserve affected-community dignity and consent.','Keep planned/shared-service direction distinct from current implementation.','Require auditable authority for consequential transitions.'],img)
+add_diagram_atlas(d,'product and governance')
 finalise(d,OUT/'iRespond_Product_Documentation.docx')
 
 d=new_doc('iRespond Technical Documentation','Architecture, APIs, data, security, reliability, deployment and living-document automation','Technical Documentation')
 for topic in TECH:
   for lens in TECH_LENSES:
     add_page(d,f'Technical domain • {topic}',f'{topic}: {lens}',common(topic,lens),[('Design contract',common(topic,lens)),('Security and reliability',control(topic,lens)),('Verification evidence',evidence(topic))],['Use explicit contracts at domain and shared-service boundaries.','Fail closed for identity, authorization, evidence and moderation dependencies.','Prefer idempotent retries and transactional facts over compensating guesses.','Bind tests and runtime evidence to the exact source revision.'])
+add_diagram_atlas(d,'technical implementation')
 finalise(d,OUT/'iRespond_Technical_Documentation.docx')
 
 d=new_doc('iRespond User Manual','Role-specific operational guidance for principal users','User Manual')
 for role,desc in ROLES.items():
   for i,task in enumerate(USER_TASKS):
-    img=SCREEN_BY_ROLE[role] if i in (0,4,9) else None
+    img='07-my-contribution-offers.png' if task=='Create or track a contribution offer' else (SCREEN_BY_ROLE[role] if i in (0,4,9) else None)
     summary=f'{role}: {task}. This role {desc}. The procedure is source-bound and must not be used to justify a privilege or state transition the user does not hold.'
     add_page(d,f'Role guide • {role}',task,summary,[('Before you begin','Confirm sign-in, role, current status, connectivity and whether the action is reversible. Read any verification, moderation, privacy or funding label before proceeding.'),('Procedure',f'Use the relevant iRespond surface to complete “{task}”. Keep the current trustworthy state if the API, identity provider or reviewer boundary is unavailable. Use local drafts or retry-safe queues only where the app explicitly provides them.'),('Success criteria','The expected state is visible, feedback is clear and the audit trail can explain the actor, decision and result. Success never means hiding an error or changing the database manually to make the screen look complete.'),('Troubleshooting','Check device/network, configuration, authentication, authorization and dependency availability in that order. Escalate safeguarding or access-control problems; do not bypass them.')],['Protect personal and beneficiary data.','Do not conflate observation, verification, commitment, fulfillment and outcome.','Retry only at documented safe boundaries.','Escalate rather than bypass role or safety controls.'],img)
+add_diagram_atlas(d,'role operations')
 finalise(d,OUT/'iRespond_User_Manual_All_Roles.docx')
 
 d=new_doc('iRespond Training Manual','Instructor-led and self-paced curriculum with current-interface visual references, exercises and assessment','Training Manual')
@@ -132,12 +166,14 @@ for role,desc in ROLES.items():
     elif module=='Need observation and reporting' and role in ('Community member / reporter','Eligible verifier'): img='02-report-need.png'
     elif module=='Evidence dignity and consent': img='03-evidence-capture.png'
     elif module=='Project Room coordination' and role in ('Responder / volunteer','Community organizer / project steward','NGO / institution / donor'): img='06-project-room.png'
+    elif module=='Response to Ability': img='07-my-contribution-offers.png'
     elif module=='Privacy and data rights': img='09-privacy-data-rights.png'
     elif module=='Trust, safety and safeguarding': img='12-trust-safety-report.png'
     summary=f'Training module for {role}: {module}. The learner should build a correct decision model, not only memorize taps. The role {desc}.'
     add_page(d,f'Training path • {role}',module,summary,[('Learning objectives',f'Explain how {module.lower()} applies to {role.lower()}, identify at least two trust or safety boundaries, and demonstrate the workflow without an administrator bypass.'),('Facilitator notes','Start from a realistic community scenario. Ask what is known, what is observed, who is authorized to decide the next state, what evidence is sufficient and how the system should fail if a dependency is unavailable.'),('Guided practice',f'Have the learner rehearse {module.lower()}. Pause before every consequential action and require the learner to name the current state, target state, decision owner and safe recovery path.'),('Assessment','Score truthfulness, dignity, role correctness, accessibility awareness and safe failure above speed. Require one troubleshooting explanation and one escalation decision.')],['Learner can state the role boundary.','Learner can distinguish observation, verification, commitment and outcome where relevant.','Learner can demonstrate retry/escalation behavior.','Learner can identify privacy, accessibility and safeguarding implications.'],img)
+add_diagram_atlas(d,'training and facilitation')
 finalise(d,OUT/'iRespond_Training_Manual_All_Roles.docx')
 
-manifest={'source_revision':REV,'generated':dt.date.today().isoformat(),'documents':sorted(p.name for p in OUT.glob('*.docx')),'ui_assets':sorted(p.name for p in UI.glob('*.png')),'mermaid_sources':sorted(p.name for p in MMD.glob('*.mmd'))}
+manifest={'source_revision':REV,'generated':dt.date.today().isoformat(),'documents':sorted(p.name for p in OUT.glob('*.docx')),'ui_assets':sorted(p.name for p in UI.glob('*.png')),'mermaid_sources':sorted(p.name for p in MMD.glob('*.mmd')),'rendered_diagrams':sorted(p.name for p in DIAG.glob('*.png'))}
 (ROOT/'generated-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 print(json.dumps(manifest,indent=2))
