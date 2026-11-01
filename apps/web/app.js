@@ -41,60 +41,65 @@ async function renderHome(){
  let platform={lifecycle:['see','report','verify','diagnose','project','mobilise','execute','measure','maintain','replicate']};
  let platformReachable=false;
  try{platform=await api('/v1/platform',{},false);platformReachable=true}catch{}
- const stages=Array.isArray(platform.lifecycle)?platform.lifecycle:[],safeStages=stages.filter(step=>typeof step==='string').slice(0,10);
+ const stages=Array.isArray(platform.lifecycle)?platform.lifecycle.filter(stage=>typeof stage==='string').slice(0,10):[];
  main.innerHTML=`<div class="impact-home">
-   <section class="impact-hero" aria-labelledby="impact-title">
-     <div>
-       <span class="impact-kicker">Your community. Your ability. Your impact.</span>
-       <h1 id="impact-title">Make change <em>visible.</em> Make impact <em>real.</em></h1>
-       <p>Discover needs in your community, contribute what you can and follow action from the first observation to a lasting, independently reviewed outcome.</p>
-       <div class="hero-actions">
-         <a class="button white-action" href="#needs">Discover community needs <span aria-hidden="true">↗</span></a>
-         <a class="button primary-action" href="#project">Explore action projects <span aria-hidden="true">↗</span></a>
-       </div>
-     </div>
-     <div class="impact-signal">
-       <div class="signal-card">
-         <div class="signal-caption">The response-to-ability approach</div>
-         <strong>Every ability counts.</strong>
-         <p>Time, skills, resources, influence and care can all create meaningful change.</p>
-         <div class="signal-steps" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-         <p>Place · Position · Possessions / Capabilities</p>
-       </div>
-       <div class="signal-note">Our records distinguish observations, verified needs, accepted commitments and completed, evidenced contributions.</div>
-     </div>
-   </section>
-   <section aria-labelledby="impact-actions-title">
-     <div class="impact-section-header">
-       <div><span>Start with one action</span><h2 id="impact-actions-title">What would you like to do today?</h2><p>Find your way into community action. Every pathway is linked to an existing, governed iRespond workflow.</p></div>
-     </div>
-     <div class="impact-action-grid" style="margin-top:19px">
-       <a class="impact-action" href="#needs"><span class="action-icon" aria-hidden="true">⌖</span><div><h3>Discover needs nearby</h3><p>Explore community reports and understand their verification status before choosing a response.</p></div><span class="action-arrow">Explore NeedMap <span aria-hidden="true">↗</span></span></a>
-       <a class="impact-action amber-card" href="#needs"><span class="action-icon" aria-hidden="true">＋</span><div><h3>Report a need</h3><p>Share a community observation with confirmed location and evidence. Verification happens separately.</p></div><span class="action-arrow">Start a report <span aria-hidden="true">↗</span></span></a>
-       <a class="impact-action blue-card" href="#impact"><span class="action-icon" aria-hidden="true">✦</span><div><h3>See your impact</h3><p>Open your Impact Passport for fulfilled contributions and other server-evidenced activity.</p></div><span class="action-arrow">Open Impact Passport <span aria-hidden="true">↗</span></span></a>
-     </div>
-   </section>
-   <section class="impact-journey" aria-label="How iRespond works">
-     <div class="impact-journey-panel">
-       <h3>From observation to sustained change</h3>
-       <p>There are no shortcuts from reported need to public success claim. Work moves through accountable, auditable stages.</p>
-       <div class="impact-flow">${(safeStages.length?safeStages:['see','report','verify','project','mobilise','execute','measure','maintain']).map(stage=>`<span>${esc(human(stage))}</span>`).join('')}</div>
-       <small style="display:block;color:#61737c;margin-top:17px">${platformReachable?'Lifecycle stages loaded from the live platform contract.':'Platform description unavailable; showing documented lifecycle labels only.'}</small>
-     </div>
-     <div class="impact-journey-panel impact-trust">
-       <h3>Trust is part of every action</h3>
-       <p>Designed for evidence integrity, appropriate consent and clear authorization—not inflated engagement claims.</p>
-       <ul class="trust-list">
-         <li>Community reports remain observations until a permitted verifier reviews them.</li>
-         <li>Funding pledges are commitments, never evidence of a processed payment.</li>
-         <li>Role and project permissions are enforced by trusted server decisions.</li>
-       </ul>
-     </div>
-   </section>
-   <section class="impact-institution" aria-labelledby="institution-title">
-     <div><h3 id="institution-title">Coordinate action with your organization</h3><p>Project leaders and institutional participants can access governed project rooms, milestone tracking, contributions and verification workflows according to their actual permissions. Broader ImpactOS modules are in planning, not yet advertised as live.</p></div>
-     <a class="button" href="#project">Open Project Room <span aria-hidden="true">↗</span></a>
-   </section>
+  <section class="impact-hero" aria-labelledby="impact-title">
+   <div class="fw-hero-copy">
+    <div class="fw-kicker">SEE IT · OWN IT · SOLVE IT</div>
+    <h1 id="impact-title">Change begins with <em>someone.</em> Why not you?</h1>
+    <p>One small response can become something extraordinary. Discover community needs, contribute what you can, and follow real action through accountable results.</p>
+    <div class="hero-actions"><a class="button white-action" href="#needs">Explore community needs <span aria-hidden="true">↗</span></a>
+     <a class="button primary-action" href="#project">View action projects <span aria-hidden="true">↗</span></a></div>
+    <div class="fw-hero-caption">Every ability matters. Verified records matter, too.</div>
+   </div>
+   <div class="fw-art" aria-hidden="true">
+    <div class="fw-orbit"></div><div class="fw-leaf1"></div><div class="fw-leaf2"></div>
+    <div class="fw-people"><div class="fw-person one"><div class="fw-hair"></div></div><div class="fw-person two"><div class="fw-hair"></div></div></div>
+    <div class="fw-art-label"><b>✦</b> Every ability counts</div>
+    <div class="fw-art-label bottom">Real people. Real action.</div>
+   </div>
+  </section>
+  <section aria-labelledby="fw-actions-heading">
+   <div class="impact-section-header"><div><span>YOUR NEXT SMALL STEP</span>
+    <h2 id="fw-actions-heading">A place for <em>your kind of good.</em></h2>
+    <p>Choose a meaningful action. Each pathway opens an existing iRespond workflow, not an unimplemented promise.</p>
+   </div></div>
+   <div class="impact-action-grid" style="margin-top:20px">
+    <a class="impact-action" href="#needs"><span class="action-icon" aria-hidden="true">⌖</span>
+     <div><h3>Discover a need</h3><p>Explore actual reports and see their evidence state before you get involved.</p></div>
+     <span class="action-arrow">Open community discovery <span aria-hidden="true">↗</span></span></a>
+    <a class="impact-action amber-card" href="#needs"><span class="action-icon" aria-hidden="true">＋</span>
+     <div><h3>Report what you see</h3><p>Capture a community observation with confirmed coordinates and evidence.</p></div>
+     <span class="action-arrow">Start a need report <span aria-hidden="true">↗</span></span></a>
+    <a class="impact-action blue-card" href="#impact"><span class="action-icon" aria-hidden="true">✦</span>
+     <div><h3>Follow your impact</h3><p>See the contributions and project activities supported by platform records.</p></div>
+     <span class="action-arrow">View Impact Passport <span aria-hidden="true">↗</span></span></a>
+   </div>
+  </section>
+  <section class="impact-journey" aria-label="Accountable community action">
+   <div class="impact-journey-panel">
+    <div class="fw-kicker" style="color:#397657;font-size:11px;font-weight:900;letter-spacing:.1em">HOW ACTION GROWS</div>
+    <h3>From a need to a lasting answer.</h3>
+    <p>iRespond keeps the journey transparent from first observation through verification and maintenance.</p>
+    <div class="impact-flow">${(stages.length?stages:['see','report','verify','project','mobilise','execute','measure','maintain']).map(stage=>`<span>${esc(human(stage))}</span>`).join('')}</div>
+    <small style="display:block;color:#748474;margin-top:15px">${platformReachable?'Stages loaded from the live platform API.':'Live API unavailable: displaying documented lifecycle labels, not activity data.'}</small>
+   </div>
+   <div class="impact-journey-panel impact-trust">
+    <div class="fw-kicker" style="color:#91614B;font-size:11px;font-weight:900;letter-spacing:.1em">TRUST IS AN EXPERIENCE</div>
+    <h3>Good intentions. Clear evidence.</h3>
+    <p>For authentic community impact, clarity about what is known matters more than a decorative metric.</p>
+    <ul class="trust-list">
+     <li>Reports are observations until an authorized reviewer verifies them.</li>
+     <li>Funding pledges are commitments, never evidence of a processed payment.</li>
+     <li>Identity, roles and project permissions come from the server.</li>
+    </ul>
+   </div>
+  </section>
+  <section class="impact-institution" aria-labelledby="institution-title">
+   <div><h3 id="institution-title">Bring your organization into the work.</h3>
+    <p>Authorized project leaders can coordinate milestones, contributions and reviews in Project Rooms. Broader ImpactOS institutions and AI matching remain planned extensions, not live features.</p></div>
+   <a class="button" href="#project">Open Project Room <span aria-hidden="true">↗</span></a>
+  </section>
  </div>`;
 }
 function sdgDropdownHTML(){return`<div class="field full"><label id="sdg-dropdown-label">Sustainable Development Goals</label><details class="sdg-dropdown"><summary aria-labelledby="sdg-dropdown-label sdg-summary"><span id="sdg-summary">Select one or more SDGs</span><span aria-hidden="true">⌄</span></summary><input type="hidden" name="sdgTags" value=""><div class="sdg-options">${SDGS.map(goal=>`<label><input type="checkbox" name="sdgTagOption" value="${goal.id}"><strong>${goal.id}</strong><span>${esc(goal.name)}</span></label>`).join('')}</div></details><small class="field-help">Optional. Select any goals this observation may affect.</small></div>`}
