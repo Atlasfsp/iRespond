@@ -20,6 +20,8 @@ body{background:var(--fw-canvas);color:var(--fw-ink);font-family:var(--fw-ui);fo
 .button.gold{background:var(--fw-gold);color:var(--fw-strong)}
 .button.ghost{color:var(--fw-ink)}
 main{max-width:1460px;overflow-wrap:anywhere}
+main:focus:not(:focus-visible){outline:none}
+.impact-hero a.button{text-decoration:none}
 .brand-mark{width:43px;height:43px;border-radius:15px;background:var(--fw-strong);color:transparent;position:relative;overflow:hidden}
 .brand-mark::before{content:"✦";color:#D9EDC7;position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);font-size:30px;line-height:1}
 .brand strong{font-size:21px;font-weight:900;letter-spacing:-.055em;color:var(--fw-strong)}
