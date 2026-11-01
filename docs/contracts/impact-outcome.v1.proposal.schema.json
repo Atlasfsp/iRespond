@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://irespond.example/spec/impact-outcome.v1.schema.json",
+  "$id": "urn:irespond:schemas:impact-outcome:v1",
   "title": "iRespond Impact Outcome Record — proposal only",
   "description": "Draft measurement and evidence contract for ADR review. Not active API or production storage. An activity count is not automatically an attributable community outcome.",
   "type": "object",
