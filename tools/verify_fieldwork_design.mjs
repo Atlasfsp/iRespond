@@ -21,7 +21,7 @@ for(const route of ['#needs','#project','#impact'])requireText(app,route,'Existi
 requireText(app,"await api('/v1/platform',{},false)",'Platform lifecycle must derive from real API');
 requireText(app,'Funding pledges are commitments','Money-state integrity is non-negotiable');
 requireText(app,'Reports are observations','A community report is not automatically verified');
-requireText(app,'Roles and project permissions','Do not fabricate role authority');
+requireText(app,'roles and project permissions','Do not fabricate role authority');
 for(const route of ['/needmap','/report','/workspace','/impact','/catalog']){
  requireText(home,route,'Native route missing '+route);
 }
