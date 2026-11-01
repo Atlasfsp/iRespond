@@ -13,6 +13,7 @@ on:
       - 'services/api/cmd/server/**'
       - 'deploy/helm/irespond/**'
       - 'tools/verify_web_frontend.mjs'
+      - 'tools/verify_horizon_experience.mjs'
       - 'tools/verify_frontend_api_coverage.mjs'
       - 'tools/verify_frontend_execution.mjs'
       - 'tools/verify_frontend_reachability.mjs'
@@ -34,6 +35,8 @@ jobs:
           node-version: 22
       - name: Canonical browser runtime syntax
         run: node --check apps/web/app.js
+      - name: Horizon experience contract
+        run: node tools/verify_horizon_experience.mjs
       - name: Stitch catalog runtime syntax
         run: node --check apps/web/stitch-catalog.js
       - name: Frontend/API ownership coverage
