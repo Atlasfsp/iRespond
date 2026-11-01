@@ -87,7 +87,10 @@ export default function ImpactPassport() {
                   <Ionicons name="shield-checkmark" size={18} color={Stitch.color.onPrimary} />
                   <Text style={s.verifiedText}>SERVER-EVIDENCED PASSPORT</Text>
                 </View>
+                <Text style={s.heroEyebrow}>YOUR CONTRIBUTIONS, DOCUMENTED</Text>
+                <Text style={s.heroHeading}>Impact Passport</Text>
                 <Text style={s.heroSubject}>{data.subject}</Text>
+                <Text style={s.heroDescription}>A record of your platform activities and completed responses. Individual activity is not automatically proof of long-term community outcomes.</Text>
               </View>
 
               <View style={s.card}>
@@ -254,23 +257,26 @@ const s = StyleSheet.create({
   error: { padding: Stitch.space.base, borderRadius: Stitch.radius.lg, backgroundColor: Stitch.color.errorContainer, flexDirection: 'row', gap: Stitch.space.md },
   errorText: { ...Stitch.type.bodyBold, color: Stitch.color.onErrorContainer },
   link: { ...Stitch.type.bodyBold, color: Stitch.color.primary, marginTop: 4 },
-  passportHero: { minHeight: 290, padding: Stitch.space.xl, borderRadius: Stitch.radius.hero, backgroundColor: Stitch.color.primaryContainer, overflow: 'hidden', position: 'relative', justifyContent: 'flex-end', gap: Stitch.space.md },
-  heroGlow: { position: 'absolute', width: 300, height: 300, borderRadius: 150, top: -160, right: -80, backgroundColor: 'rgba(207,229,255,.10)' },
+  passportHero: { minHeight: 300, padding: Stitch.space.xl, borderRadius: 25, backgroundColor: '#092E3F', overflow: 'hidden', position: 'relative', justifyContent: 'flex-end', gap: Stitch.space.sm },
+  heroGlow: { position: 'absolute', width: 300, height: 300, borderRadius: 150, top: -160, right: -80, borderWidth: 52, borderColor: 'rgba(171,235,196,.10)' },
   verified: { alignSelf: 'flex-end', paddingHorizontal: Stitch.space.md, paddingVertical: 8, borderRadius: Stitch.radius.full, backgroundColor: Stitch.color.secondary, flexDirection: 'row', alignItems: 'center', gap: 5 },
   verifiedText: { ...Stitch.type.tag, color: Stitch.color.onPrimary },
-  heroSubject: { ...Stitch.type.hero, color: Stitch.color.onPrimary },
+  heroEyebrow:{...Stitch.type.eyebrow,color:'#B1E7C9',fontSize:10},
+  heroHeading:{fontSize:34,lineHeight:40,letterSpacing:-1,fontWeight:'900',color:'#FFFFFF'},
+  heroSubject: { ...Stitch.type.bodyBold, color: '#BCEACF' },
+  heroDescription:{...Stitch.type.body,color:'#DCEDE5',fontSize:12,lineHeight:19,maxWidth:320},
   compassRow: { flexDirection: 'row', gap: Stitch.space.sm },
   compass: { flex: 1, minHeight: 78, padding: Stitch.space.sm, borderRadius: Stitch.radius.md, backgroundColor: Stitch.color.surfaceLow, alignItems: 'center', justifyContent: 'center' },
   compassLabel: { ...Stitch.type.tag, color: Stitch.color.onSurfaceVariant, marginTop: 3 },
   compassValue: { ...Stitch.type.footnote, color: Stitch.color.primary, maxWidth: '100%' },
   profileName: { ...Stitch.type.card, color: Stitch.color.onSurface },
   metrics: { flexDirection: 'row', flexWrap: 'wrap', gap: Stitch.space.md },
-  metric: { width: '47%', flexGrow: 1, padding: Stitch.space.base, borderRadius: Stitch.radius.lg, backgroundColor: Stitch.color.surfaceLowest, borderWidth: 1, borderColor: Stitch.color.outlineVariant },
+  metric: { width: '47%', flexGrow: 1, padding: Stitch.space.base, borderRadius: 18, backgroundColor: Stitch.color.surfaceLowest, borderWidth: 1, borderColor: '#D9E6E2' },
   metricHead: { flexDirection: 'row', gap: 5, alignItems: 'center' },
   metricLabel: { ...Stitch.type.tag, color: Stitch.color.onSurface },
   metricValue: { ...Stitch.type.stat, marginTop: Stitch.space.md },
-  metricGreen: { color: '#57C88B' },
-  metricAmber: { color: '#F5AB2F' },
+  metricGreen: { color: '#176C4C' },
+  metricAmber: { color: '#85540B' },
   card: { padding: Stitch.space.card, borderRadius: Stitch.radius.lg, backgroundColor: Stitch.color.surfaceLowest, borderWidth: 1, borderColor: Stitch.color.outlineVariant, gap: Stitch.space.md },
   section: { ...Stitch.type.section, color: Stitch.color.onSurface },
   sdgWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Stitch.space.sm },
