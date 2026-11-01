@@ -82,7 +82,7 @@ async function renderHome(){
     <h3>From a need to a lasting answer.</h3>
     <p>iRespond keeps the journey transparent from first observation through verification and maintenance.</p>
     <div class="impact-flow">${(stages.length?stages:['see','report','verify','project','mobilise','execute','measure','maintain']).map(stage=>`<span>${esc(human(stage))}</span>`).join('')}</div>
-    <small style="display:block;color:#748474;margin-top:15px">${platformReachable?'Stages loaded from the live platform API.':'Live API unavailable: displaying documented lifecycle labels, not activity data.'}</small>
+    <small style="display:block;color:#748474;margin-top:15px">${platformReachable?'Stages loaded from the live platform API.':'Platform description unavailable: displaying documented lifecycle labels, not activity data.'}</small>
    </div>
    <div class="impact-journey-panel impact-trust">
     <div class="fw-kicker" style="color:#91614B;font-size:11px;font-weight:900;letter-spacing:.1em">TRUST IS AN EXPERIENCE</div>
