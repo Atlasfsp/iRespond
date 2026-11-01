@@ -122,7 +122,12 @@ main[tabindex="-1"]:focus{outline:none}
 }
 @media(max-width:680px){
  main{width:calc(100% - 30px);padding:21px 0 55px}
- .topbar{padding:12px 14px;gap:8px}
+ .topbar{padding:12px 14px;gap:8px;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;align-items:center}
+ .topbar .brand{grid-column:1;grid-row:1;min-width:0}
+ .topbar #stitch-surface-launcher{grid-column:2;grid-row:1}
+ .topbar #identity-actions{grid-column:2;grid-row:2;justify-self:end}
+ .topbar #primary-nav{grid-column:1;grid-row:2;order:0;min-width:0;max-width:100%;overflow-x:auto}
+ .topbar #primary-nav a{font-size:12px;padding:8px 9px}
  .brand strong{font-size:20px}
  .brand-mark{width:36px;height:36px;border-radius:12px}
  .identity-actions .button{font-size:12px;padding:8px 12px;min-height:38px}
