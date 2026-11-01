@@ -103,7 +103,7 @@ export default function NeedMap() {
           <View style={s.filterSection}>
             <Text style={s.filterHeading}>Filter by evidence state</Text>
             <View style={s.filterRow}>
-              {([{value:'all',label:'All reports'},{value:'verified',label:'Verified'},{value:'unverified',label:'Awaiting verification'}] as const).map(option=>(
+              {([{value:'all',label:'All reports'},{value:'verified',label:'Verified'},{value:'unverified',label:'Not confirmed'}] as const).map(option=>(
                 <Pressable key={option.value} accessibilityRole="button" accessibilityState={{selected:filter===option.value}} onPress={()=>setFilter(option.value)}
                  style={[s.filterChip,filter===option.value&&s.filterChipSelected]}>
                   <Text style={[s.filterChipText,filter===option.value&&s.filterChipTextSelected]}>{option.label}</Text>
@@ -149,7 +149,7 @@ export default function NeedMap() {
               <View style={s.flex}>
                 <View style={s.cardTop}>
                   <Text style={s.category}>
-                    {need.sdgTags.length ? need.sdgTags.map((number) => `SDG ${number}`).join(' · ') : human(need.category || 'community')}
+                    {(need.sdgTags || []).length ? (need.sdgTags || []).map((number) => `SDG ${number}`).join(' · ') : human(need.category || 'community')}
                   </Text>
                   <View
                     style={[
