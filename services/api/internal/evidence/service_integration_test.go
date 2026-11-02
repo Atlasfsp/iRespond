@@ -30,7 +30,7 @@ func TestSignedUploadLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	for _, name := range []string{"0001_core.sql", "0002_evidence.sql", "0011_evidence_review_audit.sql"} {
+	for _, name := range []string{"0001_core.sql", "0002_evidence.sql", "0011_evidence_review_audit.sql", "0012_evidence_policy_receipts.sql"} {
 		b, err := os.ReadFile(filepath.Join("..", "..", "migrations", name))
 		if err != nil {
 			t.Fatal(err)
@@ -52,6 +52,7 @@ func TestSignedUploadLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer svc.Close()
+	reviewer := Reviewer{Principal: auth.Principal{Subject: "independent-reviewer", TenantID: "ngo/lagos", ActorType: "human", Roles: map[string]struct{}{"evidence_reviewer": {}}}, PolicyDecisionID: "synthetic-integration-receipt", IdempotencyKey: "review-intent-1"}
 	if err := svc.EnsureBucket(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +92,7 @@ func TestSignedUploadLifecycle(t *testing.T) {
 		t.Fatalf("signed upload URL allowed object overwrite, status=%d", status)
 	}
 
-	if _, err := svc.AccessURL(ctx, "evidence-need", upload.EvidenceID); !errors.Is(err, ErrEvidenceNotFound) {
+	if _, err := svc.AccessURL(ctx, "evidence-need", upload.EvidenceID, reviewer); !errors.Is(err, ErrEvidenceNotFound) {
 		t.Fatalf("evidence became accessible before moderation: %v", err)
 	}
 	// An actorless internal call must never moderate evidence.
@@ -100,12 +101,11 @@ func TestSignedUploadLifecycle(t *testing.T) {
 	}
 	for _, role := range []string{"evidence_reviewer", "community_verifier", "trust_safety_admin"} {
 		for _, subject := range []string{"person-1", "reporter"} {
-			if _, err := svc.Review(ctx, upload.EvidenceID, "available", Reviewer{Principal: auth.Principal{Subject: subject, Roles: map[string]struct{}{role: {}}}}); !errors.Is(err, ErrReviewForbidden) {
+			if _, err := svc.Review(ctx, upload.EvidenceID, "available", Reviewer{Principal: auth.Principal{Subject: subject, TenantID: "ngo/lagos", Roles: map[string]struct{}{role: {}}}, PolicyDecisionID: "synthetic-integration-receipt"}); !errors.Is(err, ErrReviewForbidden) {
 				t.Fatalf("conflicted reviewer %s allowed: %v", subject, err)
 			}
 		}
 	}
-	reviewer := Reviewer{Principal: auth.Principal{Subject: "independent-reviewer", Roles: map[string]struct{}{"evidence_reviewer": {}}}, IdempotencyKey: "review-intent-1"}
 	record, err = svc.Review(ctx, upload.EvidenceID, "available", reviewer)
 	if err != nil {
 		t.Fatal(err)
@@ -133,12 +133,20 @@ func TestSignedUploadLifecycle(t *testing.T) {
 	if audits != 1 || events != 1 {
 		t.Fatalf("duplicate review effects: audit=%d event=%d", audits, events)
 	}
-	var auditDigest, actor string
-	if err := pool.QueryRow(ctx, `SELECT source_sha256_hex,reviewer_id FROM evidence_reviews WHERE evidence_id=$1`, upload.EvidenceID).Scan(&auditDigest, &actor); err != nil {
+	var auditDigest, actor, auditTenant, auditPolicy string
+	if err := pool.QueryRow(ctx, `SELECT source_sha256_hex,reviewer_id,tenant_id,policy_decision_id FROM evidence_reviews WHERE evidence_id=$1`, upload.EvidenceID).Scan(&auditDigest, &actor, &auditTenant, &auditPolicy); err != nil {
 		t.Fatal(err)
 	}
-	if auditDigest != expectedSHA || actor != "independent-reviewer" {
+	if auditTenant != "ngo/lagos" || auditPolicy != "synthetic-integration-receipt" || auditDigest != expectedSHA || actor != "independent-reviewer" {
 		t.Fatalf("unbound review %s %s", auditDigest, actor)
+	}
+	crossTenant := reviewer
+	crossTenant.Principal.TenantID = "ngo/other"
+	if _, err := svc.Review(ctx, upload.EvidenceID, "available", crossTenant); !errors.Is(err, ErrReviewConflict) {
+		t.Fatalf("audit intent crossed tenant: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `INSERT INTO evidence_reviews(id,evidence_id,reviewer_id,source_sha256_hex,from_status,decision,idempotency_key) SELECT 'unscoped-'||id,evidence_id,reviewer_id,source_sha256_hex,from_status,decision,'unscoped-intent' FROM evidence_reviews WHERE evidence_id=$1`, upload.EvidenceID); err == nil {
+		t.Fatal("unscoped review bypassed database receipt guard")
 	}
 	if _, err := pool.Exec(ctx, `UPDATE evidence_reviews SET reviewer_id='forged' WHERE evidence_id=$1`, upload.EvidenceID); err == nil {
 		t.Fatal("audit overwrite allowed")
@@ -152,7 +160,7 @@ func TestSignedUploadLifecycle(t *testing.T) {
 	if _, err := pool.Exec(ctx, `UPDATE need_evidence SET object_key='replacement' WHERE id=$1`, upload.EvidenceID); err == nil {
 		t.Fatal("source object relinking allowed")
 	}
-	access, err := svc.AccessURL(ctx, "evidence-need", upload.EvidenceID)
+	access, err := svc.AccessURL(ctx, "evidence-need", upload.EvidenceID, reviewer)
 	if err != nil {
 		t.Fatal(err)
 	}

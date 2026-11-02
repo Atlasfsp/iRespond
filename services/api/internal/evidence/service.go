@@ -217,7 +217,8 @@ func (s *Service) Complete(ctx context.Context, needID, evidenceID, uploaderID s
 }
 
 
-func (s *Service) AccessURL(ctx context.Context, needID, evidenceID string) (string, error) {
+func (s *Service) AccessURL(ctx context.Context, needID, evidenceID string, scope ...Reviewer) (string, error) {
+ if len(scope)!=1 || !validReviewAuthority(scope[0]) {return "",ErrReviewForbidden}
 	var objectKey string
 	err := s.db.QueryRow(ctx, "SELECT object_key FROM need_evidence WHERE id=$1 AND need_id=$2 AND status='available'", evidenceID, needID).Scan(&objectKey)
 	if errors.Is(err, pgx.ErrNoRows) {

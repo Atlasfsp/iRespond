@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+ "strings"
 	"time"
 
 	"github.com/Atlasfsp/iRespond/services/api/internal/needs"
@@ -34,11 +35,11 @@ func TestJWTVerifierAndPolicy(t *testing.T) {
 	verifier := &JWTVerifier{Issuer:"https://identity.example",Audience:"irespond-api",JWKSURL:server.URL}
 	token := signedToken(t,key,kid,map[string]any{
 		"sub":"person-123", "iss":"https://identity.example", "aud":"irespond-api",
-		"exp":time.Now().Add(time.Hour).Unix(), "roles":[]string{"community_verifier"},
+		"exp":time.Now().Add(time.Hour).Unix(), "roles":[]string{"community_verifier"}, "tenant_id":"ngo/lagos",
 	})
 	principal, err := verifier.Verify(context.Background(), token)
 	if err != nil { t.Fatalf("verify token: %v", err) }
-	if principal.Subject != "person-123" || principal.ActorType != "human" || !principal.HasRole("community_verifier") { t.Fatalf("unexpected principal: %#v", principal) }
+	if principal.Subject != "person-123" || principal.ActorType != "human" || principal.TenantID != "ngo/lagos" || !principal.HasRole("community_verifier") { t.Fatalf("unexpected principal: %#v", principal) }
 	if !CanTransition(principal, needs.VerificationRequested) { t.Fatal("authenticated principal should request verification") }
 	if !CanTransition(principal, needs.CommunityConfirmed) { t.Fatal("community verifier should confirm community verification") }
 	if CanTransition(principal, needs.GovernmentConfirmed) { t.Fatal("community verifier must not perform government confirmation") }
@@ -128,5 +129,17 @@ func TestOnlyHumanSubjectsCanReview(t *testing.T) {
    if got := CanReviewEvidence(p); got != want { t.Errorf("actor %q subject %q review=%v want %v",actorType,subject,got,want) }
    if got := CanTransition(p,needs.CommunityConfirmed); got != want { t.Errorf("actor %q subject %q verification=%v want %v",actorType,subject,got,want) }
   }
+ }
+}
+
+func TestJWTVerifierRejectsMalformedTenantClaim(t *testing.T) {
+ key,err:=rsa.GenerateKey(rand.Reader,2048);if err!=nil{t.Fatal(err)};kid:="tenant-test"
+ server:=httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
+  _=json.NewEncoder(w).Encode(map[string]any{"keys":[]map[string]any{{"kty":"RSA","kid":kid,"n":base64.RawURLEncoding.EncodeToString(key.PublicKey.N.Bytes()),"e":base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.PublicKey.E)).Bytes())}}})
+ }));defer server.Close()
+ verifier:=&JWTVerifier{Issuer:"https://identity.example",Audience:"irespond-api",JWKSURL:server.URL}
+ for _,tenant:=range []string{"ACME","ngo//lagos","ngo/../other","-ngo","ngo/","a/b/c/d/e/f/g/h/i",strings.Repeat("a",64)} {
+  token:=signedToken(t,key,kid,map[string]any{"sub":"person-1","iss":"https://identity.example","aud":"irespond-api","exp":time.Now().Add(time.Hour).Unix(),"tenant_id":tenant})
+  if _,err:=verifier.Verify(context.Background(),token);err==nil{t.Errorf("malformed tenant %q accepted",tenant)}
  }
 }
