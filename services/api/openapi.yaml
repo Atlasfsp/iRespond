@@ -217,9 +217,15 @@ paths:
     post:
       tags: [Evidence]
       operationId: reviewEvidence
+      description: Requires an authenticated independent reviewer; uploader and original need reporter cannot moderate their own evidence. Decisions bind the stored SHA-256 and append audit/outbox records atomically.
       security: [{ bearerAuth: [] }]
       parameters:
         - { $ref: '#/components/parameters/EvidenceId' }
+        - in: header
+          name: Idempotency-Key
+          required: false
+          description: Stable review intent; reuse with a different decision conflicts. Legacy callers without a key receive a server-derived intent.
+          schema: { type: string, minLength: 1, maxLength: 128, pattern: '^[!-~]+$' }
       requestBody:
         required: true
         content:
@@ -239,6 +245,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /v1/needs/{id}/evidence/{evidenceId}/access:
     get:
       tags: [Evidence]

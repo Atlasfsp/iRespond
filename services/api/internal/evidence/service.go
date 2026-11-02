@@ -216,18 +216,6 @@ func (s *Service) Complete(ctx context.Context, needID, evidenceID, uploaderID s
 	return rec, err
 }
 
-func (s *Service) Review(ctx context.Context, evidenceID, decision string) (Record, error) {
-	decision = strings.TrimSpace(strings.ToLower(decision))
-	if decision != "available" && decision != "quarantined" && decision != "rejected" {
-		return Record{}, ErrInvalidReview
-	}
-	var rec Record
-	err := s.db.QueryRow(ctx, `UPDATE need_evidence SET status=$2,available_at=CASE WHEN $2='available' THEN now() ELSE NULL END WHERE id=$1 AND status='pending_review' RETURNING id,need_id,content_type,size_bytes,COALESCE(sha256_hex,''),status,created_at,available_at`, evidenceID, decision).Scan(&rec.ID, &rec.NeedID, &rec.ContentType, &rec.SizeBytes, &rec.SHA256Hex, &rec.Status, &rec.CreatedAt, &rec.AvailableAt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Record{}, ErrEvidenceNotFound
-	}
-	return rec, err
-}
 
 func (s *Service) AccessURL(ctx context.Context, needID, evidenceID string) (string, error) {
 	var objectKey string

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "purpose": "planning_template_only",
+  "evidenceClass": "synthetic_configuration_not_field_evidence",
+  "institutionTypes": ["ngo", "university", "foundation", "government_agency", "corporate_csr"],
+  "selectedInstitutionType": null,
+  "institutionId": null,
+  "institutionName": null,
+  "accountableOwner": null,
+  "implementationCoordinator": null,
+  "committedHumanFTE": null,
+  "weeklyEngineeringHours": null,
+  "participantCount": null,
+  "approvedStartDate": null,
+  "approvedLaunchDate": null,
+  "intervention": {"type": null, "baseline": null, "outcomeMethodVersion": null, "beneficiaryFeedbackProtocol": null},
+  "readiness": {
+    "verifiedTenantMembership": false,
+    "consentApproved": false,
+    "dataProtectionApproved": false,
+    "safeguardingOwnerAssigned": false,
+    "escalationRunbookApproved": false,
+    "reviewersTrained": false,
+    "accessibilityReviewed": false,
+    "offlineRecoveryTested": false,
+    "monitoringOwnerAssigned": false,
+    "deploymentApproved": false,
+    "externalCertificationPassed": false
+  },
+  "ga": false
+}

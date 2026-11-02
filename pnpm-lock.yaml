@@ -94,6 +94,9 @@ importers:
 
   tools/docs-sync:
     devDependencies:
+      axe-core:
+        specifier: 4.14.0
+        version: 4.14.0
       mermaid:
         specifier: 12.1.0
         version: 12.1.0
@@ -1154,6 +1157,10 @@ packages:
 
   async-limiter@1.0.1:
     resolution: {integrity: sha512-csOlWGAcRFJaI6m+F2WKdnMKr4HhdhFVBk0H/QbJFMCr+uO2kwohwXQPxw/9OCxp05r5ghVBFSyioixx3gfkNQ==}
+
+  axe-core@4.14.0:
+    resolution: {integrity: sha512-9WTZxEjsZ7b13TH8JPmbV2z8CHbl80/2hm3XPEG4JgNdQLK81IBRXmSxHfMAOkSqQeRxT/0dwNDz2GOm3zzpcQ==}
+    engines: {node: '>=4'}
 
   babel-jest@29.7.0:
     resolution: {integrity: sha512-BrvGY3xZSwEcCzKvKsCi2GgHqDqsYkOP4/by5xCgIwGXQxIEh+8ew3gmrE1y7XRR6LHZIj6yLYnUi/mm2KXKBg==}
@@ -4763,6 +4770,8 @@ snapshots:
   asap@2.0.6: {}
 
   async-limiter@1.0.1: {}
+
+  axe-core@4.14.0: {}
 
   babel-jest@29.7.0(@babel/core@7.29.7):
     dependencies:
