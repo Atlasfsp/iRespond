@@ -6,12 +6,13 @@
  --fw-canvas:#F8F7F1;--fw-paper:#FFFFFF;--fw-ink:#18352A;--fw-strong:#102820;--fw-muted:#53685C;--fw-line:#E2E6DB;
  --fw-leaf:#205C45;--fw-leaf-dark:#154533;--fw-leaf-soft:#E2F0E7;--fw-coral:#EF7656;--fw-coral-text:#A3432B;--fw-coral-soft:#FCE7DF;--fw-gold:#F5CD6C;--fw-iris:#DCD7F7;
  --fw-display:Georgia,'Times New Roman',serif;--fw-ui:'Avenir Next','Segoe UI',system-ui,-apple-system,sans-serif;
+ --fw-focus:#946B12;
  --fw-shadow:0 18px 46px rgba(29,62,42,.08);
 }
 html{background:var(--fw-canvas)}
 body{background:var(--fw-canvas);color:var(--fw-ink);font-family:var(--fw-ui);font-size:15px;font-feature-settings:"kern";-webkit-font-smoothing:antialiased}
 .app-shell{background:var(--fw-canvas)}
-:where(button,a,input,textarea,select,summary):focus-visible{outline:3px solid #DB9D27;outline-offset:3px}
+:where(button,a,input,textarea,select,summary):focus-visible{outline:3px solid var(--fw-focus);outline-offset:3px}
 :where(.button,.impact-action,.primary-nav a){transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease,border-color .16s ease}
 .button{background:var(--fw-leaf);border-radius:13px;min-height:47px;font-weight:850}
 .button:hover:not(:disabled){transform:translateY(-1px);background:var(--fw-leaf-dark)}
@@ -151,3 +152,5 @@ main[tabindex="-1"]:focus{outline:none}
  .impact-section-header h2{font-size:28px}
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+.impact-institution :focus-visible{outline-color:var(--fw-gold)}

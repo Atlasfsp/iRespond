@@ -74,8 +74,10 @@ func (r *Record) Review(tenant, reviewer string, approve bool, now time.Time) er
 	if r.State != "submitted" && r.State != "under_review" {
 		return errors.New("record is not awaiting review")
 	}
-	if err := r.validate(now); err != nil {
-		return err
+	if approve {
+		if err := r.validate(now); err != nil {
+			return err
+		}
 	}
 	r.State = "rejected"
 	if approve {

@@ -9,3 +9,12 @@ test('FIELDWORK semantic text palette meets WCAG AA on intended surfaces',()=>{
  assert.match(css,/--fw-coral-text:#A3432B/);
  assert.doesNotMatch(css,/color:var\(--fw-coral\)/,'decorative coral must not be used for text');
 });
+test('keyboard focus has non-text contrast on light and forest surfaces',()=>{
+ const css=readFileSync('apps/web/fieldwork.css','utf8');
+ const focus=css.match(/--fw-focus:#([0-9a-f]{6})/i)?.[1];
+ assert.ok(focus,'semantic focus token required');
+ assert.ok(contrast(focus,'FFFFFF')>=3);
+ assert.ok(contrast(focus,'F8F7F1')>=3);
+ assert.ok(contrast('F5CD6C','205C45')>=3);
+ assert.match(css,/\.impact-institution :focus-visible\{outline-color:var\(--fw-gold\)\}/);
+});

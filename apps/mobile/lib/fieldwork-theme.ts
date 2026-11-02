@@ -15,7 +15,7 @@ export const Fieldwork = {
   verified:'#1C6545',verifiedSurface:'#DDF2E3',
   observed:'#775923',observedSurface:'#FCF1D1',
   disputed:'#973F35',disputedSurface:'#FCE5E2',
-  focus:'#DA9E2A',
+  focus:'#946B12',
   textOnLeaf:'#FFFFFF',textOnPaper:'#18352A'
  },
  radius:{card:22,hero:27,button:13,pill:999,icon:15},

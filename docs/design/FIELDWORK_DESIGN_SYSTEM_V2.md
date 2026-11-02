@@ -34,7 +34,7 @@ All illustration should be original, licensed or user-provided. Do not copy layo
 | Iris | `--fw-iris` | `#DCD7F7` | Skills and identity surfaces |
 | Muted text | `--fw-muted` | `#53685C` | Secondary prose |
 | Hairline | `--fw-line` | `#E2E6DB` | Borders and separators |
-| Focus | `focus` | `#DA9E2A` | Keyboard focus |
+| Focus | `focus` | `#946B12` | Keyboard focus |
 
 Approximate WCAG contrast on the named backgrounds, verified in a local contrast calculation: ink on canvas **12.37:1**; action green on white **7.84:1**; coral text on pale sage **5.38:1**; muted on white **6.0:1**. Decorative coral on white is only **2.84:1**: *never use it for essential text on white*. Specific component combinations require independent testing.
 
@@ -98,3 +98,6 @@ Approximate WCAG contrast on the named backgrounds, verified in a local contrast
 6. Mobile builds and Android/iOS E2E smoke tests; service contract and external release owners sign off.
 
 **Verdict:** This is a visually substantial, functional *design-system candidate* for staged implementation, not an assertion that every iRespond feature or external release gate is complete.
+
+Keyboard focus uses dark gold on light surfaces and sun gold on forest surfaces;
+these pairs are checked against the 3:1 non-text contrast target.

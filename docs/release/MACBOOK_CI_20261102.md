@@ -72,7 +72,8 @@ https://docs.github.com/en/actions/reference/security/secure-use
   repository security/pins and Helm deployment contracts pass locally.
 - Go unit suite and vet pass without integration environment; integration tests that
   require `TEST_DATABASE_URL` / object storage skip and are not counted as E2E evidence.
-- No attached Android device/AVD, no Java runtime, no full Xcode installation.
+- No attached Android device/AVD and no full Xcode installation. Homebrew JDK 17
+  is available even though macOS Java registration did not report it.
   Native builds, VoiceOver/TalkBack and physical-device certification remain open.
 
 Raw local evidence: `build/evidence/completion/`. Never promote local results to
@@ -106,3 +107,13 @@ owner must restore artifact storage availability without paid usage (for example
 reviewing superseded storage and allowing quota recalculation). Existing certification
 artifacts were not deleted. A successful self-hosted scheduler probe cannot clear
 this separate evidence-upload requirement.
+
+## Nested Docker storage compatibility
+
+The first API run failed before tests while extracting the pinned YugabyteDB image:
+Docker's containerd overlay snapshotter could not create an opaque-directory whiteout
+(`operation not permitted`). Switching this dedicated machine to the userspace
+`fuse-overlayfs` classic driver resolved a two-layer opaque-whiteout regression probe.
+The provisioner now configures that driver and executes the probe before CI. Host
+shares, host networking and runner privileges were not broadened. The API job still
+requires genuine rerun evidence; the probe does not certify database integration.

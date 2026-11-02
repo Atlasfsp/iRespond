@@ -6,14 +6,17 @@ orb run -m irespond-ci sh -c '
   set -eu
   test ! -e /Users && test ! -e /mnt/mac
   sudo apt-get update
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates curl git jq libicu74 libssl3 docker.io gh unzip python3-pip python3-venv
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates curl git jq libicu74 libssl3 docker.io fuse-overlayfs gh unzip python3-pip python3-venv
   sudo usermod -aG docker "$USER"
+  printf "%s\n" "{\"features\":{\"containerd-snapshotter\":false},\"storage-driver\":\"fuse-overlayfs\"}" | sudo tee /etc/docker/daemon.json >/dev/null
   sudo systemctl enable --now docker
+  sudo systemctl restart docker
   mkdir -p "$HOME/runner"
   cd "$HOME/runner"
   curl -fL https://github.com/actions/runner/releases/download/v2.338.0/actions-runner-linux-arm64-2.338.0.tar.gz -o runner.tar.gz
   echo "628b4a7258487b80c1d3c221095a7ded349f5ae0175fd3dfab708d07428f041b  runner.tar.gz" | sha256sum -c -
   tar -xzf runner.tar.gz
 '
+orb run -m irespond-ci python3 - < tools/ci/verify-docker-whiteouts.py
 python3 tools/ci/configure-runner-group.py
 printf '%s\n' 'Ready. Start one ephemeral reviewed job with tools/ci/run-isolated-job.sh.'

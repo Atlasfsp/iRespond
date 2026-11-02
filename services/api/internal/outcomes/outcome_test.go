@@ -53,3 +53,17 @@ func TestPublicProjectionRedactsEvidenceAndBlocksPrivateOrDisputedClaims(t *test
 		t.Fatal("disputed claim published")
 	}
 }
+
+func TestReviewerCanRejectUnapprovedEvidence(t *testing.T) {
+	r := sample()
+	r.Evidence[0].Approved = false
+	if err := r.Review("ngo", "reviewer", false, time.Now()); err != nil {
+		t.Fatalf("reviewer cannot reject invalid evidence: %v", err)
+	}
+	if r.State != "rejected" {
+		t.Fatal("rejection was not recorded")
+	}
+	if _, ok := r.Public(); ok {
+		t.Fatal("rejected measurement published")
+	}
+}
