@@ -27,7 +27,7 @@ permissions:
 jobs:
   freshness:
     if: github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101'))
-    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
+    runs-on: [self-hosted, Linux, ARM64, irespond-isolated, irespond-manuals]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -56,7 +56,7 @@ jobs:
   build-manuals:
     needs: freshness
     if: github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101'))
-    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
+    runs-on: [self-hosted, Linux, ARM64, irespond-isolated, irespond-manuals]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

@@ -1,0 +1,37 @@
+{
+  "sourceRevision": "0dbf411ed7916f9f5ecdaaf098be6598dfdd9874",
+  "configuration": "local offline demonstration data",
+  "expoSurface": "React Native Web; not Android/iOS",
+  "webViewports": [
+    [
+      1440,
+      1000
+    ],
+    [
+      768,
+      1024
+    ],
+    [
+      390,
+      844
+    ]
+  ],
+  "files": [
+    {
+      "path": "docs/screenshots/20261102/fieldwork-expo-phone.png",
+      "sha256": "a18dc81b55d3c75f106f9491d05786f44ffd5f19b6b83ba17aa1e57b01f51fea"
+    },
+    {
+      "path": "docs/screenshots/20261102/fieldwork-web-desktop.png",
+      "sha256": "1fc6430cf66f5095c3494ef614097b711ffed9f90214172ca790a81e53de608f"
+    },
+    {
+      "path": "docs/screenshots/20261102/fieldwork-web-phone.png",
+      "sha256": "4506c48db589ff6b687fed16d3bdfc45aa84c36690a32c686af0f3957ffa7fd6"
+    },
+    {
+      "path": "docs/screenshots/20261102/fieldwork-web-tablet.png",
+      "sha256": "f63226a89063e037270ffb904b00637a0b77f486fe77b3a9c51c7dd048140408"
+    }
+  ]
+}

@@ -21,7 +21,7 @@ permissions:
 jobs:
   baseline-ownership:
     if: (github.event_name != 'push') && (github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101')))
-    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
+    runs-on: [self-hosted, Linux, ARM64, irespond-isolated, irespond-docs-admin]
     steps:
       - name: Resolve authoritative pull request metadata
         id: pr
@@ -177,7 +177,7 @@ jobs:
   revalidate-open-publications:
     name: Revalidate open generated publications after main advances
     if: (github.event_name == 'push') && (github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101')))
-    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
+    runs-on: [self-hosted, Linux, ARM64, irespond-isolated, irespond-docs-admin]
     permissions:
       actions: write
       contents: read
