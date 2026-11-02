@@ -9,3 +9,15 @@ test('all canonical native screens inherit FIELDWORK semantic colors',()=>{
  assert.equal(Stitch.color.error,Fieldwork.color.disputed);
  assert.ok(Stitch.control.minHeight>=44);
 });
+import {readFileSync} from 'node:fs';
+test('selected navigation icons remain visible against the selected surface',()=>{
+ const chrome=readFileSync('apps/mobile/components/StitchChrome.tsx','utf8');
+ assert.doesNotMatch(chrome,/active\?Stitch\.color\.primaryFixed/,'primaryFixed now equals the selected surface');
+ assert.match(chrome,/active\?Fieldwork\.color\.leaf/);
+});
+test('bottom navigation owns the bottom safe area',()=>{
+ const chrome=readFileSync('apps/mobile/components/StitchChrome.tsx','utf8');
+ assert.match(chrome,/<SafeAreaView edges=\{\['bottom'\]\} style=\{s.bottomNav\}>/);
+ const catalog=readFileSync('apps/mobile/app/catalog.tsx','utf8');
+ assert.match(catalog,/<SafeAreaView style=\{s.safe\} edges=\{\['top','left','right'\]\}>/);
+});

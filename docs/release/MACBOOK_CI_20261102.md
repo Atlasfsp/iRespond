@@ -117,3 +117,11 @@ Docker's containerd overlay snapshotter could not create an opaque-directory whi
 The provisioner now configures that driver and executes the probe before CI. Host
 shares, host networking and runner privileges were not broadened. The API job still
 requires genuine rerun evidence; the probe does not certify database integration.
+
+## Reachable Go certificate advisory
+
+The real supply-chain job found GO-2026-6809 in Go 1.26.9. The fix raises the module
+minimum and both CI Go lanes to 1.26.10 and pins the corresponding bookworm compiler
+image at `sha256:23ce71337b726608afb1bc00986e630a05034a87a87ea1fc2cd1ae5cf33387eb`.
+The official Linux ARM64 SDK is checksum-verified before prewarming the runner cache.
+The patched candidate still needs a genuine negative scan and full API rerun.
