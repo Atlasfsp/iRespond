@@ -21,3 +21,9 @@ test('bottom navigation owns the bottom safe area',()=>{
  const catalog=readFileSync('apps/mobile/app/catalog.tsx','utf8');
  assert.match(catalog,/<SafeAreaView style=\{s.safe\} edges=\{\['top','left','right'\]\}>/);
 });
+test('native demo banner text wraps inside its icon row',()=>{
+ const chrome=readFileSync('apps/mobile/components/StitchChrome.tsx','utf8');
+ const style=chrome.match(/demoText:\{([^}]+)\}/)?.[1]||'';
+ assert.match(style,/flex:1/);
+ assert.match(style,/flexShrink:1/);
+});

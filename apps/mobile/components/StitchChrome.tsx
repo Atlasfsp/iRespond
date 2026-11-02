@@ -12,7 +12,7 @@ export function StitchBottomNav(){const pathname=usePathname();return <SafeAreaV
 const s=StyleSheet.create({
  topBar:{minHeight:68,paddingHorizontal:Stitch.space.screen,paddingVertical:Stitch.space.sm,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderBottomWidth:1,borderBottomColor:Fieldwork.color.border,backgroundColor:'#FFFFFF'},
  demoBanner:{minHeight:32,paddingHorizontal:Stitch.space.screen,paddingVertical:7,backgroundColor:Stitch.color.tertiaryFixed,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6},
- demoText:{...Stitch.type.footnote,color:Stitch.color.primary,fontWeight:'900',textAlign:'center'},
+ demoText:{flex:1,flexShrink:1,...Stitch.type.footnote,color:Stitch.color.primary,fontWeight:'900',textAlign:'center'},
  brandGroup:{flexDirection:'row',alignItems:'center',gap:11,flex:1,minWidth:0},
  avatar:{width:40,height:40,borderRadius:13,backgroundColor:Fieldwork.color.inkStrong,alignItems:'center',justifyContent:'center'},
  avatarText:{color:'#E8F5DC',fontWeight:'900',fontSize:14},
