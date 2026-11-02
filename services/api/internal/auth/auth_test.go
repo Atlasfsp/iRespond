@@ -38,7 +38,7 @@ func TestJWTVerifierAndPolicy(t *testing.T) {
 	})
 	principal, err := verifier.Verify(context.Background(), token)
 	if err != nil { t.Fatalf("verify token: %v", err) }
-	if principal.Subject != "person-123" || !principal.HasRole("community_verifier") { t.Fatalf("unexpected principal: %#v", principal) }
+	if principal.Subject != "person-123" || principal.ActorType != "human" || !principal.HasRole("community_verifier") { t.Fatalf("unexpected principal: %#v", principal) }
 	if !CanTransition(principal, needs.VerificationRequested) { t.Fatal("authenticated principal should request verification") }
 	if !CanTransition(principal, needs.CommunityConfirmed) { t.Fatal("community verifier should confirm community verification") }
 	if CanTransition(principal, needs.GovernmentConfirmed) { t.Fatal("community verifier must not perform government confirmation") }
@@ -80,4 +80,53 @@ func signedToken(t *testing.T, key *rsa.PrivateKey, kid string, claims map[strin
 	sig, err := rsa.SignPKCS1v15(rand.Reader,key,crypto.SHA256,digest[:])
 	if err != nil { t.Fatal(err) }
 	return input + "." + base64.RawURLEncoding.EncodeToString(sig)
+}
+
+func TestVerifiedWorkloadCannotPerformHumanReview(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kid := "actor-test"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"keys": []map[string]any{{"kty": "RSA", "kid": kid, "n": base64.RawURLEncoding.EncodeToString(key.PublicKey.N.Bytes()), "e": base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.PublicKey.E)).Bytes())}}})
+	}))
+	defer server.Close()
+	verifier := &JWTVerifier{Issuer: "https://identity.example", Audience: "irespond-api", JWKSURL: server.URL}
+	for _, actorType := range []string{"service", "ai_employee"} {
+		t.Run(actorType, func(t *testing.T) {
+			token := signedToken(t, key, kid, map[string]any{"sub": "workload-1", "iss": "https://identity.example", "aud": "irespond-api", "exp": time.Now().Add(time.Hour).Unix(), "actor_type": actorType, "delegated_by": []string{"human-sponsor"}, "roles": []string{"trust_safety_admin", "evidence_reviewer", "community_verifier"}})
+			p, err := verifier.Verify(context.Background(), token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if CanReviewEvidence(p) {
+				t.Error("workload must not review evidence even with human roles and delegation")
+			}
+			for _, next := range []needs.VerificationState{needs.VerificationRequested, needs.CommunityConfirmed, needs.Rejected, needs.IndependentlyAudited} {
+				if CanTransition(p, next) {
+					t.Errorf("workload must not perform human verification transition %s", next)
+				}
+			}
+		})
+	}
+	for _, actorType := range []string{"unknown", " human ", "agent"} {
+		t.Run("invalid_"+actorType, func(t *testing.T) {
+			token := signedToken(t, key, kid, map[string]any{"sub": "workload-1", "iss": "https://identity.example", "aud": "irespond-api", "exp": time.Now().Add(time.Hour).Unix(), "actor_type": actorType})
+			if _, err := verifier.Verify(context.Background(), token); err == nil {
+				t.Error("unsupported actor identity must fail closed")
+			}
+		})
+	}
+}
+
+func TestOnlyHumanSubjectsCanReview(t *testing.T) {
+ for _, actorType := range []string{"", "human", "service", "ai_employee", "unknown"} {
+  for _, subject := range []string{"", "person-1"} {
+   p := Principal{Subject:subject, ActorType:actorType, Roles:map[string]struct{}{"trust_safety_admin":{}}}
+   want := subject != "" && (actorType == "" || actorType == "human")
+   if got := CanReviewEvidence(p); got != want { t.Errorf("actor %q subject %q review=%v want %v",actorType,subject,got,want) }
+   if got := CanTransition(p,needs.CommunityConfirmed); got != want { t.Errorf("actor %q subject %q verification=%v want %v",actorType,subject,got,want) }
+  }
+ }
 }
