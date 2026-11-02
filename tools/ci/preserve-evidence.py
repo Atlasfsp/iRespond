@@ -13,7 +13,7 @@ output = pathlib.Path.home() / "evidence"
 output.mkdir(exist_ok=True)
 stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 target = output / f"irespond-{revision}-{stamp}.tar.gz"
-allowed = [root / "build/evidence", root / "docs/documentation-system", root / "docs/manuals/generated/ui-interface-baseline.md"]
+allowed = [root / "dist", root / "build/evidence", root / "docs/documentation-system", root / "docs/manuals/generated/ui-interface-baseline.md"]
 with tarfile.open(target, "w:gz") as archive:
     for path in allowed:
         candidates = path.rglob("*") if path.is_dir() else [path]

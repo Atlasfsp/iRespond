@@ -125,3 +125,20 @@ minimum and both CI Go lanes to 1.26.10 and pins the corresponding bookworm comp
 image at `sha256:23ce71337b726608afb1bc00986e630a05034a87a87ea1fc2cd1ae5cf33387eb`.
 The official Linux ARM64 SDK is checksum-verified before prewarming the runner cache.
 The patched candidate still needs a genuine negative scan and full API rerun.
+
+## CI fixture storage and inventory completeness
+
+YugabyteDB correctly rejected writes when the shared Linux root filesystem became
+nearly full. CI now uses a bounded 4 GiB tmpfs data volume with a 3 GiB container
+memory limit, consistent with YugabyteDB's documented RAMDisk guidance for CI/CD.
+The data directory used only 41 MiB in the failed run. Disk-protection flags remain
+unchanged. Readiness now performs real table creation and insertion, rather than
+accepting a read-only `SELECT 1` result. Backup/restore and all API tests remain.
+This fixture validates logical behavior, not physical production storage durability.
+Reference: https://docs.yugabyte.com/stable/best-practices-operations/administration/
+
+The release's original non-recursive pnpm inventory contained only the empty root
+workspace. It now captures production workspace roots plus the complete frozen
+resolution graph, policy and Metro patch bytes. Go module edges and per-file hashes
+are included, and a verifier rejects missing mobile dependencies or missing graphs.
+Only disposable CI containers and this task's unused runner files are cleaned up.

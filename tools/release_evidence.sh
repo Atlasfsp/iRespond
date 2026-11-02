@@ -32,7 +32,10 @@ go version -m "$out/bin/irespond-api-linux-amd64" > "$out/inventory/api-buildinf
 popd >/dev/null
 
 pushd "$root" >/dev/null
-pnpm list --prod --depth Infinity --json > "$out/inventory/pnpm-production.json"
+pnpm list -r --prod --depth 0 --json > "$out/inventory/pnpm-production.json"
+cp pnpm-lock.yaml pnpm-workspace.yaml "$out/inventory/"
+mkdir -p "$out/inventory/patches"
+cp patches/*.patch "$out/inventory/patches/"
 grep -E '^FROM ' services/api/Dockerfile > "$out/inventory/container-base-images.txt"
 helm package deploy/helm/irespond --destination "$out/chart" >/dev/null
 popd >/dev/null

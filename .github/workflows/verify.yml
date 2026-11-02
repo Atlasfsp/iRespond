@@ -99,11 +99,15 @@ jobs:
         working-directory: .
         run: |
           docker run -d --name irespond-yugabyte --hostname irespond-yugabyte \
+            --memory=3g --tmpfs /home/yugabyte/yb_data:rw,size=4g \
             -p 5433:5433 -p 7000:7000 -p 15433:15433 \
             yugabytedb/yugabyte@sha256:3926eedf0ff4b99426fbff533128ff16635ed5697a5cf086dde4fafec28e6f75 bin/yugabyted start \
             --base_dir=/home/yugabyte/yb_data --background=false
+          mkdir -p build/evidence/runtime
+          docker inspect irespond-yugabyte | jq '.[0] | {sourceSha:env.GITHUB_SHA,databaseStorage:.HostConfig.Tmpfs,memoryBytes:.HostConfig.Memory,scope:"CI logical integration; no storage durability certification"}' > build/evidence/runtime/ci-fixture-storage.json
+          cat build/evidence/runtime/ci-fixture-storage.json
           for i in {1..90}; do
-            if docker exec irespond-yugabyte bash -c '/home/yugabyte/bin/ysqlsh --host $(hostname) -U yugabyte -d yugabyte -c "SELECT 1"' >/dev/null 2>&1; then exit 0; fi
+            if docker exec irespond-yugabyte bash -c 'PGOPTIONS="-c statement_timeout=20000" /home/yugabyte/bin/ysqlsh --host $(hostname) -U yugabyte -d yugabyte -v ON_ERROR_STOP=1 -c "CREATE TABLE IF NOT EXISTS ci_storage_probe(id int PRIMARY KEY)" -c "INSERT INTO ci_storage_probe VALUES(1) ON CONFLICT DO NOTHING" -c "DROP TABLE ci_storage_probe"' >/dev/null 2>&1; then exit 0; fi
             sleep 2
           done
           docker logs irespond-yugabyte
