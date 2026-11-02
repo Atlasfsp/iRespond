@@ -20,6 +20,8 @@ try {
   const missing=await page.locator('main').evaluate(main=>[...main.querySelectorAll('input:not([type=hidden]),select,textarea')].filter(el=>!el.labels?.length&&!el.getAttribute('aria-label')&&!el.getAttribute('aria-labelledby')).map(el=>({tag:el.tagName,name:el.name})));
   await page.addScriptTag({content:axeSource});
   const audit=await page.evaluate(()=>axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}));
+  const smallControls=await page.locator('main .field label > input:not([type=checkbox]):not([type=radio]):not([type=hidden]), main .field label > textarea, main .field label > select').evaluateAll(controls=>controls.filter(el=>parseFloat(getComputedStyle(el).fontSize)<15).map(el=>el.name));
+  assert.deepEqual(smallControls,[],`${route}: control text must not shrink to label size`);
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
   results.push({route,width,height,missing,overflow,violations:audit.violations,incomplete:audit.incomplete,runtimeErrors:[...runtimeErrors]});
  }

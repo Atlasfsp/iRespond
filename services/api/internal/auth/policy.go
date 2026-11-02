@@ -5,6 +5,9 @@ import "github.com/Atlasfsp/iRespond/services/api/internal/needs"
 // CanTransition separates the public action of requesting verification from
 // privileged confirmation, audit, government, dispute, and rejection actions.
 func CanTransition(p Principal, next needs.VerificationState) bool {
+	if !p.IsHuman() {
+		return false
+	}
 	switch next {
 	case needs.VerificationRequested:
 		return p.Subject != ""
@@ -30,10 +33,21 @@ func CanTransition(p Principal, next needs.VerificationState) bool {
 // CanReviewEvidence protects both evidence moderation and the signed byte-access
 // path with one policy. Authentication alone never grants evidence visibility.
 func CanReviewEvidence(p Principal) bool {
-	return anyRole(p, "community_verifier", "evidence_reviewer", "trust_safety_admin")
+	return p.IsHuman() && anyRole(p, "community_verifier", "evidence_reviewer", "trust_safety_admin")
 }
 
 func anyRole(p Principal, roles ...string) bool {
-	for _, role := range roles { if p.HasRole(role) { return true } }
+	for _, role := range roles {
+		if p.HasRole(role) {
+			return true
+		}
+	}
 	return false
+}
+
+// IsHuman preserves legacy in-process human principals. Verified tokens always
+// have an explicit canonical actor type after JWTVerifier.Verify. Delegation and
+// human-named roles cannot turn an AI employee or service into a human reviewer.
+func (p Principal) IsHuman() bool {
+	return p.Subject != "" && (p.ActorType == "" || p.ActorType == "human")
 }
