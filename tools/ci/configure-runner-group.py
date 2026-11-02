@@ -7,7 +7,8 @@ import tempfile
 
 
 def api(path, *args):
-    return json.loads(subprocess.check_output(["gh", "api", path, *args], text=True))
+    output = subprocess.check_output(["gh", "api", path, *args], text=True)
+    return json.loads(output) if output.strip() else None
 
 
 name = "irespond-mac-isolated-20261102"
@@ -33,11 +34,19 @@ if existing:
     assert all(repo["id"] == repository["id"] for repo in selected), "group has unrelated repositories; refuse mutation"
     endpoint += f"/{group_id}"
     method = "PATCH"
-    # PATCH uses the dedicated repository endpoint to retain the existing selection.
+    # Repository access is assigned explicitly after creation or update below.
     payload.pop("selected_repository_ids")
 with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as stream:
     json.dump(payload, stream)
     stream.flush()
     result = api(endpoint, "--method", method, "--input", stream.name)
 assert result["restricted_to_workflows"] and result["visibility"] == "selected"
+assert result["allows_public_repositories"]
+repository_endpoint = f"orgs/Atlasfsp/actions/runner-groups/{result['id']}/repositories"
+with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as stream:
+    json.dump({"selected_repository_ids": [repository["id"]]}, stream)
+    stream.flush()
+    api(repository_endpoint, "--method", "PUT", "--input", stream.name)
+selected = api(repository_endpoint)["repositories"]
+assert [repo["id"] for repo in selected] == [repository["id"]], "effective repository selection was not restored"
 print(json.dumps({key: result[key] for key in ("id", "name", "visibility", "restricted_to_workflows")}, indent=2))

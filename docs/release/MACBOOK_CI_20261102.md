@@ -171,3 +171,15 @@ uses account/project permissions instead of identity implementation details.
 Final APK hashes, native screenshots and route-smoke results are retained separately
 from Expo Web captures. A demo/debug signing key does not provide production signing
 or physical-device/iOS certification.
+
+## Effective runner repository access
+
+A later runner reprovision revealed an empty selected-repository list even though
+workflow restrictions and public-repository permission were correct. The setup
+script updated group visibility but did not call the dedicated repository-selection
+API afterward. That left subsequent jobs queued with an otherwise healthy runner.
+Setup now explicitly assigns only iRespond after every create/update and reads back
+the effective selection before reporting success. Five stateful API-model tests
+cover creation, update, empty-selection repair, rejection of unrelated repositories
+and a server ignoring assignment. The update tests failed before the fix. Runner
+transport and newer-version diagnostics did not resolve this policy defect.
