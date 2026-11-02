@@ -84,7 +84,7 @@ Approximate WCAG contrast on the named backgrounds, verified in a local contrast
 
 **Implemented:** `apps/web/fieldwork.css` loaded after the canonical layers; browser Home revamped to action-first FIELDWORK hero and content; `apps/mobile/lib/fieldwork-theme.ts`; mobile Home and universal chrome adopt semantic palette while keeping existing routes and offline queue.
 
-**Not yet implemented:** new production backing APIs, full screen-by-screen migration for the complete Stitch catalog, native build verification, institutional ImpactOS/AI agents, global map provider and independent GA certification.
+**Not yet implemented:** new production backing APIs, full screen-by-screen migration for the complete Stitch catalog, native iOS and physical-device verification, institutional ImpactOS/AI agents, global map provider and independent GA certification.
 
 **Canonical guards:** keep 45/45 user-facing API contract ownership, web/mobile execution and reachability checks, server authorization and the frozen external GA boundary. Do not merge to main as a visual-only acceptance.
 
@@ -101,3 +101,15 @@ Approximate WCAG contrast on the named backgrounds, verified in a local contrast
 
 Keyboard focus uses dark gold on light surfaces and sun gold on forest surfaces;
 these pairs are checked against the 3:1 non-text contrast target.
+
+## Supplied prototype reconciliation — 2 November 2026
+
+The original interactive HTML is preserved in `.codex-handoff/06-fieldwork-reference.html`
+as a design reference, not a deployed application or production data source. Its warm
+canvas, deep ink, action green, coral, gold, iris, editorial serif accents, responsive
+hero/cards and explicit demo/evidence labels align with the integrated V2 direction.
+The application retains the accessible coral-text and focus variants above instead
+of adopting the prototype’s lower-contrast essential text. Prototype-only modal
+placeholders and sample opportunity IDs do not replace real application routes.
+Android emulator build and route captures now exist; full 91-screen, authenticated
+live-data, dynamic-type and independent accessibility acceptance remain open.

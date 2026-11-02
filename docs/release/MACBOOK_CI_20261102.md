@@ -2,10 +2,13 @@
 
 ## Inputs and source
 
-Original pasted instructions are preserved in `.codex-handoff/01-fieldwork-source.txt`,
-`02-mac-ci-source.txt` and `03-evolution-source.txt`. The downloadable six-prompt ZIP
-and named full Markdown handoff were not attached; the included starter instructions,
-phase table and PR #71 handoff comment define this execution.
+Original pasted references are preserved in `.codex-handoff/01-fieldwork-source.txt`,
+`02-mac-ci-source.txt` and `03-evolution-source.txt`. The subsequently supplied full
+six-prompt handoff, ZIP starter and interactive HTML are preserved as references
+04–06 with SHA-256 provenance in `attachment-manifest.json`. Both downloaded Markdown
+copies and the ZIP Markdown are identical. Embedded operator instructions are source
+material; the user request and session constraints govern execution. See
+`ATTACHMENT_REQUIREMENTS_20261102.md` for reconciliation against actual evidence.
 
 Starting PR #71: `e1d9cb524164aa0e1c8fdaf0eb878c49dac80536`.
 Starting main: `c12a4b5b8736700c2fdf2739fcd6f9a41c233521`.
@@ -72,9 +75,9 @@ https://docs.github.com/en/actions/reference/security/secure-use
   repository security/pins and Helm deployment contracts pass locally.
 - Go unit suite and vet pass without integration environment; integration tests that
   require `TEST_DATABASE_URL` / object storage skip and are not counted as E2E evidence.
-- No attached Android device/AVD and no full Xcode installation. Homebrew JDK 17
-  is available even though macOS Java registration did not report it.
-  Native builds, VoiceOver/TalkBack and physical-device certification remain open.
+- Android ARM64 demo APK built using JDK 17 and captured on an Android 36 emulator.
+  Five routes passed smoke checks with no fatal native/JS errors. Full Xcode is
+  unavailable; native iOS, VoiceOver/TalkBack and physical-device certification remain open.
 
 Raw local evidence: `build/evidence/completion/`. Never promote local results to
 fabricated GitHub statuses. No GA declaration; #53 stays separate.
@@ -115,8 +118,8 @@ Docker's containerd overlay snapshotter could not create an opaque-directory whi
 (`operation not permitted`). Switching this dedicated machine to the userspace
 `fuse-overlayfs` classic driver resolved a two-layer opaque-whiteout regression probe.
 The provisioner now configures that driver and executes the probe before CI. Host
-shares, host networking and runner privileges were not broadened. The API job still
-requires genuine rerun evidence; the probe does not certify database integration.
+shares, host networking and runner privileges were not broadened. The subsequent genuine API job passed integration, backup/restore, load and image
+provenance checks; the initial probe alone did not certify database integration.
 
 ## Reachable Go certificate advisory
 
@@ -124,7 +127,8 @@ The real supply-chain job found GO-2026-6809 in Go 1.26.9. The fix raises the mo
 minimum and both CI Go lanes to 1.26.10 and pins the corresponding bookworm compiler
 image at `sha256:23ce71337b726608afb1bc00986e630a05034a87a87ea1fc2cd1ae5cf33387eb`.
 The official Linux ARM64 SDK is checksum-verified before prewarming the runner cache.
-The patched candidate still needs a genuine negative scan and full API rerun.
+The patched candidate subsequently passed the genuine negative scan (zero reachable
+vulnerabilities) and complete API rerun. Non-reachable module advisories remain visible.
 
 ## CI fixture storage and inventory completeness
 
