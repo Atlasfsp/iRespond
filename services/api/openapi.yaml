@@ -856,7 +856,7 @@ components:
         category: { type: string }
         latitude: { type: number }
         longitude: { type: number }
-        reporterId: { type: string }
+        reporterId: { type: string, description: Withheld on public reads; verified attribution is retained privately for review controls. }
         verificationState: { $ref: '#/components/schemas/VerificationState' }
         sdgTags: { type: array, items: { type: integer } }
         createdAt: { type: string, format: date-time }

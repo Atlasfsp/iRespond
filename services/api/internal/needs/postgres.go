@@ -67,7 +67,7 @@ func (p *PostgresRepository) Nearby(ctx context.Context, lat, lng, radiusKm floa
 func (p *PostgresRepository) Transition(ctx context.Context, id string, next VerificationState, verifierID string) (Need, error) {
 	tx, err := p.pool.BeginTx(ctx, pgx.TxOptions{}); if err != nil { return Need{}, err }; defer tx.Rollback(ctx)
 	row := tx.QueryRow(ctx, `SELECT id,title,description,category,reporter_id,verification_state,sdg_tags,COALESCE(latitude,0),COALESCE(longitude,0),created_at,updated_at FROM needs WHERE id=$1 FOR UPDATE`, id)
-	n, err := scanNeed(row); if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, ErrNotFound) { return Need{}, ErrNotFound }; if err != nil { return Need{}, err }; if !allowed(n.VerificationState,next) { return Need{}, ErrInvalidTransition }
+	n, err := scanNeed(row); if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, ErrNotFound) { return Need{}, ErrNotFound }; if err != nil { return Need{}, err }; if err:=validateVerificationActor(n.ReporterID,verifierID,next);err!=nil{return Need{},err}; if !allowed(n.VerificationState,next) { return Need{}, ErrInvalidTransition }
 	n.VerificationState=next; n.UpdatedAt=time.Now().UTC(); _, err = tx.Exec(ctx, `UPDATE needs SET verification_state=$2,updated_at=$3 WHERE id=$1`,id,next,n.UpdatedAt); if err != nil { return Need{}, err }
 	_, err = tx.Exec(ctx, `INSERT INTO need_verifications(id,need_id,verifier_id,state) VALUES($1,$2,$3,$4)`,randomID(),id,verifierID,next); if err != nil { return Need{}, err }
 	payload,_:=json.Marshal(n); _, err = tx.Exec(ctx, `INSERT INTO outbox_events(id,aggregate_type,aggregate_id,event_type,payload) VALUES($1,'need',$2,'need.verification_changed',$3)`,randomID(),id,payload); if err != nil { return Need{}, err }
