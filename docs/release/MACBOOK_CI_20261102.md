@@ -152,3 +152,22 @@ lifetime content-addressed pnpm store and Go downloads, with lower fetch concurr
 and retries. Frozen installs and lockfile integrity remain required. This removes
 an optional cache-service dependency; it does not remove mandatory artifact upload
 or resolve the organization storage quota. Regression checks enforce this boundary.
+
+## Native Android route validation
+
+The actual ARM64 demo APK assembled and cold-started, but navigation to sign-in
+exposed an inherited `Cannot find native module ExpoCrypto` crash. JavaScript
+bundling and type checking had not detected the missing native registration.
+Promoting the already-locked SDK 53 `expo-crypto@14.1.5` to a direct application
+dependency enables its native autolinking without changing its resolved package.
+The new mobile CI check resolves the actual Android native manifest and requires
+CryptoModule plus browser, secure storage, media and location modules. It records
+that manifest against the source SHA. Expo's AuthSession installation guidance
+also requires Crypto: https://docs.expo.dev/versions/latest/sdk/auth-session/.
+
+Native visual QA also found the long demo notice clipping within its icon row.
+Constrained, shrinking text now wraps inside the row; the workspace sign-in copy
+uses account/project permissions instead of identity implementation details.
+Final APK hashes, native screenshots and route-smoke results are retained separately
+from Expo Web captures. A demo/debug signing key does not provide production signing
+or physical-device/iOS certification.

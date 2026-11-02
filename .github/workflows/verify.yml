@@ -19,6 +19,8 @@ jobs:
         with:
           node-version: 22
       - run: pnpm install --frozen-lockfile
+      - name: Verify required native module registration
+        run: node tools/ci/verify-native-autolinking.mjs
       - run: pnpm mobile:typecheck
       - name: Frontend, offline, design and dependency policy checks
         run: bash tools/ci/local-verify.sh
