@@ -21,15 +21,16 @@ var (
 
 // Reviewer is server-supplied after OIDC verification, never decoded from JSON.
 type Reviewer struct {
-	Principal      auth.Principal
-	IdempotencyKey string
+	Principal        auth.Principal
+	IdempotencyKey   string
+	PolicyDecisionID string
 }
 
 // Review keeps actorless legacy Go calls fail-closed. Existing HTTP clients need
 // not change their decision payload; identity comes only from verified claims.
 // The state, append-only audit and outbox event commit in one YSQL transaction.
 func (s *Service) Review(ctx context.Context, evidenceID, decision string, identity ...Reviewer) (Record, error) {
-	if len(identity) != 1 || strings.TrimSpace(identity[0].Principal.Subject) == "" || !auth.CanReviewEvidence(identity[0].Principal) {
+	if len(identity) != 1 || !validReviewAuthority(identity[0]) {
 		return Record{}, ErrReviewForbidden
 	}
 	actor := identity[0].Principal.Subject
@@ -47,7 +48,7 @@ func (s *Service) Review(ctx context.Context, evidenceID, decision string, ident
 	}
 	var last error
 	for attempt := 0; attempt < 5; attempt++ {
-		rec, err := s.reviewOnce(ctx, evidenceID, decision, actor, key)
+		rec, err := s.reviewOnce(ctx, evidenceID, decision, actor, key, identity[0].Principal.TenantID, identity[0].PolicyDecisionID)
 		var pgerr *pgconn.PgError
 		if !errors.As(err, &pgerr) || (pgerr.Code != "40001" && pgerr.Code != "40P01") {
 			return rec, err
@@ -64,7 +65,7 @@ func (s *Service) Review(ctx context.Context, evidenceID, decision string, ident
 	return Record{}, last
 }
 
-func (s *Service) reviewOnce(ctx context.Context, evidenceID, decision, actor, key string) (Record, error) {
+func (s *Service) reviewOnce(ctx context.Context, evidenceID, decision, actor, key, tenant, policyReceipt string) (Record, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return Record{}, err
@@ -82,10 +83,10 @@ func (s *Service) reviewOnce(ctx context.Context, evidenceID, decision, actor, k
 	if actor == uploader || actor == reporter {
 		return Record{}, ErrReviewForbidden
 	}
-	var previousActor, previousDecision, previousDigest string
-	err = tx.QueryRow(ctx, `SELECT reviewer_id,decision,source_sha256_hex FROM evidence_reviews WHERE evidence_id=$1 AND idempotency_key=$2`, evidenceID, key).Scan(&previousActor, &previousDecision, &previousDigest)
+	var previousActor, previousDecision, previousDigest, previousTenant string
+	err = tx.QueryRow(ctx, `SELECT reviewer_id,decision,source_sha256_hex,COALESCE(tenant_id,'') FROM evidence_reviews WHERE evidence_id=$1 AND idempotency_key=$2`, evidenceID, key).Scan(&previousActor, &previousDecision, &previousDigest, &previousTenant)
 	if err == nil {
-		if previousActor != actor || previousDecision != decision || previousDigest != rec.SHA256Hex || rec.Status != decision {
+		if previousTenant != tenant || previousActor != actor || previousDecision != decision || previousDigest != rec.SHA256Hex || rec.Status != decision {
 			return Record{}, ErrReviewConflict
 		}
 		return rec, tx.Commit(ctx)
@@ -100,7 +101,7 @@ func (s *Service) reviewOnce(ctx context.Context, evidenceID, decision, actor, k
 		return Record{}, ErrObjectMismatch
 	}
 	reviewID := newID()
-	_, err = tx.Exec(ctx, `INSERT INTO evidence_reviews(id,evidence_id,reviewer_id,source_sha256_hex,from_status,decision,idempotency_key) VALUES($1,$2,$3,$4,'pending_review',$5,$6)`, reviewID, evidenceID, actor, rec.SHA256Hex, decision, key)
+	_, err = tx.Exec(ctx, `INSERT INTO evidence_reviews(id,evidence_id,reviewer_id,source_sha256_hex,from_status,decision,idempotency_key,tenant_id,policy_decision_id) VALUES($1,$2,$3,$4,'pending_review',$5,$6,$7,$8)`, reviewID, evidenceID, actor, rec.SHA256Hex, decision, key, tenant, policyReceipt)
 	if err != nil {
 		return Record{}, err
 	}
@@ -108,7 +109,7 @@ func (s *Service) reviewOnce(ctx context.Context, evidenceID, decision, actor, k
 	if err != nil {
 		return Record{}, err
 	}
-	payload, err := json.Marshal(map[string]string{"evidenceId": evidenceID, "reviewId": reviewID, "status": decision})
+	payload, err := json.Marshal(map[string]string{"evidenceId": evidenceID, "reviewId": reviewID, "status": decision, "tenantId": tenant})
 	if err != nil {
 		return Record{}, err
 	}
@@ -121,4 +122,8 @@ func (s *Service) reviewOnce(ctx context.Context, evidenceID, decision, actor, k
 	}
 	rec.Status = decision
 	return rec, nil
+}
+
+func validReviewAuthority(identity Reviewer) bool {
+	return strings.TrimSpace(identity.Principal.Subject) != "" && auth.CanReviewEvidence(identity.Principal) && auth.ValidTenantID(identity.Principal.TenantID) && strings.TrimSpace(identity.PolicyDecisionID) != "" && len(identity.PolicyDecisionID) <= 512
 }

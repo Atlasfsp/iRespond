@@ -222,6 +222,7 @@ paths:
   /v1/evidence/{evidenceId}/review:
     post:
       tags: [Evidence]
+      description: Requires a verified human tenant identity, reviewer role and a fresh SS-13 review decision for the concrete evidence resource. Missing or unavailable policy fails closed.
       operationId: reviewEvidence
       description: Requires an authenticated independent reviewer; uploader and original need reporter cannot moderate their own evidence. Decisions bind the stored SHA-256 and append audit/outbox records atomically.
       security: [{ bearerAuth: [] }]
@@ -242,6 +243,7 @@ paths:
               properties:
                 decision: { type: string, enum: [available, quarantined, rejected] }
       responses:
+        '503': { description: Evidence resource policy is unavailable or unconfigured }
         '200':
           description: Review decision recorded
           content:
@@ -255,6 +257,7 @@ paths:
   /v1/needs/{id}/evidence/{evidenceId}/access:
     get:
       tags: [Evidence]
+      description: Requires a verified human tenant identity, reviewer role and fresh SS-13 read permission; only approved bytes receive a signed URL.
       operationId: authorizeEvidenceAccess
       security: [{ bearerAuth: [] }]
       parameters:
