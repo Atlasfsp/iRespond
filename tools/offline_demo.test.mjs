@@ -364,8 +364,9 @@ assert.match(workflow, /global\.irespond\.app\.demo/);
 assert.match(workflow, /iRespond-offline-demo-arm64-/);
 assert.match(workflow, /sha256sum/);
 
-const metroPatchPath = rootPackage.pnpm?.patchedDependencies?.['metro@0.82.5'];
-assert.equal(metroPatchPath, 'patches/metro@0.82.5.patch');
+const workspacePolicy = await readFile('pnpm-workspace.yaml', 'utf8');
+assert.match(workspacePolicy, /patchedDependencies:[\s\S]*"metro@0\.82\.5": "patches\/metro@0\.82\.5\.patch"/);
+const metroPatchPath = 'patches/metro@0.82.5.patch';
 const metroPatch = await readFile(metroPatchPath, 'utf8');
 assert.match(metroPatch, /imageSizeModule\.imageSize \?\? imageSizeModule/);
 assert.match(metroPatch, /typeof isImageInput === "string" \? fs\.readFileSync\(isImageInput\) : isImageInput/);

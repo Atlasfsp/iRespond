@@ -62,7 +62,7 @@ async function renderHome(){
   <section aria-labelledby="fw-actions-heading">
    <div class="impact-section-header"><div><span>YOUR NEXT SMALL STEP</span>
     <h2 id="fw-actions-heading">A place for <em>your kind of good.</em></h2>
-    <p>Choose a meaningful action. Each pathway opens an existing iRespond workflow, not an unimplemented promise.</p>
+    <p>Choose a meaningful action. Find a need, share what you see, or follow the difference your contributions make.</p>
    </div></div>
    <div class="impact-action-grid" style="margin-top:20px">
     <a class="impact-action" href="#needs"><span class="action-icon" aria-hidden="true">⌖</span>
@@ -82,7 +82,7 @@ async function renderHome(){
     <h3>From a need to a lasting answer.</h3>
     <p>iRespond keeps the journey transparent from first observation through verification and maintenance.</p>
     <div class="impact-flow">${(stages.length?stages:['see','report','verify','project','mobilise','execute','measure','maintain']).map(stage=>`<span>${esc(human(stage))}</span>`).join('')}</div>
-    <small style="display:block;color:#748474;margin-top:15px">${platformReachable?'Stages loaded from the live platform API.':'Platform description unavailable: displaying documented lifecycle labels, not activity data.'}</small>
+    <small style="display:block;color:#748474;margin-top:15px">${platformReachable?'Follow each step from the first observation to ongoing care.':'This is the action journey. Current activity is temporarily unavailable.'}</small>
    </div>
    <div class="impact-journey-panel impact-trust">
     <div class="fw-kicker" style="color:#91614B;font-size:11px;font-weight:900;letter-spacing:.1em">TRUST IS AN EXPERIENCE</div>

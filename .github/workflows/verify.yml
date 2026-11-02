@@ -10,7 +10,8 @@ permissions:
 
 jobs:
   mobile:
-    runs-on: ubuntu-latest
+    if: github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101'))
+    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -23,11 +24,14 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm mobile:typecheck
+      - name: Frontend, offline, design and dependency policy checks
+        run: bash tools/ci/local-verify.sh
       - name: Repository metrics
         run: bash tools/repo_metrics.sh
 
   security-boundary:
-    runs-on: ubuntu-latest
+    if: github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101'))
+    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Repository security boundary
@@ -38,7 +42,8 @@ jobs:
         run: python3 tools/verify_openapi_contract.py
 
   supply-chain:
-    runs-on: ubuntu-latest
+    if: github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101'))
+    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -85,7 +90,8 @@ jobs:
           retention-days: 30
 
   api:
-    runs-on: ubuntu-latest
+    if: github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101'))
+    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
     env:
       TEST_DATABASE_URL: postgres://yugabyte@localhost:5433/yugabyte?sslmode=disable
       TEST_OBJECT_STORAGE_ENDPOINT: localhost:9000
@@ -171,7 +177,8 @@ jobs:
         run: docker build -f services/api/Dockerfile -t irespond-api:verify services/api
 
   deployment:
-    runs-on: ubuntu-latest
+    if: github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101'))
+    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4

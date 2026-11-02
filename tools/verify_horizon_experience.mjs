@@ -15,7 +15,7 @@ includes(web,'id="impact-title"','hero should have a labelled landmark');
 includes(web,'#needs','discovery and reporting need to route to existing working page');
 includes(web,'#impact','passport must link to existing permission-governed route');
 includes(web,"await api('/v1/platform',{},false)",'lifecycle should load from real platform contract');
-includes(web,'Platform description unavailable','offline fallback must be labelled honestly');
+includes(web,'Current activity is temporarily unavailable','offline fallback must be labelled honestly');
 includes(web,'Funding pledges are commitments','money-state truth boundary must remain visible');
 includes(css,'@media(max-width:720px)','small-screen action layout is required');
 includes(css,'prefers-reduced-motion','respect reduced motion');

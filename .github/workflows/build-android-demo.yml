@@ -21,7 +21,8 @@ concurrency:
 
 jobs:
   offline-demo-apk:
-    runs-on: ubuntu-latest
+    if: github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101'))
+    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
     timeout-minutes: 45
     env:
       CI: '1'

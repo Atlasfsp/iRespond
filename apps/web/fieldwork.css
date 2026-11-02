@@ -4,7 +4,7 @@
  */
 :root{
  --fw-canvas:#F8F7F1;--fw-paper:#FFFFFF;--fw-ink:#18352A;--fw-strong:#102820;--fw-muted:#53685C;--fw-line:#E2E6DB;
- --fw-leaf:#205C45;--fw-leaf-dark:#154533;--fw-leaf-soft:#E2F0E7;--fw-coral:#EF7656;--fw-coral-soft:#FCE7DF;--fw-gold:#F5CD6C;--fw-iris:#DCD7F7;
+ --fw-leaf:#205C45;--fw-leaf-dark:#154533;--fw-leaf-soft:#E2F0E7;--fw-coral:#EF7656;--fw-coral-text:#A3432B;--fw-coral-soft:#FCE7DF;--fw-gold:#F5CD6C;--fw-iris:#DCD7F7;
  --fw-display:Georgia,'Times New Roman',serif;--fw-ui:'Avenir Next','Segoe UI',system-ui,-apple-system,sans-serif;
  --fw-shadow:0 18px 46px rgba(29,62,42,.08);
 }
@@ -41,7 +41,7 @@ main[tabindex="-1"]:focus{outline:none}
 .impact-hero .fw-kicker{font-size:11px;letter-spacing:.14em;color:var(--fw-leaf);font-weight:900;display:inline-flex;align-items:center;gap:9px;text-transform:uppercase}
 .impact-hero .fw-kicker::before{content:"";width:8px;height:8px;background:var(--fw-coral);border-radius:50%}
 .impact-hero h1{font-family:var(--fw-ui);font-size:clamp(38px,4.3vw,64px);line-height:1.07;letter-spacing:-.055em;color:var(--fw-strong);font-weight:850;max-width:670px;margin:20px 0 14px}
-.impact-hero h1 em{font-family:var(--fw-display);font-size:1.09em;font-style:italic;font-weight:400;color:var(--fw-coral);letter-spacing:-.035em}
+.impact-hero h1 em{font-family:var(--fw-display);font-size:1.09em;font-style:italic;font-weight:400;color:var(--fw-coral-text);letter-spacing:-.035em}
 .impact-hero p{color:#596B5D;font-size:15px;line-height:1.7;max-width:500px}
 .impact-hero .hero-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:25px}
 .impact-hero .hero-actions .button{min-height:50px;padding:12px 19px}
@@ -67,7 +67,7 @@ main[tabindex="-1"]:focus{outline:none}
 .fw-hero-caption::before{content:"✓";display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:#D1E9D7;color:#205C45;font-size:12px;font-weight:900}
 .impact-section-header span{color:var(--fw-leaf)}
 .impact-section-header h2{font-size:clamp(26px,2.9vw,37px);font-weight:850;letter-spacing:-.045em;color:var(--fw-strong)}
-.impact-section-header h2 em{font-family:var(--fw-display);font-size:1.1em;font-weight:400;font-style:italic;color:var(--fw-coral)}
+.impact-section-header h2 em{font-family:var(--fw-display);font-size:1.1em;font-weight:400;font-style:italic;color:var(--fw-coral-text)}
 .impact-section-header p{color:#718073}
 .impact-action-grid{gap:16px}
 .impact-action{background:#fff;border-color:var(--fw-line);border-radius:23px;min-height:222px;padding:25px;color:var(--fw-ink)}

@@ -1,0 +1,97 @@
+## iRespond → Codex handoff: MacBook CI, security fixes and final merge
+
+Your MacBook is a practical alternative to paying for GitHub-hosted runners. GitHub's current documentation says self-hosted runners are free, and its proposed self-hosted runner charges were postponed. However, an account-level billing restriction may still affect whether GitHub schedules jobs, so Codex must test that first.&#x20;
+
+[image](https://www.google.com/s2/favicons?domain=https://docs.github.com\&sz=32)
+
+GitHub Docs+2
+
+
+
+I recommend running the required Linux CI jobs inside an isolated Linux virtual machine on your MacBook, rather than installing a permanently exposed GitHub Actions runner directly into your everyday macOS account.
+
+That matters because `Atlasfsp/iRespond` is a public repository, and GitHub explicitly warns that public-repository pull requests can expose self-hosted machines to malicious code. The existing workflows also use Ubuntu-specific commands and Linux Docker containers.&#x20;
+
+[image](https://www.google.com/s2/favicons?domain=https://docs.github.com\&sz=32)
+
+GitHub Docs+1
+
+
+
+I rechecked the repository. The handoff starts from these verified references:
+
+| Item                | Current state                                                                                       |
+| ------------------- | --------------------------------------------------------------------------------------------------- |
+| Repository          | `Atlasfsp/iRespond`                                                                                 |
+| Remaining PR        | [#71 — Horizon + FIELDWORK V2](https://github.com/Atlasfsp/iRespond/pull/71?utm_source=chatgpt.com) |
+| PR head             | `e1d9cb524164aa0e1c8fdaf0eb878c49dac80536`                                                          |
+| `main`              | `c12a4b5b8736700c2fdf2739fcd6f9a41c233521`                                                          |
+| Merge conflicts     | None reported                                                                                       |
+| Merge blocker       | Six failed required GitHub checks                                                                   |
+| Dependency security | [Issue #76](https://github.com/Atlasfsp/iRespond/issues/76?utm_source=chatgpt.com)                  |
+| GA certification    | [Issue #53](https://github.com/Atlasfsp/iRespond/issues/53?utm_source=chatgpt.com)                  |
+
+The goal for Codex is to finish the engineering, establish trustworthy MacBook-hosted CI, eliminate merge blockers, merge PR #71 into `main`, and verify the resulting commit—without paying for additional GitHub Actions usage or bypassing the repository's protections.
+
+## Codex handoff package is ready
+
+I’ve prepared six detailed prompts covering discovery, MacBook runner setup, security remediation, complete testing, frontend verification and the protected merge.
+
+iRespond Codex Mac Runner Handoff
+
+Complete prompt pack with a short starter prompt and full engineering instructions.
+
+Download the complete Codex handoff ZIP
+
+Read the full Markdown handoff
+
+### What Codex will execute
+
+| Phase | Responsibility                                                                               |
+| ----- | -------------------------------------------------------------------------------------------- |
+| 1     | Discover existing MacBook repository, inspect PR, CI and security constraints                |
+| 2     | Configure a restricted Ubuntu Linux runner inside an isolated MacBook VM                     |
+| 3     | Fix dependency vulnerabilities, execute backend/frontend tests and restore genuine CI checks |
+| 4     | Validate FIELDWORK across web, Expo and supported native devices; refresh screenshots        |
+| 5     | Resolve any remaining conflicts, satisfy branch protection and merge PR #71                  |
+| 6     | Verify the final `main` SHA, document evidence and clean up the runner                       |
+
+### Where to run Codex
+
+Use the existing local iRespond repository on your MacBook, not a new clone. Extract the handoff files into a `.codex-handoff` folder inside that repository and launch Codex there.
+
+Paste this instruction into Codex:
+
+```
+
+You are the lead release engineer for Atlasfsp/iRespond.
+
+Read .codex-handoff/IRESPOND_CODEX_MAC_RUNNER_MERGE_HANDOFF_2026-11-01.md in full.
+
+Execute Prompts 1 through 5 in sequence, followed by the autonomous completion instructions in Prompt 6.
+
+Use the existing local Git repository. Do not create another clone.
+
+Establish a secure, isolated Linux self-hosted GitHub Actions runner on my MacBook. I do not authorize paid GitHub-hosted runner usage.
+
+Complete PR #71, including FIELDWORK V2, fix security issue #76, execute all genuine required CI checks, resolve conflicts and merge through normal GitHub branch protection.
+
+Protect my personal Mac from untrusted public PR execution. Do not bypass required checks, forge results or deploy production.
+
+If GitHub account restrictions prevent self-hosted execution, complete all possible engineering work and report the precise external blocker.
+
+Provide final GitHub verification, actual frontend/mobile screenshots, test evidence and exact commit SHAs.
+
+```
+
+The handoff is also recorded in the discussion on [PR #71](https://github.com/Atlasfsp/iRespond/pull/71?utm_source=chatgpt.com), so Codex can use that as additional context.
+
+One important boundary: Codex may need you to register the runner using the short-lived token shown in GitHub's runner settings. A billing-related account lock can sometimes affect even free-tier Actions access; if that happens, Codex must identify the exact restriction rather than weaken required checks.&#x20;
+
+[image](https://www.google.com/s2/favicons?domain=https://docs.github.com\&sz=32)
+
+GitHub Docs+1
+
+
+
+The implementation and merge instructions are ready for Codex. The PR itself remains unmerged until GitHub accepts the genuine required checks.

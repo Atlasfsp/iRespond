@@ -25,7 +25,8 @@ permissions:
 
 jobs:
   source-monitor:
-    runs-on: ubuntu-latest
+    if: github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101'))
+    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
     steps:
       - name: Resolve authoritative synchronization context
         id: context
@@ -145,8 +146,8 @@ jobs:
           echo "Changed sources without manual screen mapping: ${{ steps.compare.outputs.unmapped_change_count }}"
 
   capture-on-main:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
+    if: (github.event_name == 'push') && (github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101')))
+    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
     permissions:
       contents: read
     outputs:
@@ -214,8 +215,8 @@ jobs:
 
   sync-on-main:
     needs: capture-on-main
-    if: needs.capture-on-main.outputs.changed == 'true'
-    runs-on: ubuntu-latest
+    if: (needs.capture-on-main.outputs.changed == 'true') && (github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101')))
+    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
     permissions:
       actions: write
       contents: write
