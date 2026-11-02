@@ -21,3 +21,11 @@ test('release workflows retain trusted-source gates and never select paid hosted
   assert.doesNotMatch(s,/^    if: github\.repository/m,'untrusted required jobs must remain pending, not skipped-green');
  }
 });
+test('isolated release jobs do not depend on the remote cache service',()=>{
+ for(const file of ['verify.yml','build-android-demo.yml','living-manuals.yml']){
+  const s=readFileSync(`.github/workflows/${file}`,'utf8');
+  assert.doesNotMatch(s,/cache: pnpm|cache-dependency-path:/);
+ }
+ const verify=readFileSync('.github/workflows/verify.yml','utf8');
+ assert.equal((verify.match(/cache: false/g)||[]).length,2,'both Go lanes disable default remote caching');
+});

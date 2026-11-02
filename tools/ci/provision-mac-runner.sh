@@ -11,6 +11,7 @@ orb run -m irespond-ci sh -c '
   printf "%s\n" "{\"features\":{\"containerd-snapshotter\":false},\"storage-driver\":\"fuse-overlayfs\"}" | sudo tee /etc/docker/daemon.json >/dev/null
   sudo systemctl enable --now docker
   sudo systemctl restart docker
+  printf "store-dir=%s/.cache/irespond-pnpm-store\nnetwork-concurrency=4\nfetch-retries=5\nfetch-timeout=120000\n" "$HOME" > "$HOME/.npmrc"
   mkdir -p "$HOME/runner"
   cd "$HOME/runner"
   curl -fL https://github.com/actions/runner/releases/download/v2.338.0/actions-runner-linux-arm64-2.338.0.tar.gz -o runner.tar.gz

@@ -142,3 +142,13 @@ workspace. It now captures production workspace roots plus the complete frozen
 resolution graph, policy and Metro patch bytes. Go module edges and per-file hashes
 are included, and a verifier rejects missing mobile dependencies or missing graphs.
 Only disposable CI containers and this task's unused runner files are cleaned up.
+
+## Optional cache service outage
+
+A genuine mobile run stalled restoring a remote cache, then npm timed out fetching
+`@expo/vector-icons`; no application tests executed in that failed job. The required
+workflows no longer restore remote pnpm/Go caches. The isolated VM keeps a bounded
+lifetime content-addressed pnpm store and Go downloads, with lower fetch concurrency
+and retries. Frozen installs and lockfile integrity remain required. This removes
+an optional cache-service dependency; it does not remove mandatory artifact upload
+or resolve the organization storage quota. Regression checks enforce this boundary.
