@@ -13,10 +13,10 @@ supplied duplicate master downloads do not represent independent evidence.
 | 1 Runner/governance | implemented, merge blocked externally | Real isolated smoke and genuine e90b95b jobs; `docs/release/MACBOOK_CI_20261102.md`; task VM removed |
 | 2 Dependencies | partial | e90b95b supply-chain validation: 0 high/critical JS, 3 moderate/1 low; Go 1.26.10 negative reachable scan. Upload quota blocks job; #76 remains open |
 | 3 UI/merge | partial | Web/mobile/API/security/deployment pass e90b95b; native Android emulator evidence; quota blocks required supply-chain/source-monitor. Full screen/state and iOS/assistive-tech acceptance remains |
-| 4 Trust | next implementation | ADR-003, independent review and immutable source lineage; real DB/storage negatives required |
+| 4 Trust | partial, PRs #78–79 | Independent review, immutable source/audit/outbox and strict SS13 adapter verified; tenant/resource wiring and remaining fraud/safeguarding work pending |
 | 5 Impact | not implemented as a product API | Internal outcome prototype exists; requires persistence, methods, policy, outbox and safe projections |
 | 6 Volunteer | not implemented as a product API | Internal deterministic matcher exists; requires self-owned consent profiles, concurrency-safe applications and canonical commitment mapping |
-| 7 AICO | discovery pending | Discover canonical contract; no invented endpoint, provider call or live registry claim; off by default |
+| 7 AICO | canonical contracts discovered, integration pending | Nvuto-AICO 4f4e7b88e3d45b9545e162e64eea7d17abca8bbd and Shared Services 47ec7174f905dbc9e04f9ede4f5775e978540949; no live registry/provider claim; off by default |
 | 8 Institutions | not implemented as a product API | Internal invitation prototype exists; requires verified tenant membership and programme/task/report contracts |
 | 9 Packaging | proposal only | One shared domain/identity; no endorsement, outreach or commercial claims |
 | 10 Quality | partial baseline only | Exact-source local and e90b95b CI evidence exists; 82 new matrix requirements are not all passed |
@@ -31,9 +31,9 @@ supplied duplicate master downloads do not represent independent evidence.
 2. P0: storage quota blocks required artifact uploads and protected merge. Owner:
    GitHub organization/account administrator. Retain prior certification artifacts;
    restore available free quota, await recalculation and rerun the failed checks.
-3. P0: current evidence review service lacks authenticated actor separation and a
-   durable review/audit record. Next code slice must close uploader/reporter COI,
-   protect resource scope and transact decisions with outbox events.
+3. P0: PR #78 closes authenticated reviewer separation, uploader/reporter COI and
+   immutable source/audit/outbox transactions. PR #79 hardens the SS13 adapter.
+   Resource/tenant enforcement and remaining evidence controls still require work.
 4. P0: new domains currently lack tenant-aware persistence and public authorization.
    Do not expose prototypes through UI or fabricate live integrations.
 5. P1: authenticated live-data, 91-screen/state, physical-device, native iOS and
@@ -54,3 +54,9 @@ The user authorizes preserving Go, YugabyteDB/YSQL, RustFS, Expo, StratoID/OIDC,
 Shared Services and release seams. BAC Authentik/SpiceDB/Hasura standardization
 remains behind those established service contracts; it does not authorize a
 parallel identity/data plane or silently replacing release architecture.
+
+Capacity assumptions, effort ranges and unresolved decisions are maintained in
+`docs/pilot/CAPACITY_AND_DECISIONS.md`. Institutional configurations remain planning
+templates; staffing, owners, participants and dates are UNKNOWN/UNCONFIRMED.
+The user prioritizes FIELDWORK web/mobile and existing backend integration before
+new AI and institutional domains; external commitments do not block engineering.
