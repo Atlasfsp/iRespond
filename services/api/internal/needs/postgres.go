@@ -26,16 +26,17 @@ func NewPostgresRepository(ctx context.Context, databaseURL string) (*PostgresRe
 
 func (p *PostgresRepository) Close() error { p.pool.Close(); return nil }
 
-func (p *PostgresRepository) Create(ctx context.Context, n Need, idempotencyKey string) (Need, bool, error) {
+func (p *PostgresRepository) createOnce(ctx context.Context, n Need, idempotencyKey string) (Need, bool, error) {
 	if n.VerificationState == "" { n.VerificationState = Observed }
 	now := time.Now().UTC(); if n.CreatedAt.IsZero() { n.CreatedAt = now }; n.UpdatedAt = now
 	tx, err := p.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil { return Need{}, false, err }
 	defer tx.Rollback(ctx)
 	if idempotencyKey != "" {
+		if _, err = tx.Exec(ctx, `DELETE FROM idempotency_keys WHERE scope='create_need' AND key=$1 AND expires_at <= now()`, idempotencyKey); err != nil { return Need{},false,err }
 		var body []byte
 		err = tx.QueryRow(ctx, `SELECT response_body FROM idempotency_keys WHERE scope='create_need' AND key=$1 AND expires_at > now()`, idempotencyKey).Scan(&body)
-		if err == nil { var existing Need; if json.Unmarshal(body, &existing) == nil { return existing, true, nil } } else if !errors.Is(err, pgx.ErrNoRows) { return Need{}, false, err }
+		if err == nil { var existing Need; if json.Unmarshal(body, &existing) == nil { if !sameCreationIntent(existing,n) {return Need{},false,ErrIdempotencyConflict}; return existing, true, nil } } else if !errors.Is(err, pgx.ErrNoRows) { return Need{}, false, err }
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO needs(id,title,description,category,reporter_id,verification_state,sdg_tags,latitude,longitude,created_at,updated_at)
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, n.ID,n.Title,n.Description,n.Category,n.ReporterID,n.VerificationState,n.SDGTags,n.Latitude,n.Longitude,n.CreatedAt,n.UpdatedAt)

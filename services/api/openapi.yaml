@@ -96,6 +96,8 @@ paths:
       tags: [Needs]
       operationId: createNeed
       summary: Create an observed community need
+      description: Anonymous observations remain unattributed. If a bearer token is supplied it must identify a verified human; reporter attribution comes only from that identity, never JSON.
+      security: [ {}, { bearerAuth: [] } ]
       parameters:
         - { name: Idempotency-Key, in: header, required: false, schema: { type: string } }
       requestBody:
@@ -112,6 +114,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Need' }
+        '409': { description: Idempotency key was already used for a different observation intent }
+        '401': { description: Supplied bearer token is invalid }
+        '403': { description: A workload identity cannot publish an observation }
+        '503': { description: Identity verification is unavailable for an authenticated submission }
         '400': { $ref: '#/components/responses/BadRequest' }
         '500': { $ref: '#/components/responses/InternalError' }
     get:
@@ -835,7 +841,7 @@ components:
         category: { type: string }
         latitude: { type: number }
         longitude: { type: number }
-        reporterId: { type: string }
+        reporterId: { type: string, deprecated: true, description: Ignored on creation; reporter identity is derived only from a verified bearer token. }
         sdgTags: { type: array, items: { type: integer, minimum: 1, maximum: 17 } }
     Need:
       type: object
