@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+for script in tools/ci/*.sh; do bash -n "$script"; done
 node --check apps/web/app.js
 node --check apps/web/stitch-catalog.js
 node --experimental-strip-types --test tools/ci/*.test.mjs

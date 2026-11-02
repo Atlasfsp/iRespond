@@ -2,15 +2,6 @@ name: build-android-demo
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'apps/mobile/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'patches/**'
-      - 'tools/offline_demo.test.mjs'
-      - '.github/workflows/build-android-demo.yml'
 
 permissions:
   contents: read
@@ -21,8 +12,7 @@ concurrency:
 
 jobs:
   offline-demo-apk:
-    if: github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101'))
-    runs-on: [self-hosted, Linux, ARM64, irespond-isolated, irespond-native]
+    runs-on: ${{ fromJSON((github.repository == 'Atlasfsp/iRespond' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/impact-experience-evolution-20261101')) || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71))) && '{"group":"irespond-mac-isolated-20261102", "labels":["self-hosted", "Linux", "ARM64", "irespond-isolated", "irespond-native"]}' || '["self-hosted", "irespond-untrusted-disabled"]') }}
     timeout-minutes: 45
     env:
       CI: '1'

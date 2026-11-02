@@ -1,37 +1,15 @@
 name: web-verify
 
 on:
-  pull_request:
-    paths:
-      - 'apps/web/**'
-      - 'apps/mobile/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'tools/ci/**'
-      - 'patches/**'
-      - 'docs/frontend/**'
-      - 'services/api/openapi.yaml'
-      - 'services/api/cmd/server/**'
-      - 'deploy/helm/irespond/**'
-      - 'tools/verify_web_frontend.mjs'
-      - 'tools/verify_horizon_experience.mjs'
-      - 'tools/verify_fieldwork_design.mjs'
-      - 'tools/verify_frontend_api_coverage.mjs'
-      - 'tools/verify_frontend_execution.mjs'
-      - 'tools/verify_frontend_reachability.mjs'
-      - 'tools/verify_frontend_authorization.mjs'
-      - 'tools/offline_demo.test.mjs'
-      - '.github/workflows/build-android-demo.yml'
-      - '.github/workflows/web-verify.yml'
+  push:
+    branches: [main, feat/impact-experience-evolution-20261101]
 
 permissions:
   contents: read
 
 jobs:
   web-contract:
-    if: github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101'))
-    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
+    runs-on: ${{ fromJSON((github.repository == 'Atlasfsp/iRespond' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/impact-experience-evolution-20261101')) || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71))) && '{"group":"irespond-mac-isolated-20261102", "labels":["self-hosted", "Linux", "ARM64", "irespond-isolated"]}' || '["self-hosted", "irespond-untrusted-disabled"]') }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4

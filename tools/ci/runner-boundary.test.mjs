@@ -16,6 +16,8 @@ test('release workflows retain trusted-source gates and never select paid hosted
   assert.doesNotMatch(s,/runs-on: (ubuntu|macos|windows)-/);
   assert.match(s,/github\.event\.pull_request\.head\.repo\.full_name == github\.repository/);
   assert.match(s,/github\.event\.pull_request\.number == 71/);
-  assert.match(s,/runs-on: \[self-hosted, Linux, ARM64, irespond-isolated(?:, [a-z-]+)?\]/);
+  assert.match(s,/runs-on: \$\{\{ fromJSON/);
+  assert.match(s,/irespond-untrusted-disabled/);
+  assert.doesNotMatch(s,/^    if: github\.repository/m,'untrusted required jobs must remain pending, not skipped-green');
  }
 });

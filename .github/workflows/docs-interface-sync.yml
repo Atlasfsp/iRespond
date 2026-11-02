@@ -1,18 +1,8 @@
 name: docs-interface-sync
 
 on:
-  pull_request:
-    paths:
-      - 'apps/mobile/**'
-      - 'apps/web/**'
-      - 'docs/frontend/**'
-      - 'tools/docs-sync/**'
-      - 'docs/documentation-system/**'
-      - 'docs/screenshots/current/**'
-      - '.github/workflows/docs-baseline-ownership.yml'
-      - '.github/workflows/docs-interface-sync.yml'
   push:
-    branches: [main]
+    branches: [main, feat/impact-experience-evolution-20261101]
   workflow_dispatch:
     inputs:
       pull_request_number:
@@ -25,8 +15,7 @@ permissions:
 
 jobs:
   source-monitor:
-    if: github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101'))
-    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
+    runs-on: ${{ fromJSON((github.repository == 'Atlasfsp/iRespond' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/impact-experience-evolution-20261101')) || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71))) && '{"group":"irespond-mac-isolated-20261102", "labels":["self-hosted", "Linux", "ARM64", "irespond-isolated"]}' || '["self-hosted", "irespond-untrusted-disabled"]') }}
     steps:
       - name: Resolve authoritative synchronization context
         id: context
@@ -42,6 +31,9 @@ jobs:
           set -euo pipefail
           accepted_revision="$EVENT_ACCEPTED_REVISION"
           source_revision="$EVENT_SHA"
+          if test "$EVENT_NAME" = "push" && test "$EVENT_REF" = "refs/heads/feat/impact-experience-evolution-20261101"; then
+            accepted_revision=$(gh api "repos/${EVENT_REPOSITORY}/git/ref/heads/main" --jq .object.sha)
+          fi
           publication_verification=false
           if test "$EVENT_NAME" = "workflow_dispatch" && test -n "$INPUT_PR_NUMBER"; then
             [[ "$INPUT_PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
@@ -146,8 +138,8 @@ jobs:
           echo "Changed sources without manual screen mapping: ${{ steps.compare.outputs.unmapped_change_count }}"
 
   capture-on-main:
-    if: (github.event_name == 'push') && (github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101')))
-    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ${{ fromJSON((github.repository == 'Atlasfsp/iRespond' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/impact-experience-evolution-20261101')) || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71))) && '{"group":"irespond-mac-isolated-20261102", "labels":["self-hosted", "Linux", "ARM64", "irespond-isolated"]}' || '["self-hosted", "irespond-untrusted-disabled"]') }}
     permissions:
       contents: read
     outputs:
@@ -215,8 +207,8 @@ jobs:
 
   sync-on-main:
     needs: capture-on-main
-    if: (needs.capture-on-main.outputs.changed == 'true') && (github.repository == 'Atlasfsp/iRespond' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71 && github.event.pull_request.head.ref == 'feat/impact-experience-evolution-20261101')))
-    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
+    if: needs.capture-on-main.outputs.changed == 'true'
+    runs-on: ${{ fromJSON((github.repository == 'Atlasfsp/iRespond' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/impact-experience-evolution-20261101')) || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71))) && '{"group":"irespond-mac-isolated-20261102", "labels":["self-hosted", "Linux", "ARM64", "irespond-isolated"]}' || '["self-hosted", "irespond-untrusted-disabled"]') }}
     permissions:
       actions: write
       contents: write

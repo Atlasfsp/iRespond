@@ -34,11 +34,24 @@ Live branch protection requires `mobile`, `security-boundary`, `supply-chain`, `
 `deployment` and `source-monitor`, bound to the GitHub Actions app. `web-contract`
 is additionally tested. No check name, required context or branch protection changed.
 
-Workflows now target only the isolated Linux label and restrict PR execution to
-same-repository #71 and its exact branch name. Main push/manual paths remain trusted.
-All existing test steps remain. Base-controlled `pull_request_target` logic remains
-base-controlled; its runner change cannot take effect until protected merge.
-Future PRs require a reviewed update to this temporary trust allowlist.
+Workflows now target the isolated Linux **organization runner group**
+`irespond-mac-isolated-20261102` (ID 4), restricted by GitHub to this repository and
+explicit workflow files on `main` and the reviewed #71 feature branch. Required
+checks run on trusted branch pushes, not public PR source. Branch protection still
+requires the real GitHub Actions results; untrusted PRs have no passing required
+checks. No required test or branch-protection context was removed.
+
+The runner selection expression also sends unauthorized events to an unregistered
+label, keeping them pending rather than skipped-green. Optional native/manual jobs
+have separate labels to avoid starving required checks. Base-controlled
+`pull_request_target` documentation ownership and all provenance checks remain.
+Generated documentation publication refs need reviewed group-allowlist additions
+before revalidation; they do not inherit permission to run arbitrary PR code.
+
+The group API rejects `refs/pull/71/merge` as an ambiguous non-branch/non-tag ref.
+An organization runner restricted to the approved branch refs did not accept the
+old pull-request jobs. Trusted branch-push checks are therefore used, with feature
+source-monitor comparisons explicitly anchored to the protected main baseline.
 
 Never start a repository runner on the personal macOS account. Provision ephemeral
 runners only while executing reviewed jobs, remove workspace data between jobs and
@@ -76,3 +89,20 @@ Authentik, SpiceDB and shared-service contracts required before exposing writes.
 
 Institutional pilot execution, legal/security sign-off, shared-service onboarding,
 AICO activation and real payment infrastructure require external owners and evidence.
+
+## Artifact storage blocker
+
+On the initial full source-monitor run, all regression/fingerprint/comparison/index
+steps passed, but the mandatory upload failed:
+
+> Failed to CreateArtifact: Artifact storage quota has been hit. Unable to upload
+> any new artifacts. Usage is recalculated every 6-12 hours.
+
+Run: https://github.com/Atlasfsp/iRespond/actions/runs/41389682125
+
+No upload step was suppressed or allowed to fail silently. The controller now
+archives generated evidence locally before clearing each checkout. The organization
+owner must restore artifact storage availability without paid usage (for example by
+reviewing superseded storage and allowing quota recalculation). Existing certification
+artifacts were not deleted. A successful self-hosted scheduler probe cannot clear
+this separate evidence-upload requirement.
