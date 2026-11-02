@@ -1,0 +1,18 @@
+name: Isolated MacBook runner smoke
+on:
+  push:
+    branches: [codex/fieldwork-release-completion]
+    paths: [.github/workflows/mac-runner-smoke.yml]
+permissions: {}
+jobs:
+  scheduler-smoke:
+    if: github.repository == 'Atlasfsp/iRespond' && github.event_name == 'push' && github.ref == 'refs/heads/codex/fieldwork-release-completion'
+    runs-on: [self-hosted, Linux, ARM64, irespond-isolated]
+    timeout-minutes: 2
+    steps:
+      - name: Verify isolated Linux scheduling without source checkout or secrets
+        run: |
+          test "$(uname -s)" = Linux
+          test ! -e /Users
+          test ! -e /mnt/mac
+          printf '%s\n' 'Self-hosted scheduling works; this is not a release check.'
