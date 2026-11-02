@@ -26,7 +26,7 @@ main[tabindex="-1"]:focus{outline:none}
 .brand-mark{width:43px;height:43px;border-radius:15px;background:var(--fw-strong);color:transparent;position:relative;overflow:hidden}
 .brand-mark::before{content:"✦";color:#D9EDC7;position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);font-size:30px;line-height:1}
 .brand strong{font-size:21px;font-weight:900;letter-spacing:-.055em;color:var(--fw-strong)}
-.brand small{font-size:10px;letter-spacing:.03em;color:#839187}
+.brand small{font-size:10px;letter-spacing:.03em;color:var(--fw-muted)}
 .metric,.panel,.card,.list-item{border-color:var(--fw-line);border-radius:18px;background:var(--fw-paper)}
 .panel h2,.panel h3,.card h3,.section-head h2{color:var(--fw-ink)}
 .badge{background:var(--fw-leaf-soft);color:var(--fw-leaf)}
@@ -69,7 +69,7 @@ main[tabindex="-1"]:focus{outline:none}
 .impact-section-header span{color:var(--fw-leaf)}
 .impact-section-header h2{font-size:clamp(26px,2.9vw,37px);font-weight:850;letter-spacing:-.045em;color:var(--fw-strong)}
 .impact-section-header h2 em{font-family:var(--fw-display);font-size:1.1em;font-weight:400;font-style:italic;color:var(--fw-coral-text)}
-.impact-section-header p{color:#718073}
+.impact-section-header p{color:#53685C}
 .impact-action-grid{gap:16px}
 .impact-action{background:#fff;border-color:var(--fw-line);border-radius:23px;min-height:222px;padding:25px;color:var(--fw-ink)}
 .impact-action:hover{border-color:#B0CEBA;box-shadow:var(--fw-shadow);transform:translateY(-3px)}
@@ -81,7 +81,7 @@ main[tabindex="-1"]:focus{outline:none}
 .impact-action .action-arrow{color:var(--fw-leaf)}
 .impact-journey-panel{border-radius:23px;border-color:var(--fw-line);padding:27px}
 .impact-journey-panel h3{font-weight:850;color:var(--fw-strong)}
-.impact-journey-panel p{color:#708075}
+.impact-journey-panel p{color:#53685C}
 .impact-flow span{background:#ECF4E9;color:#285F45}
 .impact-flow span:nth-child(even){background:#F8EDDB;color:#745B31}
 .impact-trust{background:#FCECE4;border-color:#F5DACD}
@@ -98,7 +98,7 @@ main[tabindex="-1"]:focus{outline:none}
  .brand{padding:4px 7px}
  .brand-mark{background:var(--fw-strong)}
  .brand strong{color:var(--fw-strong)}
- .brand small{color:#75837A}
+ .brand small{color:var(--fw-muted)}
  .primary-nav{border-top:1px solid var(--fw-line);gap:7px}
  .primary-nav a{min-height:47px;color:#607366;border-radius:13px;font-weight:790}
  .primary-nav a:hover{background:#F5F8F3;color:var(--fw-ink)}
@@ -116,7 +116,7 @@ main[tabindex="-1"]:focus{outline:none}
 }
 @media(max-width:900px){
  .topbar{background:#FFF;border-bottom:1px solid var(--fw-line)}
- .primary-nav a{color:#667C6D}
+ .primary-nav a{color:#53685C}
  .primary-nav a[aria-current="page"]{background:var(--fw-leaf-soft);color:var(--fw-leaf)}
  .impact-hero{grid-template-columns:1.1fr .9fr}
  .fw-art{min-height:370px}
@@ -131,7 +131,7 @@ main[tabindex="-1"]:focus{outline:none}
  .topbar #primary-nav a{font-size:12px;padding:8px 9px}
  .brand strong{font-size:20px}
  .brand-mark{width:36px;height:36px;border-radius:12px}
- .identity-actions .button{font-size:12px;padding:8px 12px;min-height:38px}
+ .identity-actions .button{font-size:12px;padding:8px 12px;min-height:44px}
  .impact-home{gap:24px}
  .impact-hero{grid-template-columns:1fr;border-radius:23px}
  .fw-hero-copy{padding:27px 22px 10px}
@@ -154,3 +154,15 @@ main[tabindex="-1"]:focus{outline:none}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 
 .impact-institution :focus-visible{outline-color:var(--fw-gold)}
+
+/* Keep each visible field label associated with its control, including repeated forms. */
+.field > label:has(input, select, textarea){display:grid;gap:6px}
+
+.impact-journey-panel > small{color:var(--fw-muted)}
+.primary-nav a{min-height:44px;display:inline-flex;align-items:center}
+.button.ghost,.button.ghost:hover{background:transparent;color:var(--fw-leaf)}
+
+/* Avoid partially transparent live messages with unreadable transient contrast. */
+.toast{transition:none}
+/* Native wrapping labels must not shrink the user's entered text. */
+.field label > :is(input,textarea,select){font-size:15px;font-weight:400}

@@ -13,6 +13,7 @@
     "render-diagrams": "node src/render-diagrams.mjs"
   },
   "devDependencies": {
+    "axe-core": "4.14.0",
     "mermaid": "12.1.0",
     "playwright": "1.55.0"
   }
