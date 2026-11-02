@@ -53,7 +53,8 @@ func (m *MemoryRepository) Get(_ context.Context, id string) (Need, error) { ret
 func (m *MemoryRepository) Nearby(_ context.Context, lat, lng, radiusKm float64) ([]Need, error) {
 	return m.store.Nearby(lat, lng, radiusKm), nil
 }
-func (m *MemoryRepository) Transition(_ context.Context, id string, state VerificationState, _ string) (Need, error) {
+func (m *MemoryRepository) Transition(_ context.Context, id string, state VerificationState, actor string) (Need, error) {
+	n,err:=m.store.Get(id);if err!=nil{return Need{},err};if err=validateVerificationActor(n.ReporterID,actor,state);err!=nil{return Need{},err}
 	return m.store.Transition(id, state)
 }
 func (m *MemoryRepository) Close() error { return nil }

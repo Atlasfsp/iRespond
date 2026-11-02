@@ -9,6 +9,7 @@ import (
 	"github.com/Atlasfsp/iRespond/services/api/internal/needs"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -60,4 +61,43 @@ func scopedNeedIdempotencyKey(reporter, key string) string {
 	}
 	digest := sha256.Sum256([]byte("need-create-v2\x00" + reporter + "\x00" + key))
 	return hex.EncodeToString(digest[:])
+}
+
+func getNeedHandler(repo needs.Repository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		n, err := repo.Get(r.Context(), r.PathValue("id"))
+		if errors.Is(err, needs.ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "need not found"})
+			return
+		}
+		if err != nil {
+			log.Printf("get need: %v", err)
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to load need"})
+			return
+		}
+		n.ReporterID = ""
+		writeJSON(w, http.StatusOK, n)
+	}
+}
+
+func nearbyNeedsHandler(repo needs.Repository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		lat, e1 := strconv.ParseFloat(r.URL.Query().Get("lat"), 64)
+		lng, e2 := strconv.ParseFloat(r.URL.Query().Get("lng"), 64)
+		radius, e3 := strconv.ParseFloat(r.URL.Query().Get("radiusKm"), 64)
+		if e1 != nil || e2 != nil || e3 != nil || lat < -90 || lat > 90 || lng < -180 || lng > 180 || radius <= 0 || radius > 200 {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "valid lat, lng and radiusKm (0-200) are required"})
+			return
+		}
+		items, err := repo.Nearby(r.Context(), lat, lng, radius)
+		if err != nil {
+			log.Printf("nearby needs: %v", err)
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to query nearby needs"})
+			return
+		}
+		for i := range items {
+			items[i].ReporterID = ""
+		}
+		writeJSON(w, http.StatusOK, items)
+	}
 }

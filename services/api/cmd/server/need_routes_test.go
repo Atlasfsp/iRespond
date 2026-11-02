@@ -88,3 +88,31 @@ func TestNeedRetryKeysCannotReplayAnotherReporter(t *testing.T) {
 		t.Fatal("another reporter's idempotency response was disclosed")
 	}
 }
+
+func TestPublicNeedReadDoesNotExposeVerifiedReporterIdentity(t *testing.T) {
+	repo := needs.NewMemoryRepository()
+	defer repo.Close()
+	ctx := context.Background()
+	secretSubject := "private-oidc-subject-123"
+	n, _, err := repo.Create(ctx, needs.Need{ID: "public-observation", Title: "Synthetic observation", Description: "Test only", ReporterID: secretSubject, Latitude: 6.5, Longitude: 3.4}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/needs/{id}", getNeedHandler(repo))
+	mux.HandleFunc("GET /v1/needs", nearbyNeedsHandler(repo))
+	for _, url := range []string{"/v1/needs/" + n.ID, "/v1/needs?lat=6.5&lng=3.4&radiusKm=1"} {
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, url, nil))
+		if rr.Code != 200 {
+			t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
+		}
+		if strings.Contains(rr.Body.String(), secretSubject) {
+			t.Errorf("public route %s disclosed verified reporter identity", url)
+		}
+	}
+	stored, err := repo.Get(ctx, n.ID)
+	if err != nil || stored.ReporterID != secretSubject {
+		t.Fatal("privacy projection changed authoritative attribution")
+	}
+}

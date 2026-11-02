@@ -2,6 +2,7 @@ package needs
 
 import (
 	"context"
+ "errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -46,9 +47,10 @@ func TestPostgresRepositoryLifecycle(t *testing.T) {
 	if err != nil { t.Fatal(err) }
 	if len(far) != 0 { t.Fatalf("expected no distant needs, got %d", len(far)) }
 
-	requested, err := repo.Transition(ctx, created.ID, VerificationRequested, "verifier-1")
+	requested, err := repo.Transition(ctx, created.ID, VerificationRequested, need.ReporterID)
 	if err != nil { t.Fatal(err) }
 	if requested.VerificationState != VerificationRequested { t.Fatalf("state=%s", requested.VerificationState) }
+ if _,err:=repo.Transition(ctx,created.ID,CommunityConfirmed,need.ReporterID);!errors.Is(err,ErrIndependentVerifierRequired){t.Fatalf("self verification allowed: %v",err)}
 	confirmed, err := repo.Transition(ctx, created.ID, CommunityConfirmed, "verifier-2")
 	if err != nil { t.Fatal(err) }
 	if confirmed.VerificationState != CommunityConfirmed { t.Fatalf("state=%s", confirmed.VerificationState) }
