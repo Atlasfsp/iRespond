@@ -32,6 +32,8 @@ func TestYSQLCreationIntentConcurrencyAndExpiry(t *testing.T) {
 	if _, err = pool.Exec(ctx, `TRUNCATE needs,need_verifications,idempotency_keys,outbox_events CASCADE`); err != nil {
 		t.Fatal(err)
 	}
+ for _,name:=range []string{"0002_evidence.sql","0013_field_report_context.sql"}{body,e:=os.ReadFile(filepath.Join("..","..","migrations",name));if e!=nil{t.Fatal(e)};if _,e=pool.Exec(ctx,string(body));e!=nil{t.Fatal(e)}}
+
 	repo, err := NewPostgresRepository(ctx, url)
 	if err != nil {
 		t.Fatal(err)

@@ -6,6 +6,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"image"
+	"image/jpeg"
 	"io"
 	"net/http"
 	"os"
@@ -30,7 +33,7 @@ func TestSignedUploadLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	for _, name := range []string{"0001_core.sql", "0002_evidence.sql", "0011_evidence_review_audit.sql", "0012_evidence_policy_receipts.sql"} {
+	for _, name := range []string{"0001_core.sql", "0002_evidence.sql", "0011_evidence_review_audit.sql", "0012_evidence_policy_receipts.sql", "0013_field_report_context.sql"} {
 		b, err := os.ReadFile(filepath.Join("..", "..", "migrations", name))
 		if err != nil {
 			t.Fatal(err)
@@ -61,12 +64,24 @@ func TestSignedUploadLifecycle(t *testing.T) {
 		t.Fatalf("invalid checksum accepted: %v", err)
 	}
 
-	payload := []byte("evidence-bytes")
+	var encoded bytes.Buffer
+	if err := jpeg.Encode(&encoded, image.NewRGBA(image.Rect(0, 0, 1, 1)), nil); err != nil {
+		t.Fatal(err)
+	}
+	payload := encoded.Bytes()
 	expectedHash := sha256.Sum256(payload)
 	expectedSHA := hex.EncodeToString(expectedHash[:])
-	upload, err := svc.Initiate(ctx, "evidence-need", "person-1", "image/jpeg", int64(len(payload)), "")
+	capture := &CaptureContext{Origin: "camera", RecordedAt: "2026-11-03T08:00:00Z", Stage: "before", LocationStatus: "unavailable"}
+	upload, err := svc.InitiateWithCapture(ctx, "evidence-need", "person-1", "image/jpeg", int64(len(payload)), "", capture)
 	if err != nil {
 		t.Fatal(err)
+	}
+	var recorded string
+	if err := pool.QueryRow(ctx, `SELECT capture_context->>'recordedAt' FROM need_evidence WHERE id=$1`, upload.EvidenceID).Scan(&recorded); err != nil || recorded != capture.RecordedAt {
+		t.Fatalf("lost capture context %s %v", recorded, err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE need_evidence SET capture_context='{}'::jsonb WHERE id=$1`, upload.EvidenceID); err == nil {
+		t.Fatal("capture context mutation allowed")
 	}
 	if status := putSigned(t, upload, payload); status < 200 || status >= 300 {
 		t.Fatalf("upload status=%d", status)
@@ -84,7 +99,8 @@ func TestSignedUploadLifecycle(t *testing.T) {
 
 	// Generated evidence keys are immutable: a presigned upload URL may not be
 	// replayed to replace bytes after completion.
-	tampered := []byte("tampered-bytes")
+	tampered := append([]byte{}, payload...)
+	tampered[len(tampered)-1] ^= 1
 	if len(tampered) != len(payload) {
 		t.Fatalf("test invariant: tampered payload length differs")
 	}
@@ -236,6 +252,101 @@ func TestSignedUploadLifecycle(t *testing.T) {
 	})
 	// A client-declared digest must match the bytes stored by RustFS. Failure is
 	// fail-closed and leaves the upload outside moderation.
+	t.Run("upload intents and per reporter media budget", func(t *testing.T) {
+		first, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "image/jpeg", int64(len(payload)), expectedSHA, capture, "stable-photo-1")
+		if e != nil {
+			t.Fatal(e)
+		}
+		replay, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "image/jpeg", int64(len(payload)), expectedSHA, capture, "stable-photo-1")
+		if e != nil || first.EvidenceID != replay.EvidenceID {
+			t.Fatalf("upload retry created another record: %+v %+v %v", first, replay, e)
+		}
+		for i := 2; i <= 4; i++ {
+			if _, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "image/jpeg", int64(len(payload)), expectedSHA, capture, fmt.Sprintf("photo-%d", i)); e != nil {
+				t.Fatal(e)
+			}
+		}
+		if _, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "image/jpeg", int64(len(payload)), expectedSHA, capture, "photo-5"); !errors.Is(e, ErrEvidenceLimit) {
+			t.Fatalf("fifth photo result: %v", e)
+		}
+		if _, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "image/jpeg", int64(len(payload))+1, expectedSHA, capture, "stable-photo-1"); !errors.Is(e, ErrUploadConflict) {
+			t.Fatalf("changed upload intent result: %v", e)
+		}
+		if status := putSigned(t, first, payload); status < 200 || status >= 300 {
+			t.Fatalf("budget fixture PUT %d", status)
+		}
+		if _, e := svc.Complete(ctx, "evidence-need", first.EvidenceID, "budget-reporter"); e != nil {
+			t.Fatal(e)
+		}
+		done, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "image/jpeg", int64(len(payload)), expectedSHA, capture, "stable-photo-1")
+		if e != nil || !done.Completed || done.EvidenceID != first.EvidenceID {
+			t.Fatalf("completed retry not acknowledged: %+v %v", done, e)
+		}
+		var wg sync.WaitGroup
+		failures := make(chan error, 6)
+		for i := 0; i < 6; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				v, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "image/jpeg", int64(len(payload)), expectedSHA, capture, "stable-photo-1")
+				if e != nil {
+					failures <- e
+				} else if v.EvidenceID != first.EvidenceID {
+					failures <- fmt.Errorf("concurrent intent duplicated")
+				}
+			}()
+		}
+		wg.Wait()
+		close(failures)
+		for e := range failures {
+			t.Fatal(e)
+		}
+		if _, e := pool.Exec(ctx, `UPDATE need_evidence SET client_attachment_id='forged-key' WHERE id=$1`, first.EvidenceID); e == nil {
+			t.Fatal("upload intent relinking allowed")
+		}
+		seconds := 30.0
+		videoContext := *capture
+		videoContext.DurationSeconds = &seconds
+		if _, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "video/mp4", 100, strings.Repeat("0", 64), &videoContext, "video-1"); e != nil {
+			t.Fatal(e)
+		}
+		if _, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "video/mp4", 100, strings.Repeat("0", 64), &videoContext, "video-2"); !errors.Is(e, ErrEvidenceLimit) {
+			t.Fatalf("second video result: %v", e)
+		}
+	})
+
+	t.Run("concurrent new upload intents preserve the budget", func(t *testing.T) {
+		var wg sync.WaitGroup
+		results := make(chan error, 6)
+		for i := 0; i < 6; i++ {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				_, e := svc.InitiateWithCapture(ctx, "evidence-need", "parallel-budget", "image/jpeg", int64(len(payload)), expectedSHA, capture, fmt.Sprintf("parallel-%d", i))
+				results <- e
+			}(i)
+		}
+		wg.Wait()
+		close(results)
+		ok, limited := 0, 0
+		for e := range results {
+			if e == nil {
+				ok++
+			} else if errors.Is(e, ErrEvidenceLimit) {
+				limited++
+			} else {
+				t.Fatal(e)
+			}
+		}
+		if ok != 4 || limited != 2 {
+			t.Fatalf("budget results successes=%d limited=%d", ok, limited)
+		}
+		var count int
+		if e := pool.QueryRow(ctx, `SELECT count(*) FROM need_evidence WHERE need_id='evidence-need' AND uploader_id='parallel-budget'`).Scan(&count); e != nil || count != 4 {
+			t.Fatalf("persisted over budget: %d %v", count, e)
+		}
+	})
+
 	mismatchPayload := []byte("checksum-mismatch")
 	mismatch, err := svc.Initiate(ctx, "evidence-need", "person-1", "image/png", int64(len(mismatchPayload)), strings.Repeat("0", 64))
 	if err != nil {

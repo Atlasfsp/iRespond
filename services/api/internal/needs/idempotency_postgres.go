@@ -11,6 +11,7 @@ import (
 // transaction and replay the winner from a fresh snapshot, never duplicate its
 // need/outbox event. Expired retry receipts may be replaced within the transaction.
 func (p *PostgresRepository) Create(ctx context.Context, n Need, key string) (Need, bool, error) {
+ if err:=ValidateReportContext(n.Category,n.CategoryDetail,n.LocationContext);err!=nil{return Need{},false,err}
 	if n.SDGTags == nil {
 		n.SDGTags = []int{}
 	}
