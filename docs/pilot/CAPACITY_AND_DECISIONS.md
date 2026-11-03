@@ -1,6 +1,6 @@
 # Capacity-aware implementation and decision register
 
-As of 2026-11-02. The supplied 90-day programme is a relative dependency framework,
+As of 2026-11-03. The supplied 90-day programme is a relative dependency framework,
 not an approved calendar or proof of completed field work. AI-assisted execution
 is available in this repository; committed human capacity is UNKNOWN.
 
@@ -9,6 +9,8 @@ is available in this repository; committed human capacity is UNKNOWN.
 | Deliverable | Source / evidence | Remaining dependency |
 | --- | --- | --- |
 | FIELDWORK web/mobile baseline | PR #71, e90b95b3ed371b5b9774e83a04aa0982fe619f86; genuine web, mobile, API, security and deployment jobs | Protected merge; additional screen/state, device and accessibility validation |
+| Field reporting, directions, custom categories, media provenance, device outbox and scoped role display | PR #89/#90; source 89fdd6e4bee5dc10986e28eaf8b05338e9aed9ac, feature merge 4361184e303b0144a0b413b11eb30b862cb1286f; actual browser/Go integration/race checks in FIELD_REVIEW_EXECUTION_20261103.md | Fresh native build/device acceptance, scanning and protected main checks |
+| Compatible Go dependency remediation | PR #91; source 3185e2d91c2686ccc69712488c62f068c05cc9df, feature merge 847bcccdc6de7397e407280b6eaab70cc1744c61; full updated race/vet/module verification and two-target scan | One unused module advisory; remaining npm findings and external release gates |
 | Independent evidence review, immutable source and audit/outbox transaction | PR #78, 1ab0f209914974782fbb4bd6b2cfd74ae7133693; Linux Go race tests with YugabyteDB/RustFS | Review, resource/tenant authorization and production integration |
 | Fail-closed SS13 authorization adapter | PR #79, a7cc333d6f5bfe5b4c8fe0760f715ae0e2895c0b; malformed response, redirect and revocation regression tests | Route-level policy wiring and live service approval |
 | Complete supplied engineering package | PR #77, 6fa4e0b5627fb5419b8818d8033f2a499a143b0d; verified package hashes | Most new product-domain acceptance requirements remain unverified |
@@ -53,10 +55,12 @@ not appointments. UNKNOWN means no supported commitment exists.
 | D05 | Commencement, testing and launch dates | Pilot owner and release authority | UNAPPROVED |
 | D06 | Consent, safeguarding, escalation and training owners | Data protection and safeguarding leads | UNASSIGNED / independent approval required |
 | D07 | Outcome methodology and beneficiary feedback protocol | Measurement lead | PROPOSED / no field validation |
-| D08 | Artifact quota and protected merge checks | GitHub organization administrator | BLOCKED / required uploads hit storage quota |
+| D08 | Runner availability, billing lock, artifact quota and protected merge checks | GitHub organization administrator | BLOCKED / latest feature 847bcc has required jobs queued; normal protected PR #71 merge refused. Documentation jobs on #89–#91 did not start due account billing lock. Earlier upload-quota failures remain historical; no paid runner or bypass authorized |
 | D09 | Independent security, legal and operational certification | Canonical external gate owners | PENDING / ga=false |
 | D10 | Commercial terms and support obligations | Authorized institutional/commercial owners | UNAPPROVED / no willingness-to-pay evidence |
 
 Update decisions only with a dated verifiable receipt and actual accountable owner.
 Repository-controlled work continues while D01–D07 remain unresolved. No institution,
 spend, staffing or real pilot deployment is authorized by these templates.
+
+The detailed product/technical review and remaining priority/effort table are in `../product/FIELD_REVIEW_20261103.md`; local verification and its limits are in `../engineering/FIELD_REVIEW_EXECUTION_20261103.md`. Repository merges do not confirm staffing, institutional decisions or certification.
