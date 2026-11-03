@@ -24,3 +24,4 @@ export function validateMediaSelection(items) {
  }
  return '';
 }
+export function publicProjectView(detail){const {permissions,viewerRoles,...publicView}=detail;return publicView}

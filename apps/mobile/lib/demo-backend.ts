@@ -1,3 +1,4 @@
+import {publicProjectView} from '../../web/field-report-policy.mjs';
 export const DEMO_API_BASE_URL = 'https://demo.irespond.local';
 export const demoMode = process.env.EXPO_PUBLIC_DEMO_MODE === '1';
 
@@ -631,7 +632,9 @@ export function createDemoFetch(realFetch: FetchLike, latencyMs = 80): FetchLike
     }
     const url = new URL(raw.replace(/^http:/, 'https:'));
     const method = (init?.method ?? (typeof input === 'object' && 'method' in input ? input.method : 'GET')).toUpperCase();
-    const result = createDemoPayload(url, method, requestBody(init?.body));
+    let result = createDemoPayload(url, method, requestBody(init?.body));
+    const headers=new Headers(init?.headers??(typeof input==='object'&&'headers' in input?input.headers:undefined));
+    if(method==='GET'&&/^\/v1\/projects\/[^/]+$/.test(url.pathname)&&headers.get('Authorization')!=='Bearer irespond-offline-demo-token'&&result.status===200){result={...result,body:publicProjectView(result.body as JsonRecord)}}
     if (latencyMs > 0) await new Promise((resolve) => setTimeout(resolve, latencyMs));
     return new Response(JSON.stringify(result.body), {
       status: result.status,
