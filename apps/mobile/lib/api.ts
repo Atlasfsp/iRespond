@@ -1,3 +1,4 @@
+import {apiBaseUrl} from './environment';
 import { getAccessToken } from './session';
 
 export type Session = {
@@ -17,9 +18,7 @@ export class APIError extends Error {
   }
 }
 
-export function apiBaseUrl() {
-  return process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '') ?? '';
-}
+export {apiBaseUrl} from './environment';
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}, authenticated: boolean | 'optional' = true): Promise<T> {
   const base = apiBaseUrl();

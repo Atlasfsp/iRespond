@@ -1,3 +1,4 @@
+import {publicProjectView} from '../../web/field-report-policy.mjs';
 export const DEMO_API_BASE_URL = 'https://demo.irespond.local';
 export const demoMode = process.env.EXPO_PUBLIC_DEMO_MODE === '1';
 
@@ -249,7 +250,7 @@ function allowedMilestoneTransition(from: string, to: string) {
 }
 function projectDetail(id: string) {
   const project = projectFor(id);
-  return project ? { project, milestones: milestonesByProject[id] ?? [], contributionNeeds: contributionNeedsByProject[id] ?? [], permissions } : null;
+  return project ? { project, milestones: milestonesByProject[id] ?? [], contributionNeeds: contributionNeedsByProject[id] ?? [], permissions,viewerRoles:Array.from(projectRolesByProject[id]??[]) } : null;
 }
 
 export function isDemoRequest(raw: string) {
@@ -284,6 +285,7 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
       title: String(input.title ?? 'Offline demo observation'),
       description: String(input.description ?? ''),
       category: String(input.category ?? 'community'),
+      categoryDetail:String(input.categoryDetail??''),
       latitude: Number(input.latitude ?? 0),
       longitude: Number(input.longitude ?? 0),
       reporterId: 'offline-demo-user',
@@ -630,7 +632,9 @@ export function createDemoFetch(realFetch: FetchLike, latencyMs = 80): FetchLike
     }
     const url = new URL(raw.replace(/^http:/, 'https:'));
     const method = (init?.method ?? (typeof input === 'object' && 'method' in input ? input.method : 'GET')).toUpperCase();
-    const result = createDemoPayload(url, method, requestBody(init?.body));
+    let result = createDemoPayload(url, method, requestBody(init?.body));
+    const headers=new Headers(init?.headers??(typeof input==='object'&&'headers' in input?input.headers:undefined));
+    if(method==='GET'&&/^\/v1\/projects\/[^/]+$/.test(url.pathname)&&headers.get('Authorization')!=='Bearer irespond-offline-demo-token'&&result.status===200){result={...result,body:publicProjectView(result.body as JsonRecord)}}
     if (latencyMs > 0) await new Promise((resolve) => setTimeout(resolve, latencyMs));
     return new Response(JSON.stringify(result.body), {
       status: result.status,

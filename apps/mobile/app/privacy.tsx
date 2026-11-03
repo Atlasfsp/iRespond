@@ -1,3 +1,4 @@
+import {apiBaseUrl} from '../lib/environment';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
@@ -14,7 +15,7 @@ const purposes=[{id:'impact-research',label:'Impact research',help:'Use de-ident
 
 export default function Privacy(){
  const[consents,setConsents]=useState<Record<string,boolean>>({});const[requests,setRequests]=useState<PrivacyRequest[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState('');const[saving,setSaving]=useState('');
- async function auth(){const base=process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/,'');const token=await getAccessToken();if(!base){setError('The privacy API is not configured on this build.');return null}if(!token){router.replace('/signin');return null}return{base,token}}
+ async function auth(){const base=apiBaseUrl();const token=await getAccessToken();if(!base){setError('The privacy API is not configured on this build.');return null}if(!token){router.replace('/signin');return null}return{base,token}}
  async function load(){const a=await auth();if(!a){setLoading(false);return}setLoading(true);setError('');try{const[c,r]=await Promise.all([fetch(`${a.base}/v1/me/privacy/consents`,{headers:{Authorization:`Bearer ${a.token}`}}),fetch(`${a.base}/v1/me/privacy/requests`,{headers:{Authorization:`Bearer ${a.token}`}})]);if(c.status===401||r.status===401){router.replace('/signin');return}if(!c.ok||!r.ok)throw new Error('load');const cs=await c.json() as Consent[];setConsents(Object.fromEntries(cs.map(v=>[v.purpose,v.granted])));setRequests(await r.json() as PrivacyRequest[])}catch{setError('Your privacy settings could not be loaded. Check connectivity and try again.')}finally{setLoading(false)}}
  useEffect(()=>{void load()},[]);
  async function consent(purpose:string,granted:boolean){const a=await auth();if(!a)return;setSaving(purpose);setConsents(v=>({...v,[purpose]:granted}));try{const r=await fetch(`${a.base}/v1/me/privacy/consents/${encodeURIComponent(purpose)}`,{method:'PUT',headers:{Authorization:`Bearer ${a.token}`,'Content-Type':'application/json'},body:JSON.stringify({granted,policyVersion})});if(!r.ok)throw new Error('save')}catch{setConsents(v=>({...v,[purpose]:!granted}));setError('That consent choice could not be saved.')}finally{setSaving('')}}

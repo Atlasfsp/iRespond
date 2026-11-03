@@ -1,3 +1,5 @@
+import {apiBaseUrl} from '../lib/environment';
+import {parseInterventionCoordinates} from '../lib/coordinates';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import * as Location from 'expo-location';
@@ -24,27 +26,24 @@ export default function NeedMap() {
   const [needs, setNeeds] = useState<Need[]>([]);
   const [status, setStatus] = useState('Finding your location…');
   const [loading, setLoading] = useState(true);
+  const [manualLatitude,setManualLatitude]=useState('');const[manualLongitude,setManualLongitude]=useState('');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<NeedFilter>('all');
 
-  async function loadNearby() {
+  async function loadNearby(manual=false) {
     setLoading(true);
     setNeeds([]); // Never present stale results as the current nearby response.
     try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-      if (!permission.granted) {
-        setStatus('Location permission is needed for nearby discovery. You can still report needs without granting it.');
-        return;
-      }
-
-      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
+      let coordinates=parseInterventionCoordinates(manualLatitude,manualLongitude);
+      if(manual){if(!coordinates){setStatus('Enter valid latitude and longitude for manual discovery.');return}}
+      else {const permission=await Location.requestForegroundPermissionsAsync();if(!permission.granted){setStatus('Location permission was not granted. Enter coordinates below to discover nearby needs.');return}const fix=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});coordinates={latitude:fix.coords.latitude,longitude:fix.coords.longitude};setManualLatitude(String(coordinates.latitude));setManualLongitude(String(coordinates.longitude));}
+      const baseUrl = apiBaseUrl();
       if (!baseUrl) {
         setStatus('NeedMap API is not configured on this build.');
         return;
       }
 
-      const url = `${baseUrl}/v1/needs?lat=${position.coords.latitude}&lng=${position.coords.longitude}&radiusKm=25`;
+      const url = `${baseUrl}/v1/needs?lat=${coordinates!.latitude}&lng=${coordinates!.longitude}&radiusKm=25`;
       const response = await fetch(url);
       if (!response.ok) throw new Error(`NeedMap request failed: ${response.status}`);
       const data = (await response.json()) as Need[];
@@ -73,6 +72,7 @@ export default function NeedMap() {
     <SafeAreaView style={s.safe} edges={['top', 'left', 'right']}>
       <View style={s.screen}>
         <StitchTopBar title="NeedMap" showBack />
+        <View style={{padding:16,gap:8}}><Text style={s.muted}>Discover by coordinates if device location is unavailable.</Text><TextInput accessibilityLabel="Discovery latitude" placeholder="Latitude" value={manualLatitude} onChangeText={setManualLatitude} keyboardType="numbers-and-punctuation" style={{minHeight:44,borderWidth:1,padding:10}}/><TextInput accessibilityLabel="Discovery longitude" placeholder="Longitude" value={manualLongitude} onChangeText={setManualLongitude} keyboardType="numbers-and-punctuation" style={{minHeight:44,borderWidth:1,padding:10}}/><Pressable accessibilityRole="button" disabled={loading} onPress={()=>void loadNearby(true)} style={{minHeight:44,justifyContent:'center'}}><Text>Find needs at these coordinates</Text></Pressable></View>
         <ScrollView contentContainerStyle={s.content}>
           <View style={s.searchRow}>
             <View style={s.search}>

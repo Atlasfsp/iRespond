@@ -2,7 +2,7 @@ import {chromium} from '../docs-sync/node_modules/playwright/index.mjs';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
 try {
- const page=await browser.newPage({viewport:{width:390,height:844}});
+ const page=await browser.newPage({viewport:{width:390,height:844}});page.setDefaultTimeout(15000);page.setDefaultNavigationTimeout(20000);
  const base=process.env.MOBILE_WEB_URL||'http://127.0.0.1:4174';
  await page.goto(base);
  const image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN1kAAAAASUVORK5CYII=';
