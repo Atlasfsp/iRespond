@@ -96,6 +96,8 @@ paths:
       tags: [Needs]
       operationId: createNeed
       summary: Create an observed community need
+      description: Anonymous observations remain unattributed. If a bearer token is supplied it must identify a verified human; reporter attribution comes only from that identity, never JSON.
+      security: [ {}, { bearerAuth: [] } ]
       parameters:
         - { name: Idempotency-Key, in: header, required: false, schema: { type: string } }
       requestBody:
@@ -112,6 +114,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Need' }
+        '409': { description: Idempotency key was already used for a different observation intent }
+        '401': { description: Supplied bearer token is invalid }
+        '403': { description: A workload identity cannot publish an observation }
+        '503': { description: Identity verification is unavailable for an authenticated submission }
         '400': { $ref: '#/components/responses/BadRequest' }
         '500': { $ref: '#/components/responses/InternalError' }
     get:
@@ -177,6 +183,7 @@ paths:
     post:
       tags: [Evidence]
       operationId: initiateEvidenceUpload
+      description: Maximum four photos and one video per authenticated uploader per need, counting retained pending and reviewed records. A stable clientAttachmentId requires sha256Hex and replays the same upload; changed intent or exhausted budget returns 409.
       security: [{ bearerAuth: [] }]
       parameters:
         - { $ref: '#/components/parameters/NeedId' }
@@ -193,6 +200,7 @@ paths:
               schema: { $ref: '#/components/schemas/InitiatedEvidenceUpload' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '404': { $ref: '#/components/responses/NotFound' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
   /v1/needs/{id}/evidence/{evidenceId}/complete:
@@ -216,10 +224,16 @@ paths:
   /v1/evidence/{evidenceId}/review:
     post:
       tags: [Evidence]
+      description: Requires a verified human tenant identity, reviewer role and a fresh SS-13 review decision for the concrete evidence resource. Missing or unavailable policy fails closed. Uploader and original need reporter cannot moderate their own evidence; decisions bind the stored SHA-256 and append audit/outbox records atomically.
       operationId: reviewEvidence
       security: [{ bearerAuth: [] }]
       parameters:
         - { $ref: '#/components/parameters/EvidenceId' }
+        - in: header
+          name: Idempotency-Key
+          required: false
+          description: Stable review intent; reuse with a different decision conflicts. Legacy callers without a key receive a server-derived intent.
+          schema: { type: string, minLength: 1, maxLength: 128, pattern: '^[!-~]+$' }
       requestBody:
         required: true
         content:
@@ -230,6 +244,7 @@ paths:
               properties:
                 decision: { type: string, enum: [available, quarantined, rejected] }
       responses:
+        '503': { description: Evidence resource policy is unavailable or unconfigured }
         '200':
           description: Review decision recorded
           content:
@@ -239,9 +254,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /v1/needs/{id}/evidence/{evidenceId}/access:
     get:
       tags: [Evidence]
+      description: Requires a verified human tenant identity, reviewer role and fresh SS-13 read permission; only approved bytes receive a signed URL.
       operationId: authorizeEvidenceAccess
       security: [{ bearerAuth: [] }]
       parameters:
@@ -289,6 +306,7 @@ paths:
     get:
       tags: [Projects]
       operationId: getProject
+      description: Public project data. Authenticated responses additionally include server permissions and viewerRoles containing only the caller's own accepted project assignments; profile position grants no authority.
       parameters: [{ $ref: '#/components/parameters/ProjectId' }]
       responses:
         '200': { description: Project detail, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
@@ -823,12 +841,14 @@ components:
       type: object
       required: [title, description, latitude, longitude]
       properties:
-        title: { type: string }
-        description: { type: string }
-        category: { type: string }
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 8000 }
+        category: { type: string, maxLength: 80, description: Other requires categoryDetail. }
+        categoryDetail: { type: string, maxLength: 120, description: Required nonblank when category is other; empty for other categories. }
+        locationContext: { $ref: '#/components/schemas/ReportLocationContext' }
         latitude: { type: number }
         longitude: { type: number }
-        reporterId: { type: string }
+        reporterId: { type: string, deprecated: true, description: Ignored on creation; reporter identity is derived only from a verified bearer token. }
         sdgTags: { type: array, items: { type: integer, minimum: 1, maximum: 17 } }
     Need:
       type: object
@@ -837,10 +857,13 @@ components:
         id: { type: string }
         title: { type: string }
         description: { type: string }
-        category: { type: string }
+        category: { type: string, description: Other requires categoryDetail. }
+        categoryDetail: { type: string, maxLength: 120, description: Required nonblank when category is other; empty for other categories. }
+        locationContext: { $ref: '#/components/schemas/ReportLocationContext' }
+        locationKnown: { type: boolean, description: False for historical rows without recorded coordinates; never route their compatibility zero values. }
         latitude: { type: number }
         longitude: { type: number }
-        reporterId: { type: string }
+        reporterId: { type: string, description: Withheld on public reads; verified attribution is retained privately for review controls. }
         verificationState: { $ref: '#/components/schemas/VerificationState' }
         sdgTags: { type: array, items: { type: integer } }
         createdAt: { type: string, format: date-time }
@@ -850,12 +873,37 @@ components:
       required: [contentType, sizeBytes]
       properties:
         contentType: { type: string, enum: [image/jpeg, image/png, image/webp, video/mp4, video/quicktime] }
-        sizeBytes: { type: integer, format: int64, minimum: 1, maximum: 52428800 }
+        sizeBytes: { type: integer, format: int64, minimum: 1, maximum: 26214400, description: Photos are capped at 10 MB; video at 25 MB. }
         sha256Hex: { type: string, pattern: '^[0-9a-fA-F]{64}$' }
+        captureContext: { $ref: '#/components/schemas/EvidenceCaptureContext' }
+        clientAttachmentId: { type: string, maxLength: 128, description: Stable opaque ID scoped to this need and authenticated uploader; retrying identical intent reuses its original record. Changed intent returns 409. }
+    ReportLocationContext:
+      type: object
+      description: Client-reported context, not verification; retained privately and withheld on public need reads and events. Historical records may omit it.
+      required: [source, confirmedAt]
+      properties:
+        source: { type: string, enum: [device, manual] }
+        capturedAt: { type: string, format: date-time }
+        confirmedAt: { type: string, format: date-time }
+        accuracyMeters: { type: number, minimum: 0 }
+    EvidenceCaptureContext:
+      type: object
+      description: Immutable client-reported attachment context. Library recordedAt is attachment time, not original capture time. New photos are capped at 10 MB and video at 25 MB. Context declares video duration of at most 30 seconds; independent media scanning/decoding remains a separate gate. Existing larger pending uploads retain their original byte declaration. No authenticity or malware certification is implied.
+      required: [origin, recordedAt, stage, locationStatus]
+      properties:
+        origin: { type: string, enum: [camera, library, legacy] }
+        recordedAt: { type: string, format: date-time }
+        stage: { type: string, enum: [before, during, after] }
+        locationStatus: { type: string, enum: [captured, denied, unavailable] }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        accuracyMeters: { type: number, minimum: 0 }
+        durationSeconds: { type: number, exclusiveMinimum: 0, maximum: 30 }
     InitiatedEvidenceUpload:
       type: object
       required: [evidenceId, uploadUrl, method, headers, expiresAt]
       properties:
+        completed: { type: boolean, description: True when this exact upload intent already completed transport; client must not PUT again. Moderation is still independent. }
         evidenceId: { type: string }
         uploadUrl: { type: string, format: uri }
         method: { type: string, const: PUT }

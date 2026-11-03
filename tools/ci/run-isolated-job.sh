@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Host-side controller. Token is streamed directly to the isolated machine.
+set -euo pipefail
+machine=irespond-ci
+runner_name=irespond-isolated-release
+labels="irespond-isolated${IRESPOND_RUNNER_EXTRA_LABEL:+,$IRESPOND_RUNNER_EXTRA_LABEL}"
+orb run -m "$machine" sh -c 'test "$(uname -s)" = Linux && test ! -e /Users && test ! -e /mnt/mac && test -x "$HOME/runner/config.sh"'
+gh api --method POST orgs/Atlasfsp/actions/runners/registration-token --jq .token |
+  orb run -m "$machine" sh -c 'read -r registration_token; cd "$HOME/runner"; ./config.sh --unattended --ephemeral --disableupdate --url https://github.com/Atlasfsp --runnergroup irespond-mac-isolated-20261102 --token "$registration_token" --name "$1" --labels "$2" --work _work' sh "$runner_name" "$labels"
+orb run -m "$machine" sh -c 'cd "$HOME/runner"; timeout 3600 ./run.sh'
+# Bind any compiled test image to the retained evidence before cache cleanup.
+orb run -m "$machine" sh -c '
+  set -eu
+  checkout="$HOME/runner/_work/iRespond/iRespond"
+  if test -d "$checkout" && docker image inspect irespond-api:verify >/dev/null 2>&1; then
+    mkdir -p "$checkout/build/evidence/runtime"
+    docker image inspect irespond-api:verify > "$checkout/build/evidence/runtime/ci-image.json"
+  fi
+'
+# Keep the genuine reports locally even if GitHub artifact storage is blocked.
+archive_path=$(orb run -m "$machine" python3 - < tools/ci/preserve-evidence.py)
+if [[ -n "$archive_path" ]]; then
+  mkdir -p build/evidence/completion
+  orb run -m "$machine" cat "$archive_path" > "build/evidence/completion/$(basename "$archive_path")"
+fi
+# Ephemeral registration disappears automatically. Retain diagnostics, not checkout.
+orb run -m "$machine" sh -c 'test ! -f "$HOME/runner/.runner" && rm -rf "$HOME/runner/_work/iRespond" "$HOME/runner/_work/_temp"'
+
+# Only disposable fixtures in this dedicated machine are removed.
+orb run -m "$machine" sh -c '
+  set -eu
+  docker info >/dev/null
+  for fixture in irespond-yugabyte irespond-rustfs; do
+    if docker container inspect "$fixture" >/dev/null 2>&1; then docker rm -f "$fixture" >/dev/null; fi
+  done
+'
+
+# The compiler image/cache belongs only to the disposable API image build.
+orb run -m "$machine" sh -c '
+  set -eu
+  if docker image inspect irespond-api:verify >/dev/null 2>&1; then
+    docker image rm irespond-api:verify >/dev/null
+    docker builder prune --all --force >/dev/null
+  fi
+'

@@ -2,6 +2,7 @@ package needs
 
 import (
 	"context"
+ "errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,6 +26,8 @@ func TestPostgresRepositoryLifecycle(t *testing.T) {
 	if _, err := pool.Exec(ctx, string(migration)); err != nil { t.Fatalf("apply migration: %v", err) }
 	if _, err := pool.Exec(ctx, `TRUNCATE need_verifications, idempotency_keys, outbox_events, needs CASCADE`); err != nil { t.Fatal(err) }
 
+ for _,name:=range []string{"0002_evidence.sql","0013_field_report_context.sql"}{body,e:=os.ReadFile(filepath.Join("..","..","migrations",name));if e!=nil{t.Fatal(e)};if _,e=pool.Exec(ctx,string(body));e!=nil{t.Fatal(e)}}
+
 	repo, err := NewPostgresRepository(ctx, databaseURL)
 	if err != nil { t.Fatal(err) }
 	defer repo.Close()
@@ -46,9 +49,10 @@ func TestPostgresRepositoryLifecycle(t *testing.T) {
 	if err != nil { t.Fatal(err) }
 	if len(far) != 0 { t.Fatalf("expected no distant needs, got %d", len(far)) }
 
-	requested, err := repo.Transition(ctx, created.ID, VerificationRequested, "verifier-1")
+	requested, err := repo.Transition(ctx, created.ID, VerificationRequested, need.ReporterID)
 	if err != nil { t.Fatal(err) }
 	if requested.VerificationState != VerificationRequested { t.Fatalf("state=%s", requested.VerificationState) }
+ if _,err:=repo.Transition(ctx,created.ID,CommunityConfirmed,need.ReporterID);!errors.Is(err,ErrIndependentVerifierRequired){t.Fatalf("self verification allowed: %v",err)}
 	confirmed, err := repo.Transition(ctx, created.ID, CommunityConfirmed, "verifier-2")
 	if err != nil { t.Fatal(err) }
 	if confirmed.VerificationState != CommunityConfirmed { t.Fatalf("state=%s", confirmed.VerificationState) }

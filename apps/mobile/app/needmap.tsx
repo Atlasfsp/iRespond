@@ -1,3 +1,5 @@
+import {apiBaseUrl} from '../lib/environment';
+import {parseInterventionCoordinates} from '../lib/coordinates';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import * as Location from 'expo-location';
@@ -18,39 +20,30 @@ type Need = {
   sdgTags: number[];
 };
 
-type Percent = `${number}%`;
-type PinPosition = { left: Percent; top: Percent };
-
-const pinPositions: PinPosition[] = [
-  { left: '22%', top: '23%' },
-  { left: '66%', top: '31%' },
-  { left: '42%', top: '57%' },
-  { left: '74%', top: '68%' },
-];
+type NeedFilter = 'all' | 'verified' | 'unverified';
 
 export default function NeedMap() {
   const [needs, setNeeds] = useState<Need[]>([]);
   const [status, setStatus] = useState('Finding your location…');
   const [loading, setLoading] = useState(true);
+  const [manualLatitude,setManualLatitude]=useState('');const[manualLongitude,setManualLongitude]=useState('');
   const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<NeedFilter>('all');
 
-  async function loadNearby() {
+  async function loadNearby(manual=false) {
     setLoading(true);
+    setNeeds([]); // Never present stale results as the current nearby response.
     try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-      if (!permission.granted) {
-        setStatus('Location permission is needed for nearby discovery. You can still report needs without granting it.');
-        return;
-      }
-
-      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
+      let coordinates=parseInterventionCoordinates(manualLatitude,manualLongitude);
+      if(manual){if(!coordinates){setStatus('Enter valid latitude and longitude for manual discovery.');return}}
+      else {const permission=await Location.requestForegroundPermissionsAsync();if(!permission.granted){setStatus('Location permission was not granted. Enter coordinates below to discover nearby needs.');return}const fix=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});coordinates={latitude:fix.coords.latitude,longitude:fix.coords.longitude};setManualLatitude(String(coordinates.latitude));setManualLongitude(String(coordinates.longitude));}
+      const baseUrl = apiBaseUrl();
       if (!baseUrl) {
         setStatus('NeedMap API is not configured on this build.');
         return;
       }
 
-      const url = `${baseUrl}/v1/needs?lat=${position.coords.latitude}&lng=${position.coords.longitude}&radiusKm=25`;
+      const url = `${baseUrl}/v1/needs?lat=${coordinates!.latitude}&lng=${coordinates!.longitude}&radiusKm=25`;
       const response = await fetch(url);
       if (!response.ok) throw new Error(`NeedMap request failed: ${response.status}`);
       const data = (await response.json()) as Need[];
@@ -69,13 +62,17 @@ export default function NeedMap() {
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return needs.filter((need) => `${need.title} ${need.category} ${need.sdgTags.join(' ')}`.toLowerCase().includes(needle));
-  }, [needs, query]);
+    return needs.filter((need) => {
+      const matches = `${need.title} ${need.category} ${(need.sdgTags || []).join(' ')}`.toLowerCase().includes(needle);
+      return matches && (filter === 'all' || (filter === 'verified' ? isConfirmed(need.verificationState) : !isConfirmed(need.verificationState)));
+    });
+  }, [needs, query, filter]);
 
   return (
     <SafeAreaView style={s.safe} edges={['top', 'left', 'right']}>
       <View style={s.screen}>
         <StitchTopBar title="NeedMap" showBack />
+        <View style={{padding:16,gap:8}}><Text style={s.muted}>Discover by coordinates if device location is unavailable.</Text><TextInput accessibilityLabel="Discovery latitude" placeholder="Latitude" value={manualLatitude} onChangeText={setManualLatitude} keyboardType="numbers-and-punctuation" style={{minHeight:44,borderWidth:1,padding:10}}/><TextInput accessibilityLabel="Discovery longitude" placeholder="Longitude" value={manualLongitude} onChangeText={setManualLongitude} keyboardType="numbers-and-punctuation" style={{minHeight:44,borderWidth:1,padding:10}}/><Pressable accessibilityRole="button" disabled={loading} onPress={()=>void loadNearby(true)} style={{minHeight:44,justifyContent:'center'}}><Text>Find needs at these coordinates</Text></Pressable></View>
         <ScrollView contentContainerStyle={s.content}>
           <View style={s.searchRow}>
             <View style={s.search}>
@@ -93,32 +90,25 @@ export default function NeedMap() {
             </Pressable>
           </View>
 
-          <View style={s.map}>
-            <View style={s.mapPatternA} />
-            <View style={s.mapPatternB} />
-            {visible.slice(0, 4).map((need, index) => (
-              <Pressable
-                key={need.id}
-                style={[
-                  s.pin,
-                  pinPosition(index),
-                  isConfirmed(need.verificationState) ? s.pinVerified : s.pinObserved,
-                ]}
-                onPress={() => router.push(`/need/${need.id}`)}
-                accessibilityLabel={`Open ${need.title}`}
-              >
-                <Ionicons
-                  name={categoryIcon(need.category)}
-                  size={19}
-                  color={isConfirmed(need.verificationState) ? Stitch.color.secondary : Stitch.color.tertiary}
-                />
-              </Pressable>
-            ))}
-            <View style={s.mapCaption}>
-              <Text style={s.mapTitle}>Live geospatial discovery</Text>
-              <Text style={s.mapText}>
-                The nearby results below come from the real API. This release does not pretend the decorative canvas is a tile provider.
-              </Text>
+          <View style={s.discoveryBanner}>
+            <View style={s.discoveryHalo} pointerEvents="none" />
+            <View style={s.discoveryMark}><Ionicons name="navigate" size={21} color="#C0F2DC" /><Text style={s.discoveryKicker}>LOCATION-AWARE DISCOVERY</Text></View>
+            <Text style={s.discoveryTitle}>Find where your response matters.</Text>
+            <Text style={s.discoveryText}>Explore actual reported needs near the device location. Results retain their verification state so you can assess them responsibly.</Text>
+            <View style={s.discoveryFooter}><View style={s.discoveryChip}><Ionicons name="radio-button-on" size={13} color="#A9E5BC" /><Text style={s.discoveryChipText}>25 km search radius</Text></View>
+              <Pressable style={s.discoveryAction} onPress={() => router.push('/report')} accessibilityRole="button"><Text style={s.discoveryActionText}>Report a need</Text><Ionicons name="arrow-forward" size={17} color="#092E3F"/></Pressable>
+            </View>
+          </View>
+
+          <View style={s.filterSection}>
+            <Text style={s.filterHeading}>Filter by evidence state</Text>
+            <View style={s.filterRow}>
+              {([{value:'all',label:'All reports'},{value:'verified',label:'Verified'},{value:'unverified',label:'Not confirmed'}] as const).map(option=>(
+                <Pressable key={option.value} accessibilityRole="button" accessibilityState={{selected:filter===option.value}} onPress={()=>setFilter(option.value)}
+                 style={[s.filterChip,filter===option.value&&s.filterChipSelected]}>
+                  <Text style={[s.filterChipText,filter===option.value&&s.filterChipTextSelected]}>{option.label}</Text>
+                </Pressable>
+              ))}
             </View>
           </View>
 
@@ -159,7 +149,7 @@ export default function NeedMap() {
               <View style={s.flex}>
                 <View style={s.cardTop}>
                   <Text style={s.category}>
-                    {need.sdgTags.length ? need.sdgTags.map((number) => `SDG ${number}`).join(' · ') : human(need.category || 'community')}
+                    {(need.sdgTags || []).length ? (need.sdgTags || []).map((number) => `SDG ${number}`).join(' · ') : human(need.category || 'community')}
                   </Text>
                   <View
                     style={[
@@ -228,10 +218,6 @@ function categoryIcon(value: string): keyof typeof Ionicons.glyphMap {
   return 'people-outline';
 }
 
-function pinPosition(index: number): PinPosition {
-  return pinPositions[index] ?? { left: '50%', top: '50%' };
-}
-
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Stitch.color.background },
   screen: { flex: 1 },
@@ -277,4 +263,22 @@ const s = StyleSheet.create({
   amberText: { ...Stitch.type.bodyBold, color: Stitch.color.primary },
   truth: { marginHorizontal: Stitch.space.screen, padding: Stitch.space.base, borderWidth: 1, borderColor: Stitch.color.outlineVariant, borderRadius: Stitch.radius.md, backgroundColor: Stitch.color.surfaceLow, flexDirection: 'row', alignItems: 'flex-start', gap: Stitch.space.md },
   truthText: { flex: 1, ...Stitch.type.footnote, color: Stitch.color.onSurfaceVariant },
+  discoveryBanner:{marginHorizontal:Stitch.space.screen,borderRadius:24,backgroundColor:'#092E3F',padding:22,gap:13,position:'relative',overflow:'hidden'},
+  discoveryHalo:{position:'absolute',width:240,height:240,right:-118,top:-120,borderWidth:48,borderColor:'rgba(166,232,196,0.1)',borderRadius:120},
+  discoveryMark:{flexDirection:'row',alignItems:'center',gap:8},
+  discoveryKicker:{...Stitch.type.eyebrow,color:'#B4ECD1',fontSize:10},
+  discoveryTitle:{...Stitch.type.headline,color:'#FFFFFF',fontSize:29,lineHeight:35,maxWidth:300},
+  discoveryText:{...Stitch.type.body,color:'#DBEDE8',fontSize:13,lineHeight:20},
+  discoveryFooter:{flexDirection:'row',gap:8,alignItems:'center',flexWrap:'wrap',justifyContent:'space-between'},
+  discoveryChip:{flexDirection:'row',alignItems:'center',gap:7,paddingVertical:8},
+  discoveryChipText:{...Stitch.type.footnote,color:'#D8EFE6'},
+  discoveryAction:{minHeight:44,paddingHorizontal:14,borderRadius:12,backgroundColor:'#DBF3E3',flexDirection:'row',alignItems:'center',gap:7},
+  discoveryActionText:{...Stitch.type.bodyBold,fontSize:12,color:'#092E3F'},
+  filterSection:{paddingHorizontal:Stitch.space.screen,paddingTop:20,gap:10},
+  filterHeading:{...Stitch.type.bodyBold,color:Stitch.color.primary},
+  filterRow:{flexDirection:'row',gap:8,flexWrap:'wrap'},
+  filterChip:{minHeight:44,paddingVertical:10,paddingHorizontal:12,backgroundColor:'#FFFFFF',borderRadius:12,borderWidth:1,borderColor:'#D4E2E0',alignItems:'center',justifyContent:'center'},
+  filterChipSelected:{backgroundColor:'#CDEBDB',borderColor:'#5FAF8B'},
+  filterChipText:{...Stitch.type.footnote,color:Stitch.color.onSurfaceVariant,fontSize:12,fontWeight:'700'},
+  filterChipTextSelected:{color:'#0C5137'},
 });

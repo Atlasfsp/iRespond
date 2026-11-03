@@ -1,18 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
-import { router } from 'expo-router';
+import { Directions } from '../components/Directions';
+import { useCallback, useMemo, useState } from 'react';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { apiFetch, getSession, postJSON, type Session } from '../lib/api';
 import { capabilitiesForRoles, verificationTransitionsForRoles } from '../lib/capabilities';
 import { Stitch } from '../lib/stitch-theme';
 
-type Need = { id: string; title: string; description: string; verificationState: string; category?: string; sdgTags?: number[] };
+type Need = { id: string; title: string; description: string; verificationState: string; category?: string; latitude?:number; longitude?:number; locationKnown?:boolean; sdgTags?: number[] };
 type CreatedProject = { id: string; title: string };
 type EvidenceDecision = 'available' | 'quarantined' | 'rejected';
 
 export default function VerificationWorkspace() {
   const [session, setSession] = useState<Session | null>(null);
-  const [needId, setNeedId] = useState('');
+  const params=useLocalSearchParams<{needId?:string}>();
+  const [needId, setNeedId] = useState(params.needId||'');
+
   const [need, setNeed] = useState<Need | null>(null);
   const [evidenceId, setEvidenceId] = useState('');
   const [communityId, setCommunityId] = useState('');
@@ -20,14 +23,14 @@ export default function VerificationWorkspace() {
   const [busy, setBusy] = useState('session');
   const [error, setError] = useState('');
 
-  useEffect(() => { getSession().then(setSession).catch(() => router.replace('/signin')).finally(() => setBusy('')); }, []);
+  useFocusEffect(useCallback(()=>{let active=true;setSession(null);setBusy('session');getSession().then(value=>{if(active)setSession(value)}).catch(()=>{if(active)router.replace('/signin')}).finally(()=>{if(active)setBusy('')});if(params.needId){setNeedId(params.needId);void loadNeed(params.needId)}return()=>{active=false}},[params.needId]));
   const caps = useMemo(() => capabilitiesForRoles(session?.roles ?? []), [session?.roles]);
   const transitions = useMemo(() => verificationTransitionsForRoles(session?.roles ?? [], need?.verificationState), [session?.roles, need?.verificationState]);
 
-  async function loadNeed() {
-    if (!needId.trim()) return;
-    setBusy('need'); setError('');
-    try { const value = await apiFetch<Need>(`/v1/needs/${encodeURIComponent(needId.trim())}`, {}, false); setNeed(value); setProjectTitle(value.title); }
+  async function loadNeed(targetID=needId) {
+    if (!targetID.trim()) return;
+    setBusy('need'); setNeed(null);setError('');
+    try { const value = await apiFetch<Need>(`/v1/needs/${encodeURIComponent(targetID.trim())}`, {}, false); setNeed(value); setProjectTitle(value.title); }
     catch (err) { setNeed(null); setError(err instanceof Error ? err.message : 'Unable to load need.'); }
     finally { setBusy(''); }
   }
@@ -81,7 +84,7 @@ export default function VerificationWorkspace() {
     <Text style={s.kicker}>VERIFICATION WORKSPACE</Text><Text style={s.title}>Make evidence-backed state changes, not social-media votes.</Text><Text style={s.muted}>Only transitions authorized by your signed identity roles are shown. The API independently verifies the same authority.</Text>
     {!!error && <View style={s.errorCard}><Text style={s.error}>{error}</Text></View>}
     <View style={s.card}><Text style={s.section}>Load a reported need</Text><TextInput value={needId} onChangeText={setNeedId} style={s.input} autoCapitalize="none" placeholder="Need ID" /><Pressable style={s.secondary} onPress={() => void loadNeed()}><Text style={s.secondaryText}>{busy === 'need' ? 'Loading…' : 'Load need'}</Text></Pressable></View>
-    {need && <View style={s.card}><View style={s.row}><Text style={s.badge}>{human(need.verificationState)}</Text><Text style={s.meta}>{need.id}</Text></View><Text style={s.needTitle}>{need.title}</Text><Text style={s.muted}>{need.description}</Text><Text style={s.section}>Permitted state changes</Text><View style={s.actions}>{transitions.map((item) => <Pressable key={item.state} disabled={!!busy} style={[s.action, item.state === 'rejected' && s.danger]} onPress={() => void transition(item.state, item.label)}><Text style={[s.actionText, item.state === 'rejected' && s.dangerText]}>{busy === item.state ? 'Saving…' : item.label}</Text></Pressable>)}</View></View>}
+    {need && <View style={s.card}><View style={s.row}><Text style={s.badge}>{human(need.verificationState)}</Text><Text style={s.meta}>{need.id}</Text></View><Text style={s.needTitle}>{need.title}</Text><Text style={s.muted}>{need.description}</Text><Directions latitude={need.latitude} longitude={need.longitude} known={need.locationKnown}/><Text style={s.section}>Permitted state changes</Text><View style={s.actions}>{transitions.map((item) => <Pressable key={item.state} disabled={!!busy} style={[s.action, item.state === 'rejected' && s.danger]} onPress={() => void transition(item.state, item.label)}><Text style={[s.actionText, item.state === 'rejected' && s.dangerText]}>{busy === item.state ? 'Saving…' : item.label}</Text></Pressable>)}</View></View>}
     {caps.has('project.convert') && need && <View style={s.card}><Text style={s.section}>Convert verified need to Action Project</Text><Text style={s.muted}>Conversion remains blocked by the API until the need has reached an accepted verified state.</Text><TextInput value={projectTitle} onChangeText={setProjectTitle} style={s.input} placeholder="Project title" /><TextInput value={communityId} onChangeText={setCommunityId} style={s.input} placeholder="Owner community ID" /><Pressable style={s.primary} disabled={!!busy} onPress={() => void convertToProject()}><Text style={s.primaryText}>{busy === 'project' ? 'Creating…' : 'Create Action Project'}</Text></Pressable></View>}
     {caps.has('evidence.review') && <View style={s.card}><Text style={s.section}>Evidence review & approved access</Text><Text style={s.muted}>Evidence bytes remain protected until the review/access policy grants a short-lived signed URL.</Text><TextInput value={evidenceId} onChangeText={setEvidenceId} style={s.input} autoCapitalize="none" placeholder="Evidence ID" /><View style={s.actions}><Pressable style={s.action} onPress={() => void reviewEvidence('available')}><Text style={s.actionText}>Approve / available</Text></Pressable><Pressable style={s.action} onPress={() => void reviewEvidence('quarantined')}><Text style={s.actionText}>Quarantine</Text></Pressable><Pressable style={[s.action, s.danger]} onPress={() => void reviewEvidence('rejected')}><Text style={s.dangerText}>Reject</Text></Pressable></View><Pressable style={s.secondary} disabled={busy==='evidence-access'} onPress={() => void openApprovedEvidence()}><Text style={s.secondaryText}>{busy==='evidence-access'?'Requesting signed URL…':'Open approved evidence'}</Text></Pressable></View>}
     <View style={s.truth}><Text style={s.truthTitle}>Authority is scoped</Text><Text style={s.truthBody}>Community, institution, expert, audit and government confirmations are different authorities. Evidence review and evidence-byte access are also separate server decisions.</Text></View>

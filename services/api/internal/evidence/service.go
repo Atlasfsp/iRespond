@@ -1,12 +1,15 @@
 package evidence
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgconn"
 	"io"
 	"path"
 	"strings"
@@ -23,12 +26,14 @@ import (
 var (
 	ErrNeedNotFound     = errors.New("need not found")
 	ErrEvidenceNotFound = errors.New("evidence not found")
+	ErrEvidenceLimit    = errors.New("maximum 4 photos and 1 video per reporter per need")
+	ErrUploadConflict   = errors.New("attachment ID is already bound to another upload intent")
 	ErrInvalidMedia     = errors.New("invalid evidence media")
 	ErrObjectMismatch   = errors.New("uploaded object does not match evidence declaration")
 	ErrInvalidReview    = errors.New("invalid evidence review")
 )
 
-const maxEvidenceBytes int64 = 50 * 1024 * 1024
+const maxEvidenceBytes int64 = 25 * 1024 * 1024
 
 type Config struct {
 	DatabaseURL string
@@ -48,6 +53,7 @@ type Service struct {
 }
 
 type InitiatedUpload struct {
+	Completed  bool              `json:"completed,omitempty"`
 	EvidenceID string            `json:"evidenceId"`
 	UploadURL  string            `json:"uploadUrl"`
 	Method     string            `json:"method"`
@@ -121,57 +127,106 @@ func (s *Service) EnsureBucket(ctx context.Context) error {
 }
 
 func (s *Service) Initiate(ctx context.Context, needID, uploaderID, contentType string, sizeBytes int64, sha256Hex string) (InitiatedUpload, error) {
+	return s.InitiateWithCapture(ctx, needID, uploaderID, contentType, sizeBytes, sha256Hex, nil)
+}
+func (s *Service) InitiateWithCapture(ctx context.Context, needID, uploaderID, contentType string, sizeBytes int64, sha256Hex string, capture *CaptureContext, clientIDs ...string) (InitiatedUpload, error) {
+	var last error
+	for attempt := 0; attempt < 5; attempt++ {
+		result, err := s.initiateOnce(ctx, needID, uploaderID, contentType, sizeBytes, sha256Hex, capture, clientIDs...)
+		var pgerr *pgconn.PgError
+		if !errors.As(err, &pgerr) || (pgerr.Code != "40001" && pgerr.Code != "40P01" && !(pgerr.Code == "23505" && pgerr.ConstraintName == "need_evidence_upload_intent")) {
+			return result, err
+		}
+		last = err
+		timer := time.NewTimer(time.Duration(attempt+1) * 20 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return InitiatedUpload{}, ctx.Err()
+		case <-timer.C:
+		}
+	}
+	return InitiatedUpload{}, last
+}
+func (s *Service) initiateOnce(ctx context.Context, needID, uploaderID, contentType string, sizeBytes int64, sha256Hex string, capture *CaptureContext, clientIDs ...string) (InitiatedUpload, error) {
 	contentType = strings.ToLower(strings.TrimSpace(contentType))
 	sha256Hex = strings.ToLower(strings.TrimSpace(sha256Hex))
-	if !allowedContentType(contentType) || sizeBytes <= 0 || sizeBytes > maxEvidenceBytes || !validOptionalSHA256(sha256Hex) {
+	key := ""
+	if len(clientIDs) > 0 {
+		key = strings.TrimSpace(clientIDs[0])
+	}
+	video := strings.HasPrefix(contentType, "video/")
+	if (key != "" && sha256Hex == "") || len(key) > 128 || !allowedContentType(contentType) || sizeBytes <= 0 || sizeBytes > maxEvidenceBytes || (!video && sizeBytes > 10*1024*1024) || !validOptionalSHA256(sha256Hex) {
 		return InitiatedUpload{}, ErrInvalidMedia
 	}
-	var exists bool
-	if err := s.db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM needs WHERE id=$1)", needID).Scan(&exists); err != nil {
+	if err := ValidateCapture(capture, contentType, sizeBytes); err != nil {
 		return InitiatedUpload{}, err
 	}
-	if !exists {
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		return InitiatedUpload{}, err
+	}
+	defer tx.Rollback(ctx)
+	var lockedID string
+	if err = tx.QueryRow(ctx, `SELECT id FROM needs WHERE id=$1 FOR UPDATE`, needID).Scan(&lockedID); errors.Is(err, pgx.ErrNoRows) {
 		return InitiatedUpload{}, ErrNeedNotFound
-	}
-
-	id := newID()
-	objectKey := path.Join("needs", needID, "evidence", id+extensionFor(contentType))
-	_, err := s.db.Exec(ctx, `INSERT INTO need_evidence(id,need_id,uploader_id,object_key,content_type,size_bytes,sha256_hex) VALUES($1,$2,$3,$4,$5,$6,NULLIF($7,''))`, id, needID, uploaderID, objectKey, contentType, sizeBytes, sha256Hex)
-	if err != nil {
+	} else if err != nil {
 		return InitiatedUpload{}, err
 	}
-
+	id, objectKey, status := "", "", ""
+	if key != "" {
+		var storedType, storedSHA string
+		var storedSize int64
+		var storedContext []byte
+		err = tx.QueryRow(ctx, `SELECT id,object_key,content_type,size_bytes,COALESCE(sha256_hex,''),status,capture_context FROM need_evidence WHERE need_id=$1 AND uploader_id=$2 AND client_attachment_id=$3`, needID, uploaderID, key).Scan(&id, &objectKey, &storedType, &storedSize, &storedSHA, &status, &storedContext)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return InitiatedUpload{}, err
+		}
+		if err == nil {
+			var original *CaptureContext
+			if len(storedContext) > 0 {
+				if e := json.Unmarshal(storedContext, &original); e != nil {
+					return InitiatedUpload{}, e
+				}
+			}
+			if storedType != contentType || storedSize != sizeBytes || (sha256Hex != "" && storedSHA != sha256Hex) || !bytes.Equal(captureJSON(original), captureJSON(capture)) || status == "deleted" {
+				return InitiatedUpload{}, ErrUploadConflict
+			}
+		}
+	}
+	if id == "" {
+		var photos, videos int
+		if err = tx.QueryRow(ctx, `SELECT count(*) FILTER (WHERE content_type NOT LIKE 'video/%'),count(*) FILTER (WHERE content_type LIKE 'video/%') FROM need_evidence WHERE need_id=$1 AND uploader_id=$2 AND status<>'deleted'`, needID, uploaderID).Scan(&photos, &videos); err != nil {
+			return InitiatedUpload{}, err
+		}
+		if (video && videos >= 1) || (!video && photos >= 4) {
+			return InitiatedUpload{}, ErrEvidenceLimit
+		}
+		id = newID()
+		objectKey = path.Join("needs", needID, "evidence", id+extensionFor(contentType))
+		if _, err = tx.Exec(ctx, `INSERT INTO need_evidence(id,need_id,uploader_id,object_key,content_type,size_bytes,sha256_hex,capture_context,client_attachment_id) VALUES($1,$2,$3,$4,$5,$6,NULLIF($7,''),$8,NULLIF($9,''))`, id, needID, uploaderID, objectKey, contentType, sizeBytes, sha256Hex, captureJSON(capture), key); err != nil {
+			return InitiatedUpload{}, err
+		}
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return InitiatedUpload{}, err
+	}
 	expiry := 10 * time.Minute
-	p, err := s.presign.PresignPutObject(ctx, &s3.PutObjectInput{
-		Bucket:        aws.String(s.bucket),
-		Key:           aws.String(objectKey),
-		ContentType:   aws.String(contentType),
-		ContentLength: aws.Int64(sizeBytes),
-		IfNoneMatch:   aws.String("*"),
-	}, func(o *s3.PresignOptions) { o.Expires = expiry })
+	p, err := s.presign.PresignPutObject(ctx, &s3.PutObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(objectKey), ContentType: aws.String(contentType), ContentLength: aws.Int64(sizeBytes), IfNoneMatch: aws.String("*")}, func(o *s3.PresignOptions) { o.Expires = expiry })
+	// Preserve a pending intent if signing fails; its stable client ID can retry safely.
 	if err != nil {
-		_, _ = s.db.Exec(ctx, "DELETE FROM need_evidence WHERE id=$1 AND status='pending_upload'", id)
 		return InitiatedUpload{}, err
 	}
-	return InitiatedUpload{
-		EvidenceID: id,
-		UploadURL:  p.URL,
-		Method:     "PUT",
-		Headers: map[string]string{
-			"Content-Type":  contentType,
-			"If-None-Match": "*",
-		},
-		ExpiresAt: time.Now().UTC().Add(expiry),
-	}, nil
+	return InitiatedUpload{EvidenceID: id, UploadURL: p.URL, Method: "PUT", Headers: map[string]string{"Content-Type": contentType, "If-None-Match": "*"}, ExpiresAt: time.Now().UTC().Add(expiry), Completed: status != "" && status != "pending_upload"}, nil
 }
 
 // Complete binds the evidence record to the bytes actually stored in RustFS/S3.
 // It verifies size, derives SHA-256, rejects a conflicting client declaration,
 // and only then moves the record into moderation.
 func (s *Service) Complete(ctx context.Context, needID, evidenceID, uploaderID string) (Record, error) {
-	var objectKey, owner, declaredSHA string
+	var objectKey, owner, declaredSHA, declaredType string
 	var sizeBytes int64
-	err := s.db.QueryRow(ctx, `SELECT object_key,size_bytes,COALESCE(sha256_hex,''),uploader_id FROM need_evidence WHERE id=$1 AND need_id=$2`, evidenceID, needID).Scan(&objectKey, &sizeBytes, &declaredSHA, &owner)
+	err := s.db.QueryRow(ctx, `SELECT object_key,size_bytes,COALESCE(sha256_hex,''),uploader_id,content_type FROM need_evidence WHERE id=$1 AND need_id=$2`, evidenceID, needID).Scan(&objectKey, &sizeBytes, &declaredSHA, &owner, &declaredType)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Record{}, ErrEvidenceNotFound
 	}
@@ -196,7 +251,16 @@ func (s *Service) Complete(ctx context.Context, needID, evidenceID, uploaderID s
 	}
 	defer obj.Body.Close()
 	h := sha256.New()
-	actualSize, err := io.Copy(h, obj.Body)
+	prefix := make([]byte, 512)
+	n, readErr := io.ReadFull(obj.Body, prefix)
+	if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
+		return Record{}, readErr
+	}
+	prefix = prefix[:n]
+	if !matchesMediaHeader(declaredType, prefix) {
+		return Record{}, ErrObjectMismatch
+	}
+	actualSize, err := io.Copy(h, io.LimitReader(io.MultiReader(bytes.NewReader(prefix), obj.Body), sizeBytes+1))
 	if err != nil {
 		return Record{}, err
 	}
@@ -216,20 +280,10 @@ func (s *Service) Complete(ctx context.Context, needID, evidenceID, uploaderID s
 	return rec, err
 }
 
-func (s *Service) Review(ctx context.Context, evidenceID, decision string) (Record, error) {
-	decision = strings.TrimSpace(strings.ToLower(decision))
-	if decision != "available" && decision != "quarantined" && decision != "rejected" {
-		return Record{}, ErrInvalidReview
+func (s *Service) AccessURL(ctx context.Context, needID, evidenceID string, scope ...Reviewer) (string, error) {
+	if len(scope) != 1 || !validReviewAuthority(scope[0]) {
+		return "", ErrReviewForbidden
 	}
-	var rec Record
-	err := s.db.QueryRow(ctx, `UPDATE need_evidence SET status=$2,available_at=CASE WHEN $2='available' THEN now() ELSE NULL END WHERE id=$1 AND status='pending_review' RETURNING id,need_id,content_type,size_bytes,COALESCE(sha256_hex,''),status,created_at,available_at`, evidenceID, decision).Scan(&rec.ID, &rec.NeedID, &rec.ContentType, &rec.SizeBytes, &rec.SHA256Hex, &rec.Status, &rec.CreatedAt, &rec.AvailableAt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Record{}, ErrEvidenceNotFound
-	}
-	return rec, err
-}
-
-func (s *Service) AccessURL(ctx context.Context, needID, evidenceID string) (string, error) {
 	var objectKey string
 	err := s.db.QueryRow(ctx, "SELECT object_key FROM need_evidence WHERE id=$1 AND need_id=$2 AND status='available'", evidenceID, needID).Scan(&objectKey)
 	if errors.Is(err, pgx.ErrNoRows) {

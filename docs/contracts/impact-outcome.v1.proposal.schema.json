@@ -1,0 +1,286 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:irespond:schemas:impact-outcome:v1",
+  "title": "iRespond Impact Outcome Record — proposal only",
+  "description": "Draft measurement and evidence contract for ADR review. Not active API or production storage. An activity count is not automatically an attributable community outcome.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "projectId",
+    "indicator",
+    "measuredAt",
+    "measurement",
+    "method",
+    "evidenceRefs",
+    "review",
+    "privacy",
+    "attribution"
+  ],
+  "properties": {
+    "contractVersion": {
+      "const": "impact-outcome.v1"
+    },
+    "projectId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "interventionGoalId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sdgTags": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 17
+      }
+    },
+    "giveDimensions": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "Conceptual mapping; does not imply UNV recognition.",
+      "items": {
+        "enum": [
+          "individual",
+          "community",
+          "economic",
+          "enabling_environment"
+        ]
+      }
+    },
+    "indicator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "kind",
+        "unit"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 4
+        },
+        "kind": {
+          "enum": [
+            "output",
+            "outcome",
+            "maintenance"
+          ]
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "populationDefinition": {
+          "type": "string"
+        },
+        "limitations": {
+          "type": "string"
+        }
+      }
+    },
+    "baseline": {
+      "$ref": "#/$defs/measurement"
+    },
+    "target": {
+      "$ref": "#/$defs/measurement"
+    },
+    "measuredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "measurement": {
+      "$ref": "#/$defs/measurement"
+    },
+    "method": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "description",
+        "dataSource"
+      ],
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 8
+        },
+        "dataSource": {
+          "type": "string",
+          "minLength": 3
+        },
+        "samplingMethod": {
+          "type": "string"
+        },
+        "confidenceNote": {
+          "type": "string"
+        },
+        "missingDataNote": {
+          "type": "string"
+        }
+      }
+    },
+    "evidenceRefs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "evidenceId",
+          "sha256"
+        ],
+        "properties": {
+          "evidenceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$"
+          },
+          "captureProvenance": {
+            "enum": [
+              "unknown",
+              "device_capture",
+              "third_party",
+              "institutional_record",
+              "generated"
+            ]
+          },
+          "reviewStatus": {
+            "enum": [
+              "awaiting_review",
+              "approved",
+              "rejected",
+              "restricted"
+            ]
+          }
+        }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "draft",
+            "submitted",
+            "under_review",
+            "approved",
+            "disputed",
+            "rejected",
+            "withdrawn"
+          ]
+        },
+        "reviewedBy": {
+          "type": "string"
+        },
+        "reviewedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reviewNote": {
+          "type": "string"
+        },
+        "communityChallengeId": {
+          "type": "string"
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classification",
+        "publicationAllowed"
+      ],
+      "properties": {
+        "classification": {
+          "enum": [
+            "public",
+            "internal",
+            "restricted",
+            "safeguarded"
+          ]
+        },
+        "publicationAllowed": {
+          "type": "boolean"
+        },
+        "consentReference": {
+          "type": "string"
+        },
+        "retentionPolicyId": {
+          "type": "string"
+        },
+        "precisionPolicy": {
+          "enum": [
+            "none",
+            "coarse_area",
+            "exact_location_restricted"
+          ]
+        }
+      }
+    },
+    "attribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claimLevel",
+        "caveats"
+      ],
+      "properties": {
+        "claimLevel": {
+          "enum": [
+            "descriptive",
+            "contribution_assessed",
+            "causal_estimate"
+          ]
+        },
+        "caveats": {
+          "type": "string",
+          "minLength": 5
+        },
+        "methodApprovalRef": {
+          "type": "string"
+        }
+      }
+    },
+    "maintenanceReviewDueAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "unit"
+      ],
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sampleSize": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

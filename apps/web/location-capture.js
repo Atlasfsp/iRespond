@@ -68,6 +68,7 @@
 
     function markManualEntry() {
       form.dataset.locationSource = 'manual';
+      delete form.dataset.locationCapturedAt;delete form.dataset.locationAccuracy;
       checkbox.checked = false;
       try {
         const coordinates = validateInterventionCoordinates(latitude.value, longitude.value);
@@ -95,6 +96,8 @@
           latitude.value = displayCoordinate(coordinates.latitude);
           longitude.value = displayCoordinate(coordinates.longitude);
           form.dataset.locationSource = 'device';
+          form.dataset.locationCapturedAt=new Date(position.timestamp||Date.now()).toISOString();
+          if(Number.isFinite(position.coords.accuracy))form.dataset.locationAccuracy=String(position.coords.accuracy);
           checkbox.checked = false;
           checkbox.disabled = false;
           const accuracy = Number.isFinite(position.coords.accuracy) ? ` · accuracy ±${Math.round(position.coords.accuracy)} m` : '';

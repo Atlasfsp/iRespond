@@ -1,16 +1,15 @@
 name: verify
 
 on:
-  pull_request:
   push:
-    branches: [main]
+    branches: [main, feat/impact-experience-evolution-20261101]
 
 permissions:
   contents: read
 
 jobs:
   mobile:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON((github.repository == 'Atlasfsp/iRespond' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/impact-experience-evolution-20261101')) || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71))) && '{"group":"irespond-mac-isolated-20261102", "labels":["self-hosted", "Linux", "ARM64", "irespond-isolated"]}' || '["self-hosted", "irespond-untrusted-disabled"]') }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -19,15 +18,17 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      - name: Verify required native module registration
+        run: node tools/ci/verify-native-autolinking.mjs
       - run: pnpm mobile:typecheck
+      - name: Frontend, offline, design and dependency policy checks
+        run: bash tools/ci/local-verify.sh
       - name: Repository metrics
         run: bash tools/repo_metrics.sh
 
   security-boundary:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON((github.repository == 'Atlasfsp/iRespond' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/impact-experience-evolution-20261101')) || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71))) && '{"group":"irespond-mac-isolated-20261102", "labels":["self-hosted", "Linux", "ARM64", "irespond-isolated"]}' || '["self-hosted", "irespond-untrusted-disabled"]') }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Repository security boundary
@@ -38,7 +39,7 @@ jobs:
         run: python3 tools/verify_openapi_contract.py
 
   supply-chain:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON((github.repository == 'Atlasfsp/iRespond' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/impact-experience-evolution-20261101')) || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71))) && '{"group":"irespond-mac-isolated-20261102", "labels":["self-hosted", "Linux", "ARM64", "irespond-isolated"]}' || '["self-hosted", "irespond-untrusted-disabled"]') }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -47,8 +48,6 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
       - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
         with:
           version: v3.18.4
@@ -58,8 +57,8 @@ jobs:
         run: pnpm audit --prod --audit-level high
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.26.9'
-          cache-dependency-path: services/api/go.sum
+          go-version: '1.26.10'
+          cache: false
       - name: Verify Go module checksums
         working-directory: services/api
         run: go mod verify
@@ -85,7 +84,7 @@ jobs:
           retention-days: 30
 
   api:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON((github.repository == 'Atlasfsp/iRespond' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/impact-experience-evolution-20261101')) || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71))) && '{"group":"irespond-mac-isolated-20261102", "labels":["self-hosted", "Linux", "ARM64", "irespond-isolated"]}' || '["self-hosted", "irespond-untrusted-disabled"]') }}
     env:
       TEST_DATABASE_URL: postgres://yugabyte@localhost:5433/yugabyte?sslmode=disable
       TEST_OBJECT_STORAGE_ENDPOINT: localhost:9000
@@ -98,11 +97,15 @@ jobs:
         working-directory: .
         run: |
           docker run -d --name irespond-yugabyte --hostname irespond-yugabyte \
+            --memory=3g --tmpfs /home/yugabyte/yb_data:rw,size=4g \
             -p 5433:5433 -p 7000:7000 -p 15433:15433 \
             yugabytedb/yugabyte@sha256:3926eedf0ff4b99426fbff533128ff16635ed5697a5cf086dde4fafec28e6f75 bin/yugabyted start \
             --base_dir=/home/yugabyte/yb_data --background=false
+          mkdir -p build/evidence/runtime
+          docker inspect irespond-yugabyte | jq '.[0] | {sourceSha:env.GITHUB_SHA,databaseStorage:.HostConfig.Tmpfs,memoryBytes:.HostConfig.Memory,scope:"CI logical integration; no storage durability certification"}' > build/evidence/runtime/ci-fixture-storage.json
+          cat build/evidence/runtime/ci-fixture-storage.json
           for i in {1..90}; do
-            if docker exec irespond-yugabyte bash -c '/home/yugabyte/bin/ysqlsh --host $(hostname) -U yugabyte -d yugabyte -c "SELECT 1"' >/dev/null 2>&1; then exit 0; fi
+            if docker exec irespond-yugabyte bash -c 'PGOPTIONS="-c statement_timeout=20000" /home/yugabyte/bin/ysqlsh --host $(hostname) -U yugabyte -d yugabyte -v ON_ERROR_STOP=1 -c "CREATE TABLE IF NOT EXISTS ci_storage_probe(id int PRIMARY KEY)" -c "INSERT INTO ci_storage_probe VALUES(1) ON CONFLICT DO NOTHING" -c "DROP TABLE ci_storage_probe"' >/dev/null 2>&1; then exit 0; fi
             sleep 2
           done
           docker logs irespond-yugabyte
@@ -123,8 +126,8 @@ jobs:
           exit 1
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.26.9'
-          cache-dependency-path: services/api/go.sum
+          go-version: '1.26.10'
+          cache: false
       - name: Verify tidy Go module metadata
         run: |
           go mod tidy
@@ -168,10 +171,12 @@ jobs:
           fi
       - name: Build production image
         working-directory: .
-        run: docker build -f services/api/Dockerfile -t irespond-api:verify services/api
+        run: |
+          docker build -f services/api/Dockerfile --build-arg VERSION=verify --build-arg COMMIT="$GITHUB_SHA" -t irespond-api:verify services/api
+          test "$(docker image inspect irespond-api:verify --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')" = "$GITHUB_SHA"
 
   deployment:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON((github.repository == 'Atlasfsp/iRespond' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/impact-experience-evolution-20261101')) || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71))) && '{"group":"irespond-mac-isolated-20261102", "labels":["self-hosted", "Linux", "ARM64", "irespond-isolated"]}' || '["self-hosted", "irespond-untrusted-disabled"]') }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4

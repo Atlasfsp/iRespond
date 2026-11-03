@@ -6,8 +6,24 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "ios": {"supportsTablet": true, "bundleIdentifier": "global.irespond.app"},
-    "android": {"package": "global.irespond.app"},
-    "plugins": ["expo-router", "expo-location"]
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "global.irespond.app"
+    },
+    "android": {
+      "package": "global.irespond.app"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-location",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow iRespond to capture intervention photos and video.",
+          "microphonePermission": "Allow iRespond to record sound with intervention video.",
+          "photosPermission": "Allow iRespond to attach intervention evidence from your library."
+        }
+      ]
+    ]
   }
 }

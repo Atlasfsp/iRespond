@@ -25,6 +25,9 @@ var (
 
 type Principal struct {
 	Subject string
+	// ActorType comes only from the verified OIDC token, never a request header.
+	ActorType string
+	TenantID string
 	Roles   map[string]struct{}
 }
 
@@ -55,6 +58,8 @@ type tokenHeader struct {
 
 type claims struct {
 	Sub    string   `json:"sub"`
+	ActorType string `json:"actor_type"`
+ TenantID string `json:"tenant_id"`
 	Iss    string   `json:"iss"`
 	Aud    any      `json:"aud"`
 	Exp    int64    `json:"exp"`
@@ -95,11 +100,16 @@ func (v *JWTVerifier) Verify(ctx context.Context, token string) (Principal, erro
 	sig, err := base64.RawURLEncoding.DecodeString(parts[2])
 	if err != nil || rsa.VerifyPKCS1v15(key, crypto.SHA256, digest[:], sig) != nil { return Principal{}, ErrInvalidToken }
 
+	actorType := c.ActorType
+	if actorType == "" { actorType = "human" } // Canonical Shared Services legacy human default.
+	if actorType != "human" && actorType != "service" && actorType != "ai_employee" { return Principal{}, ErrInvalidToken }
+	tenantID := strings.TrimSpace(c.TenantID)
+	if tenantID != "" && !ValidTenantID(tenantID) { return Principal{}, ErrInvalidToken }
 	roles := map[string]struct{}{}
 	for _, role := range c.Roles { if role = strings.TrimSpace(role); role != "" { roles[role] = struct{}{} } }
 	for _, group := range c.Groups { if group = strings.TrimSpace(group); group != "" { roles[group] = struct{}{} } }
 	for _, scope := range strings.Fields(c.Scope) { roles["scope:"+scope] = struct{}{} }
-	return Principal{Subject:c.Sub, Roles:roles}, nil
+	return Principal{Subject:c.Sub, ActorType:actorType, TenantID:tenantID, Roles:roles}, nil
 }
 
 func (v *JWTVerifier) key(ctx context.Context, kid string) (*rsa.PublicKey, error) {

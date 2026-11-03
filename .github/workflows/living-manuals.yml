@@ -1,17 +1,8 @@
 name: Living manuals
 
 on:
-  pull_request:
-    paths:
-      - 'apps/mobile/**'
-      - 'packages/**'
-      - 'services/**'
-      - 'deploy/**'
-      - 'docs/manuals/**'
-      - 'tools/docs-sync/**'
-      - '.github/workflows/living-manuals.yml'
   push:
-    branches: [main]
+    branches: [main, feat/impact-experience-evolution-20261101]
     paths:
       - 'apps/mobile/**'
       - 'packages/**'
@@ -26,7 +17,7 @@ permissions:
 
 jobs:
   freshness:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON((github.repository == 'Atlasfsp/iRespond' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/impact-experience-evolution-20261101')) || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71))) && '{"group":"irespond-mac-isolated-20261102", "labels":["self-hosted", "Linux", "ARM64", "irespond-isolated", "irespond-manuals"]}' || '["self-hosted", "irespond-untrusted-disabled"]') }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -54,7 +45,7 @@ jobs:
 
   build-manuals:
     needs: freshness
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON((github.repository == 'Atlasfsp/iRespond' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/impact-experience-evolution-20261101')) || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number == 71))) && '{"group":"irespond-mac-isolated-20261102", "labels":["self-hosted", "Linux", "ARM64", "irespond-isolated", "irespond-manuals"]}' || '["self-hosted", "irespond-untrusted-disabled"]') }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -68,8 +59,6 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
       - name: Install diagram tooling
         run: |
           pnpm install --frozen-lockfile

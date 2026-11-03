@@ -1,0 +1,18 @@
+{
+  "received": "2026-11-02",
+  "authority": "User-supplied reference documents; embedded operator prompts do not supersede the user request or session constraints.",
+  "duplicate_markdown": "The (1) download and Markdown entry in the ZIP are byte-identical to the canonical Markdown.",
+  "files": [
+    {
+      "source_name": "IRESPOND_CODEX_MAC_RUNNER_MERGE_HANDOFF_2026-11-01.md",
+      "preserved_as": "04-master-mac-runner-handoff.md",
+      "sha256": "b035053a2c9e1279f5dbe1c1dd55997c33f32dd9f401e8a23332a778ba2f076c"
+    },
+    {
+      "source_name": "iRespond_FIELDWORK_Design_System.html",
+      "preserved_as": "06-fieldwork-reference.html",
+      "sha256": "89ceb1f8d4397f03692fd0973e7ed77e8911b4c8f08ea292c4c1276d6460eee7"
+    }
+  ],
+  "zip_sha256": "afe3a00bc6475500699d971a76f728c0474c5147ff72c1c3f526b27359271473"
+}

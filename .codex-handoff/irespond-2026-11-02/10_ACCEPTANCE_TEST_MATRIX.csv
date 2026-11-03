@@ -1,0 +1,83 @@
+Test_ID,Workstream,Requirement_or_Threat,Pass_Criteria,Evidence_Command_or_Method,Target_Day,Priority,Status,Observed_Result,Evidence_URI,Owner
+CI-001,Baseline and CI,Check existing local repository remote and clean worktree,repo origin and status recorded; user edits preserved,git remote -v; git status --porcelain,D1,P0,NOT_RUN,,,UNASSIGNED
+CI-002,Baseline and CI,"Snapshot main, PR #71 and old frozen candidate SHA",verified GitHub SHA; historic candidate not rewritten,"gh pr view 71 --json headRefOid,baseRefOid; git rev-parse origin/main",D1,P0,NOT_RUN,,,UNASSIGNED
+CI-003,Baseline and CI,Self-hosted runner scheduler smoke with free isolated Linux VM,trusted same-repo test job obtains real runner and logs; no billing activation,GitHub workflow/job runner evidence,D3,P0,NOT_RUN,,,UNASSIGNED
+CI-004,Baseline and CI,Runner public-PR threat isolation,"fork PR cannot reach runner secrets, personal Mac, Docker host",runner group/ref restrictions + adversarial review,D3,P0,NOT_RUN,,,UNASSIGNED
+CI-005,Baseline and CI,Mobile TypeScript CI,"pnpm mobile:typecheck exits zero, pinned lockfile",pnpm install --frozen-lockfile && pnpm mobile:typecheck,D5,P0,NOT_RUN,,,UNASSIGNED
+CI-006,Baseline and CI,Web syntax and FIELDWORK/Horizon contracts,all real frontend contracts green,node --check; tools/verify_* scripts,D5,P0,NOT_RUN,,,UNASSIGNED
+CI-007,Baseline and CI,Existing API 51 operations and ownership/route checks,source drift gate green; no fabricated operation,python tools/verify_openapi_contract.py; frontend scripts,D6,P0,NOT_RUN,,,UNASSIGNED
+CI-008,Baseline and CI,Backend unit tests and static vet,go test -p 1 ./... and go vet ./... green,cd services/api && go test -p 1 ./... && go vet ./...,D6,P0,NOT_RUN,,,UNASSIGNED
+CI-009,Baseline and CI,Security boundary and pinned supply chain,existing guard scripts pass without suppression,bash tools/security_boundary.sh; bash tools/verify_ci_runtime_pins.sh,D6,P0,NOT_RUN,,,UNASSIGNED
+CI-010,Baseline and CI,Production dependency audit without high findings,pnpm audit --prod --audit-level high exits 0,pnpm audit --prod --audit-level high; SBOM,D10,P0,NOT_RUN,,,UNASSIGNED
+CI-011,Baseline and CI,Expo Metro and offline demo actual runtime,startup and queue persistence smoke in working app,Expo web/native smoke logs; offline_demo.test.mjs,D12,P0,NOT_RUN,,,UNASSIGNED
+CI-012,Baseline and CI,YugabyteDB/YSQL migrations twice and failure retry,same state after second migration; no partial records,real YSQL integration tests,D12,P0,NOT_RUN,,,UNASSIGNED
+CI-013,Baseline and CI,"RustFS object upload, hash and read back","create-only, SHA256, review, signed read tested",real RustFS S3 integration tests,D12,P0,NOT_RUN,,,UNASSIGNED
+CI-014,Baseline and CI,CI load baseline and deployment render,300/300; p95<=1000 ms; >=20 RPS; Helm tests,cmd/loadcheck; helm lint/template; verify_deployment.sh,D12,P0,NOT_RUN,,,UNASSIGNED
+CI-015,Baseline and CI,Merge required GitHub contexts on exact PR head,required contexts passed on same SHA; protected merge accepted,gh pr checks 71; GitHub merge response; main SHA,D14,P0,NOT_RUN,,,UNASSIGNED
+CI-016,Baseline and CI,Historical GA candidate remains unmodified,"sha, tree, artifact hash unchanged; ga=false",frozen artifact hash and GitHub issue #53,D14,P0,NOT_RUN,,,UNASSIGNED
+CI-017,Baseline and CI,Production candidate not inferred from PR check,"new source SHA, successful main push, handoff eligible true only then",GA manifest and successful main job evidence,D88,P0,NOT_RUN,,,UNASSIGNED
+CI-018,Baseline and CI,AppForge SkyForge Droplet certification,dated external refs on exact same SHA; missing gates blocked,"human signoffs, external provider evidence",D89,P0,NOT_RUN,,,UNASSIGNED
+TR-001,Trust & Evidence,Evidence upload create-only replay guard,same key cannot overwrite original bytes,"RustFS S3 integration: conditional PUT, replay, race",D16,P1,NOT_RUN,,,UNASSIGNED
+TR-002,Trust & Evidence,Evidence declared hash mismatch,"reject bytes, prevent review and byte access",tampered upload fixture + byte-stream SHA256,D17,P1,NOT_RUN,,,UNASSIGNED
+TR-003,Trust & Evidence,Evidence size and MIME/polyglot detection,oversize/malformed and type-confused media rejected,upload negative fixtures,D18,P1,NOT_RUN,,,UNASSIGNED
+TR-004,Trust & Evidence,Pending moderation signed read denied,no presigned read before review,JWT roles x evidence state table,D18,P1,NOT_RUN,,,UNASSIGNED
+TR-005,Trust & Evidence,Conflicted reviewer and self-approval denial,creator/beneficiary cannot improperly approve own evidence,policy unit + integration authz negative tests,D21,P1,NOT_RUN,,,UNASSIGNED
+TR-006,Trust & Evidence,Independent reviewer decision audit,"append-only review transitions, actor and timestamp",YSQL ledger + outbox event verification,D23,P1,NOT_RUN,,,UNASSIGNED
+TR-007,Trust & Evidence,Synthetic image with valid metadata is not assumed true,C2PA validity not equal factual verification,content credential fixture,D23,P1,NOT_RUN,,,UNASSIGNED
+TR-008,Trust & Evidence,Provenance missing and invalid signatures,unknown and invalid distinguished; no auto rejection,fixture of credential statuses,D24,P1,NOT_RUN,,,UNASSIGNED
+TR-009,Trust & Evidence,Restricted beneficiary location policy,coarse public resolution; exact coords only via allowed roles,geo query authz + public export fixture,D24,P1,NOT_RUN,,,UNASSIGNED
+TR-010,Trust & Evidence,Consent withdrawal and media deletion propagation,access and downstream copies removed or restricted per policy,RustFS lifecycle+projection integration,D26,P1,NOT_RUN,,,UNASSIGNED
+TR-011,Trust & Evidence,Prompt injection embedded inside evidence,model cannot execute document instructions,AI tool denial and sanitizer fixture,D52,P1,NOT_RUN,,,UNASSIGNED
+TR-012,Trust & Evidence,"Media quarantine, malware and CSAM escalation","unsafe input held; only trained humans, approved process",SS-42/SS-43 signed contract + fail-closed tests,D27,P0,NOT_RUN,,,UNASSIGNED
+TR-013,Trust & Evidence,Duplicate outbox delivery and idempotency,one effective transition after replay/crash,YSQL transaction and NATS/Redpanda replay fixture,D27,P1,NOT_RUN,,,UNASSIGNED
+TR-014,Trust & Evidence,Dispute/appeal with redaction,report challenged and reviewed without revealing safeguarded subject,role+data projection integration,D28,P1,NOT_RUN,,,UNASSIGNED
+IM-001,Impact measurement,Outcome schema and method provenance,"goal, indicator, baseline, sample and method links required",JSON Schema + OpenAPI/YSQL schema tests,D29,P1,NOT_RUN,,,UNASSIGNED
+IM-002,Impact measurement,Output and outcome semantic separation,"fulfilled task counted output, not outcome without measurement",impact domain test and API snapshot,D30,P1,NOT_RUN,,,UNASSIGNED
+IM-003,Impact measurement,No unsupported causality,causal flag requires approved methodology or treated unknown,reviewer decision and type validation,D31,P1,NOT_RUN,,,UNASSIGNED
+IM-004,Impact measurement,Missing baseline/method/denominator,publish forbidden or unknown label explicit,sparse measurement fixture,D31,P1,NOT_RUN,,,UNASSIGNED
+IM-005,Impact measurement,Review approval and dispute transitions,only authorized reviewer can publish or retract,YSQL transaction policy tests,D32,P1,NOT_RUN,,,UNASSIGNED
+IM-006,Impact measurement,Six-month maintenance follow-up scheduling,"dated review created, overdue surfaced, no false completion",scheduler with deterministic clock fixture,D33,P2,NOT_RUN,,,UNASSIGNED
+IM-007,Impact measurement,Beneficiary feedback private projection,cohort anonymity and consent respected,tenant/public export tests,D34,P1,NOT_RUN,,,UNASSIGNED
+IM-008,Impact measurement,Impact Passport evidence lineage,role activity not shown as measured social outcome,mobile/web UI + API integrated screenshot,D35,P1,NOT_RUN,,,UNASSIGNED
+IM-009,Impact measurement,SDG and GIVE conceptual mapping,tags do not claim UN certification; method and mapping version stored,schema and report contract,D35,P2,NOT_RUN,,,UNASSIGNED
+IM-010,Impact measurement,Impact report tamper check,evidence digests and reviewer attestation checkable,signed or digest manifest; mutation fixture,D35,P2,NOT_RUN,,,UNASSIGNED
+VO-001,Volunteer & Skills,Ability profile affirmative consent,hidden by default; explicit scoped consent,UI/API consent and role tests,D38,P1,NOT_RUN,,,UNASSIGNED
+VO-002,Volunteer & Skills,Volunteer can revoke/withdraw,recommendations stop and downstream access revoked,service policy and event tests,D39,P1,NOT_RUN,,,UNASSIGNED
+VO-003,Volunteer & Skills,Private skills and accommodations,sensitive accommodations not public or leaked to model,projection negative tests,D39,P0,NOT_RUN,,,UNASSIGNED
+VO-004,Volunteer & Skills,Deterministic match eligibility,"filtered by verified opportunity, location/privacy and availability",unit golden fixture + property tests,D42,P1,NOT_RUN,,,UNASSIGNED
+VO-005,Volunteer & Skills,"Explainable score, no discriminatory attributes",reasons reference approved criteria; fairness audit,ranking evaluation fixtures,D44,P1,NOT_RUN,,,UNASSIGNED
+VO-006,Volunteer & Skills,No auto-placement or approval,only actor approved by server can accept,role/negative API tests,D45,P0,NOT_RUN,,,UNASSIGNED
+VO-007,Volunteer & Skills,Capacity and concurrency safety,oversubscription prevented under concurrent accept,YSQL transaction race tests,D46,P1,NOT_RUN,,,UNASSIGNED
+VO-008,Volunteer & Skills,Applications idempotency and notification replay,one application/notification per intent; retry safe,duplicate request and outbox tests,D47,P1,NOT_RUN,,,UNASSIGNED
+VO-009,Volunteer & Skills,Minors and safety restrictions,age-appropriate default and partner safeguards,policy and moderation workflow fixtures,D48,P0,NOT_RUN,,,UNASSIGNED
+VO-010,Volunteer & Skills,Real fulfilment vs intention,match accepted not counted as completed,fulfilment evidence integration and UI test,D49,P1,NOT_RUN,,,UNASSIGNED
+AI-001,AICO,Discover real AICO contracts and registry,no fictional agent endpoints/IDs,linked source inventory and ADR,D50,P1,NOT_RUN,,,UNASSIGNED
+AI-002,AICO,Least privilege tool allowlist,all agent tools read/propose only,capability test + denied-action fixtures,D51,P0,NOT_RUN,,,UNASSIGNED
+AI-003,AICO,Typed structured proposal schema,schema-valid recommendations with uncertainty and source refs,JSON Schema validation,D52,P1,NOT_RUN,,,UNASSIGNED
+AI-004,AICO,Human approvals for consequential actions,"agent cannot approve verification, eligibility or money",end-to-end deny + human approval positive,D53,P0,NOT_RUN,,,UNASSIGNED
+AI-005,AICO,Prompt injection via report body,user/tenant text cannot mutate agent tool policy,prompt injection red team,D53,P0,NOT_RUN,,,UNASSIGNED
+AI-006,AICO,Cross-tenant and PII data isolation,no unauthorized data in prompts or model logs,redaction + tenant replay E2E,D53,P0,NOT_RUN,,,UNASSIGNED
+AI-007,AICO,Provider outage and disable switch,deterministic human workflow works with AICO off,"fault injection, kill-switch fixture",D54,P1,NOT_RUN,,,UNASSIGNED
+AI-008,AICO,Cost/latency quality model routing,"only cheaper model at verified parity, per-tenant caps",evaluator + budget guard test,D55,P2,NOT_RUN,,,UNASSIGNED
+AI-009,AICO,Hallucinated project/impact assertions,unsupported content never published,fact grounding evaluator,D55,P1,NOT_RUN,,,UNASSIGNED
+AI-010,AICO,Agent proposals audit and expiry,"actor, model version, evidence, expiry, decision stored",YSQL and event contract tests,D56,P1,NOT_RUN,,,UNASSIGNED
+OS-001,Institutional ImpactOS,Institution tenant and membership authz,tenant scopes enforced by server,YSQL multi-tenant and IDOR fixtures,D60,P0,NOT_RUN,,,UNASSIGNED
+OS-002,Institutional ImpactOS,No cross-tenant programme enumeration,list/search/export results exclude foreign tenant,API query negative tests,D61,P0,NOT_RUN,,,UNASSIGNED
+OS-003,Institutional ImpactOS,Institution membership invitation,valid invited account and admin policy enforced,invitation accept/revoke E2E,D62,P1,NOT_RUN,,,UNASSIGNED
+OS-004,Institutional ImpactOS,Programme and task operations,create/assign/approve lifecycle with outbox,Go integration tests,D65,P1,NOT_RUN,,,UNASSIGNED
+OS-005,Institutional ImpactOS,Volunteer match within programme,only opted-in authorized participants visible,API+UI end-to-end,D68,P1,NOT_RUN,,,UNASSIGNED
+OS-006,Institutional ImpactOS,Review separation of duties,institution manager does not bypass independent review,role matrix test,D70,P0,NOT_RUN,,,UNASSIGNED
+OS-007,Institutional ImpactOS,Evidence and impact dashboard,data all from reviewed API; no invented sums,UI snapshot + API scenario,D73,P1,NOT_RUN,,,UNASSIGNED
+OS-008,Institutional ImpactOS,Programme report export redaction,"method, gaps and private fields audited",export tests incl sensitive rows,D75,P0,NOT_RUN,,,UNASSIGNED
+OS-009,Institutional ImpactOS,Maintenance and affected-community challenge,dispute updates programme report state,YSQL+UI state machine test,D77,P1,NOT_RUN,,,UNASSIGNED
+OS-010,Institutional ImpactOS,Pilot in low-risk consented context,"real approved owner and participants, or explicitly not run",signed pilot checklist and telemetry,D86,P0,NOT_RUN,,,UNASSIGNED
+OP-001,Acceptance & Operations,Mobile device accessibility,"VoiceOver/TalkBack, large text, 44pt controls",real device evidence with tester,D81,P1,NOT_RUN,,,UNASSIGNED
+OP-002,Acceptance & Operations,Responsive browser accessibility,"WCAG 2.2 AA target, keyboard, focus, reduced motion",automated scan + manual audit,D81,P1,NOT_RUN,,,UNASSIGNED
+OP-003,Acceptance & Operations,Offline queue recovery,queued report survives restart and coordinate correction,device offline/resume scenario,D82,P1,NOT_RUN,,,UNASSIGNED
+OP-004,Acceptance & Operations,Restore and failover,YSQL PITR and RustFS recovery tested in production-like environment,dated drill + audit owner,D83,P0,NOT_RUN,,,UNASSIGNED
+OP-005,Acceptance & Operations,Release reproducibility,source and image/artifact/checksum match exact commit,SBOM + release provenance,D87,P0,NOT_RUN,,,UNASSIGNED
+OP-006,Acceptance & Operations,Data minimization retention deletion,expiring content/consent version propagate,privacy / SS-24 test,D84,P0,NOT_RUN,,,UNASSIGNED
+OP-007,Acceptance & Operations,Incident drill and abuse response,"real escalation owner, paging, rollback run",dated tabletop and recovery drill,D86,P0,NOT_RUN,,,UNASSIGNED
+OP-008,Acceptance & Operations,Observability and no data leakage,"metrics trace IDs, no protected data as attributes",observability scan and logs,D85,P1,NOT_RUN,,,UNASSIGNED
+OP-009,Acceptance & Operations,Release decision no-go with missing evidence,ga remains false on blocked required gate,decision manifest unit test,D89,P0,NOT_RUN,,,UNASSIGNED
+OP-010,Acceptance & Operations,Day-90 independent pilot and GA verdict,separate explicit signed decisions with source SHA,release worksheet and signoff,D90,P0,NOT_RUN,,,UNASSIGNED

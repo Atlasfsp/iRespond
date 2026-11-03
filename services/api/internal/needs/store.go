@@ -26,6 +26,9 @@ const (
 )
 
 type Need struct {
+ LocationKnown bool `json:"locationKnown"`
+ CategoryDetail string `json:"categoryDetail,omitempty"`
+ LocationContext *LocationContext `json:"locationContext,omitempty"`
 	ID                string            `json:"id"`
 	Title             string            `json:"title"`
 	Description       string            `json:"description"`
@@ -47,6 +50,7 @@ type Store struct {
 func NewStore() *Store { return &Store{items: map[string]Need{}} }
 
 func (s *Store) Create(n Need) Need {
+ n.LocationKnown=true
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := time.Now().UTC()

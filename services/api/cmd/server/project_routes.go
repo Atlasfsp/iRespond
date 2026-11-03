@@ -114,8 +114,10 @@ func registerProjectRoutes(mux *http.ServeMux, identity auth.Verifier, manager *
 		manage, err := isManager(r, principal); if err != nil { writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to authorize project"}); return }
 		contributions, err := canManageContributions(r, principal); if err != nil { writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to authorize project contributions"}); return }
 		validate, err := canValidateMilestones(r, principal); if err != nil { writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unable to authorize project validation"}); return }
+        viewerRoles,err:=manager.ViewerRoles(r.Context(),r.PathValue("id"),principal.Subject);if err!=nil{writeJSON(w,http.StatusInternalServerError,map[string]string{"error":"unable to load project role assignments"});return}
 		writeJSON(w, http.StatusOK, map[string]any{
 			"project": detail.Project,
+            "viewerRoles":viewerRoles,
 			"milestones": detail.Milestones,
 			"contributionNeeds": detail.ContributionNeeds,
 			"permissions": projectPermissions{CanManageProject: manage, CanManageMilestones: manage, CanValidateMilestones: validate, CanManageRoles: manage, CanManageContributions: contributions, CanPublishContributionNeeds: manage, CanManageFunding: manage},

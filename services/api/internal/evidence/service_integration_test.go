@@ -6,13 +6,18 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"image"
+	"image/jpeg"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
+	"github.com/Atlasfsp/iRespond/services/api/internal/auth"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -28,7 +33,7 @@ func TestSignedUploadLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	for _, name := range []string{"0001_core.sql", "0002_evidence.sql"} {
+	for _, name := range []string{"0001_core.sql", "0002_evidence.sql", "0011_evidence_review_audit.sql", "0012_evidence_policy_receipts.sql", "0013_field_report_context.sql"} {
 		b, err := os.ReadFile(filepath.Join("..", "..", "migrations", name))
 		if err != nil {
 			t.Fatal(err)
@@ -50,6 +55,7 @@ func TestSignedUploadLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer svc.Close()
+	reviewer := Reviewer{Principal: auth.Principal{Subject: "independent-reviewer", TenantID: "ngo/lagos", ActorType: "human", Roles: map[string]struct{}{"evidence_reviewer": {}}}, PolicyDecisionID: "synthetic-integration-receipt", IdempotencyKey: "review-intent-1"}
 	if err := svc.EnsureBucket(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -58,12 +64,24 @@ func TestSignedUploadLifecycle(t *testing.T) {
 		t.Fatalf("invalid checksum accepted: %v", err)
 	}
 
-	payload := []byte("evidence-bytes")
+	var encoded bytes.Buffer
+	if err := jpeg.Encode(&encoded, image.NewRGBA(image.Rect(0, 0, 1, 1)), nil); err != nil {
+		t.Fatal(err)
+	}
+	payload := encoded.Bytes()
 	expectedHash := sha256.Sum256(payload)
 	expectedSHA := hex.EncodeToString(expectedHash[:])
-	upload, err := svc.Initiate(ctx, "evidence-need", "person-1", "image/jpeg", int64(len(payload)), "")
+	capture := &CaptureContext{Origin: "camera", RecordedAt: "2026-11-03T08:00:00Z", Stage: "before", LocationStatus: "unavailable"}
+	upload, err := svc.InitiateWithCapture(ctx, "evidence-need", "person-1", "image/jpeg", int64(len(payload)), "", capture)
 	if err != nil {
 		t.Fatal(err)
+	}
+	var recorded string
+	if err := pool.QueryRow(ctx, `SELECT capture_context->>'recordedAt' FROM need_evidence WHERE id=$1`, upload.EvidenceID).Scan(&recorded); err != nil || recorded != capture.RecordedAt {
+		t.Fatalf("lost capture context %s %v", recorded, err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE need_evidence SET capture_context='{}'::jsonb WHERE id=$1`, upload.EvidenceID); err == nil {
+		t.Fatal("capture context mutation allowed")
 	}
 	if status := putSigned(t, upload, payload); status < 200 || status >= 300 {
 		t.Fatalf("upload status=%d", status)
@@ -81,7 +99,8 @@ func TestSignedUploadLifecycle(t *testing.T) {
 
 	// Generated evidence keys are immutable: a presigned upload URL may not be
 	// replayed to replace bytes after completion.
-	tampered := []byte("tampered-bytes")
+	tampered := append([]byte{}, payload...)
+	tampered[len(tampered)-1] ^= 1
 	if len(tampered) != len(payload) {
 		t.Fatalf("test invariant: tampered payload length differs")
 	}
@@ -89,17 +108,75 @@ func TestSignedUploadLifecycle(t *testing.T) {
 		t.Fatalf("signed upload URL allowed object overwrite, status=%d", status)
 	}
 
-	if _, err := svc.AccessURL(ctx, "evidence-need", upload.EvidenceID); !errors.Is(err, ErrEvidenceNotFound) {
+	if _, err := svc.AccessURL(ctx, "evidence-need", upload.EvidenceID, reviewer); !errors.Is(err, ErrEvidenceNotFound) {
 		t.Fatalf("evidence became accessible before moderation: %v", err)
 	}
-	record, err = svc.Review(ctx, upload.EvidenceID, "available")
+	// An actorless internal call must never moderate evidence.
+	if _, err := svc.Review(ctx, upload.EvidenceID, "available"); err == nil {
+		t.Fatal("actorless review accepted; no authenticated reviewer separation")
+	}
+	for _, role := range []string{"evidence_reviewer", "community_verifier", "trust_safety_admin"} {
+		for _, subject := range []string{"person-1", "reporter"} {
+			if _, err := svc.Review(ctx, upload.EvidenceID, "available", Reviewer{Principal: auth.Principal{Subject: subject, TenantID: "ngo/lagos", Roles: map[string]struct{}{role: {}}}, PolicyDecisionID: "synthetic-integration-receipt"}); !errors.Is(err, ErrReviewForbidden) {
+				t.Fatalf("conflicted reviewer %s allowed: %v", subject, err)
+			}
+		}
+	}
+	record, err = svc.Review(ctx, upload.EvidenceID, "available", reviewer)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if record.Status != "available" {
 		t.Fatalf("review status=%s", record.Status)
 	}
-	access, err := svc.AccessURL(ctx, "evidence-need", upload.EvidenceID)
+
+	// A lost response/retry cannot duplicate the audit or outbox transition.
+	for i := 0; i < 2; i++ {
+		if _, err := svc.Review(ctx, upload.EvidenceID, "available", reviewer); err != nil {
+			t.Fatalf("idempotent retry: %v", err)
+		}
+	}
+	if _, err := svc.Review(ctx, upload.EvidenceID, "rejected", reviewer); !errors.Is(err, ErrReviewConflict) {
+		t.Fatalf("intent reuse accepted: %v", err)
+	}
+	var audits, events int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM evidence_reviews WHERE evidence_id=$1`, upload.EvidenceID).Scan(&audits); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type='evidence.reviewed'`, upload.EvidenceID).Scan(&events); err != nil {
+		t.Fatal(err)
+	}
+	if audits != 1 || events != 1 {
+		t.Fatalf("duplicate review effects: audit=%d event=%d", audits, events)
+	}
+	var auditDigest, actor, auditTenant, auditPolicy string
+	if err := pool.QueryRow(ctx, `SELECT source_sha256_hex,reviewer_id,tenant_id,policy_decision_id FROM evidence_reviews WHERE evidence_id=$1`, upload.EvidenceID).Scan(&auditDigest, &actor, &auditTenant, &auditPolicy); err != nil {
+		t.Fatal(err)
+	}
+	if auditTenant != "ngo/lagos" || auditPolicy != "synthetic-integration-receipt" || auditDigest != expectedSHA || actor != "independent-reviewer" {
+		t.Fatalf("unbound review %s %s", auditDigest, actor)
+	}
+	crossTenant := reviewer
+	crossTenant.Principal.TenantID = "ngo/other"
+	if _, err := svc.Review(ctx, upload.EvidenceID, "available", crossTenant); !errors.Is(err, ErrReviewConflict) {
+		t.Fatalf("audit intent crossed tenant: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `INSERT INTO evidence_reviews(id,evidence_id,reviewer_id,source_sha256_hex,from_status,decision,idempotency_key) SELECT 'unscoped-'||id,evidence_id,reviewer_id,source_sha256_hex,from_status,decision,'unscoped-intent' FROM evidence_reviews WHERE evidence_id=$1`, upload.EvidenceID); err == nil {
+		t.Fatal("unscoped review bypassed database receipt guard")
+	}
+	if _, err := pool.Exec(ctx, `UPDATE evidence_reviews SET reviewer_id='forged' WHERE evidence_id=$1`, upload.EvidenceID); err == nil {
+		t.Fatal("audit overwrite allowed")
+	}
+	if _, err := pool.Exec(ctx, `DELETE FROM evidence_reviews WHERE evidence_id=$1`, upload.EvidenceID); err == nil {
+		t.Fatal("audit deletion allowed")
+	}
+	if _, err := pool.Exec(ctx, `UPDATE need_evidence SET sha256_hex=$2 WHERE id=$1`, upload.EvidenceID, strings.Repeat("0", 64)); err == nil {
+		t.Fatal("completed digest mutation allowed")
+	}
+	if _, err := pool.Exec(ctx, `UPDATE need_evidence SET object_key='replacement' WHERE id=$1`, upload.EvidenceID); err == nil {
+		t.Fatal("source object relinking allowed")
+	}
+	access, err := svc.AccessURL(ctx, "evidence-need", upload.EvidenceID, reviewer)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,8 +190,163 @@ func TestSignedUploadLifecycle(t *testing.T) {
 		t.Fatalf("download mismatch: %q", body)
 	}
 
+	newPending := func() string {
+		t.Helper()
+		u, err := svc.Initiate(ctx, "evidence-need", "person-1", "image/jpeg", int64(len(payload)), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if status := putSigned(t, u, payload); status < 200 || status >= 300 {
+			t.Fatalf("fixture PUT: %d", status)
+		}
+		if _, err := svc.Complete(ctx, "evidence-need", u.EvidenceID, "person-1"); err != nil {
+			t.Fatal(err)
+		}
+		return u.EvidenceID
+	}
+	t.Run("concurrent duplicate review", func(t *testing.T) {
+		id := newPending()
+		var wg sync.WaitGroup
+		results := make(chan error, 6)
+		for i := 0; i < 6; i++ {
+			wg.Add(1)
+			go func() { defer wg.Done(); _, err := svc.Review(ctx, id, "available", reviewer); results <- err }()
+		}
+		wg.Wait()
+		close(results)
+		for err := range results {
+			if err != nil {
+				t.Fatalf("concurrent retry: %v", err)
+			}
+		}
+		var count int
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM evidence_reviews WHERE evidence_id=$1`, id).Scan(&count); err != nil || count != 1 {
+			t.Fatalf("concurrent audit count=%d error=%v", count, err)
+		}
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type='evidence.reviewed'`, id).Scan(&count); err != nil || count != 1 {
+			t.Fatalf("concurrent event count=%d error=%v", count, err)
+		}
+	})
+	t.Run("outbox failure rolls back decision and audit", func(t *testing.T) {
+		id := newPending()
+		if _, err := pool.Exec(ctx, `CREATE OR REPLACE FUNCTION test_deny_evidence_outbox() RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'injected outbox failure'; END; $$ LANGUAGE plpgsql;
+   CREATE TRIGGER test_deny_evidence_outbox BEFORE INSERT ON outbox_events FOR EACH ROW WHEN (NEW.event_type='evidence.reviewed') EXECUTE FUNCTION test_deny_evidence_outbox()`); err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if _, err := pool.Exec(ctx, `DROP TRIGGER IF EXISTS test_deny_evidence_outbox ON outbox_events; DROP FUNCTION IF EXISTS test_deny_evidence_outbox()`); err != nil {
+				t.Error(err)
+			}
+		}()
+		if _, err := svc.Review(ctx, id, "available", reviewer); err == nil {
+			t.Fatal("decision committed despite outbox failure")
+		}
+		var state string
+		var count int
+		if err := pool.QueryRow(ctx, `SELECT status FROM need_evidence WHERE id=$1`, id).Scan(&state); err != nil || state != "pending_review" {
+			t.Fatalf("partial decision: %s %v", state, err)
+		}
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM evidence_reviews WHERE evidence_id=$1`, id).Scan(&count); err != nil || count != 0 {
+			t.Fatalf("partial audit: %d %v", count, err)
+		}
+	})
 	// A client-declared digest must match the bytes stored by RustFS. Failure is
 	// fail-closed and leaves the upload outside moderation.
+	t.Run("upload intents and per reporter media budget", func(t *testing.T) {
+		first, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "image/jpeg", int64(len(payload)), expectedSHA, capture, "stable-photo-1")
+		if e != nil {
+			t.Fatal(e)
+		}
+		replay, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "image/jpeg", int64(len(payload)), expectedSHA, capture, "stable-photo-1")
+		if e != nil || first.EvidenceID != replay.EvidenceID {
+			t.Fatalf("upload retry created another record: %+v %+v %v", first, replay, e)
+		}
+		for i := 2; i <= 4; i++ {
+			if _, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "image/jpeg", int64(len(payload)), expectedSHA, capture, fmt.Sprintf("photo-%d", i)); e != nil {
+				t.Fatal(e)
+			}
+		}
+		if _, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "image/jpeg", int64(len(payload)), expectedSHA, capture, "photo-5"); !errors.Is(e, ErrEvidenceLimit) {
+			t.Fatalf("fifth photo result: %v", e)
+		}
+		if _, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "image/jpeg", int64(len(payload))+1, expectedSHA, capture, "stable-photo-1"); !errors.Is(e, ErrUploadConflict) {
+			t.Fatalf("changed upload intent result: %v", e)
+		}
+		if status := putSigned(t, first, payload); status < 200 || status >= 300 {
+			t.Fatalf("budget fixture PUT %d", status)
+		}
+		if _, e := svc.Complete(ctx, "evidence-need", first.EvidenceID, "budget-reporter"); e != nil {
+			t.Fatal(e)
+		}
+		done, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "image/jpeg", int64(len(payload)), expectedSHA, capture, "stable-photo-1")
+		if e != nil || !done.Completed || done.EvidenceID != first.EvidenceID {
+			t.Fatalf("completed retry not acknowledged: %+v %v", done, e)
+		}
+		var wg sync.WaitGroup
+		failures := make(chan error, 6)
+		for i := 0; i < 6; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				v, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "image/jpeg", int64(len(payload)), expectedSHA, capture, "stable-photo-1")
+				if e != nil {
+					failures <- e
+				} else if v.EvidenceID != first.EvidenceID {
+					failures <- fmt.Errorf("concurrent intent duplicated")
+				}
+			}()
+		}
+		wg.Wait()
+		close(failures)
+		for e := range failures {
+			t.Fatal(e)
+		}
+		if _, e := pool.Exec(ctx, `UPDATE need_evidence SET client_attachment_id='forged-key' WHERE id=$1`, first.EvidenceID); e == nil {
+			t.Fatal("upload intent relinking allowed")
+		}
+		seconds := 30.0
+		videoContext := *capture
+		videoContext.DurationSeconds = &seconds
+		if _, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "video/mp4", 100, strings.Repeat("0", 64), &videoContext, "video-1"); e != nil {
+			t.Fatal(e)
+		}
+		if _, e := svc.InitiateWithCapture(ctx, "evidence-need", "budget-reporter", "video/mp4", 100, strings.Repeat("0", 64), &videoContext, "video-2"); !errors.Is(e, ErrEvidenceLimit) {
+			t.Fatalf("second video result: %v", e)
+		}
+	})
+
+	t.Run("concurrent new upload intents preserve the budget", func(t *testing.T) {
+		var wg sync.WaitGroup
+		results := make(chan error, 6)
+		for i := 0; i < 6; i++ {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				_, e := svc.InitiateWithCapture(ctx, "evidence-need", "parallel-budget", "image/jpeg", int64(len(payload)), expectedSHA, capture, fmt.Sprintf("parallel-%d", i))
+				results <- e
+			}(i)
+		}
+		wg.Wait()
+		close(results)
+		ok, limited := 0, 0
+		for e := range results {
+			if e == nil {
+				ok++
+			} else if errors.Is(e, ErrEvidenceLimit) {
+				limited++
+			} else {
+				t.Fatal(e)
+			}
+		}
+		if ok != 4 || limited != 2 {
+			t.Fatalf("budget results successes=%d limited=%d", ok, limited)
+		}
+		var count int
+		if e := pool.QueryRow(ctx, `SELECT count(*) FROM need_evidence WHERE need_id='evidence-need' AND uploader_id='parallel-budget'`).Scan(&count); e != nil || count != 4 {
+			t.Fatalf("persisted over budget: %d %v", count, e)
+		}
+	})
+
 	mismatchPayload := []byte("checksum-mismatch")
 	mismatch, err := svc.Initiate(ctx, "evidence-need", "person-1", "image/png", int64(len(mismatchPayload)), strings.Repeat("0", 64))
 	if err != nil {

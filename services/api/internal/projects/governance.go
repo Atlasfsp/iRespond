@@ -73,3 +73,21 @@ func projectReadiness(ctx context.Context,tx pgx.Tx,projectID,target string,mana
 func allowedProjectTransition(from,to string)bool{if to=="cancelled"&&from!="completed"&&from!="cancelled"{return true};return map[string]string{"draft":"approved","approved":"mobilising","mobilising":"executing","executing":"validating","validating":"maintaining","maintaining":"completed"}[from]==to}
 func allowedMilestoneTransition(from,to string)bool{if to=="cancelled"&&from!="validated"&&from!="cancelled"{return true};switch from{case"planned":return to=="ready";case"ready":return to=="in_progress";case"in_progress":return to=="blocked"||to=="submitted";case"blocked":return to=="in_progress";case"submitted":return to=="validated"};return false}
 func validProjectRole(role string)bool{switch role{case"project_manager","community_steward","verifier","volunteer_lead","procurement_lead","maintenance_owner":return true};return false}
+
+// ViewerRoles exposes only the requesting actor's accepted assignments.
+func (m *Manager) ViewerRoles(ctx context.Context, projectID, actorID string) ([]string, error) {
+	roles := []string{}
+	rows, err := m.pool.Query(ctx, `SELECT role FROM project_roles WHERE project_id=$1 AND actor_id=$2 ORDER BY role`, projectID, actorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var role string
+		if err := rows.Scan(&role); err != nil {
+			return nil, err
+		}
+		roles = append(roles, role)
+	}
+	return roles, rows.Err()
+}

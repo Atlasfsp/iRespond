@@ -1,0 +1,30 @@
+import {chromium} from '../docs-sync/node_modules/playwright/index.mjs';
+import assert from 'node:assert/strict';
+const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
+try {
+ const page=await browser.newPage({viewport:{width:390,height:844}});page.setDefaultTimeout(15000);page.setDefaultNavigationTimeout(20000);
+ const base=process.env.MOBILE_WEB_URL||'http://127.0.0.1:4174';
+ await page.goto(base);
+ const image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN1kAAAAASUVORK5CYII=';
+ const draft={title:'Synthetic recovery test',description:'Not pilot evidence',evidenceUris:[image],updatedAt:'2026-11-02T00:00:00Z'};
+ await page.evaluate(draft=>localStorage.setItem('irespond.need-draft.v1',JSON.stringify(draft)),draft);
+ await page.goto(`${base}/evidence`);
+ await page.getByText('Evidence attached',{exact:true}).waitFor({timeout:5000});
+ assert.equal(await page.getByRole('button',{name:'Save evidence to draft',exact:true}).count(),1);
+ await page.getByRole('button',{name:'Save evidence to draft',exact:true}).click();
+ await page.waitForFunction(()=>JSON.parse(localStorage.getItem('irespond.need-draft.v1')).updatedAt!=='2026-11-02T00:00:00Z');
+ const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('irespond.need-draft.v1')));
+ assert.deepEqual(stored.evidenceUris,draft.evidenceUris,'Saving a reopened draft must preserve its attachments');
+ assert.equal(stored.title,draft.title);
+ await page.evaluate(()=>localStorage.setItem('irespond.need-draft.v1','invalid-json'));
+ await page.reload();
+ await page.getByRole('button',{name:'Retry restoring evidence',exact:true}).waitFor();
+ assert.equal(await page.getByRole('button',{name:'Save evidence to draft',exact:true}).isDisabled(),true);
+ assert.equal(await page.getByRole('button',{name:'Submit observation',exact:true}).isDisabled(),true);
+ assert.equal(await page.evaluate(()=>localStorage.getItem('irespond.need-draft.v1')),'invalid-json','A restore failure must not overwrite saved bytes');
+ await page.evaluate(draft=>localStorage.setItem('irespond.need-draft.v1',JSON.stringify(draft)),draft);
+ await page.getByRole('button',{name:'Retry restoring evidence',exact:true}).click();
+ await page.getByText('Evidence attached',{exact:true}).waitFor();
+ assert.equal(await page.getByRole('button',{name:'Save evidence to draft',exact:true}).isEnabled(),true);
+ console.log(JSON.stringify({synthetic:true,reopenedAttachmentsPreserved:true,restoreFailureBlocksWrites:true,retryRestoresAttachments:true,nativeDeviceValidation:false}));
+} finally {await browser.close()}

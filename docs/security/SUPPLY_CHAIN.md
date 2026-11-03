@@ -29,8 +29,24 @@ There is no silent vulnerability ignore mechanism in the repository. A future ex
 
 The Go vulnerability lane uses the official Go vulnerability scanner (`govulncheck`) and the Go vulnerability database. JavaScript production dependencies are checked through the pnpm audit interface. Tool versions used by required CI are pinned or otherwise captured in evidence.
 
-## Time-bounded Expo build-tool exceptions
+## 2 November 2026 remediation
 
-`CVE-2026-85393` (`node-forge`) and `CVE-2026-93687` (`braces`) currently have no patched upstream release. Their dependency paths are confined to Expo CLI, Metro, and React Native build/developer tooling; neither package is imported by iRespond application source or included as an application runtime capability. They are therefore listed in `pnpm.auditConfig.ignoreCves` while all other high and critical findings remain blocking.
+The earlier Expo build-tool advisory suppressions are retired. No `ignoreCves` or
+blanket advisory exceptions remain in the active pnpm workspace policy.
 
-Remove each exception as soon as Expo's dependency graph provides a fixed release. Any change that introduces either package into application runtime code invalidates this exception and must fail release review.
+Fixed production dependencies include undici 6.29.1 (7.x policy 7.30.1),
+decode-uri-component 0.5.1 and node-forge 1.4.1. The production audit reports zero
+high/critical findings and retains three moderate and one low finding for follow-up;
+this is not a statement that every development dependency or external image is free
+of vulnerabilities. Preserve the Metro patch and validate Expo compatibility.
+
+The genuine Go scan also identified reachable **GO-2026-6809 / CVE-2026-111943**
+(`crypto/x509.Certificate.Verify`) in Go 1.26.9. The module minimum, CI compiler and
+production build image now use **Go 1.26.10**. The Docker compiler image remains
+pinned by its verified immutable registry digest. No scanner suppression was added.
+
+Official advisory: https://pkg.go.dev/vuln/GO-2026-6809
+
+Every patched candidate must pass the real scanner again. Non-reachable module
+findings remain visible in scanner output; reachability is assessed against the
+actual candidate, not assumed permanently safe for future code.

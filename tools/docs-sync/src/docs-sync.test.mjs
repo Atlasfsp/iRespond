@@ -740,12 +740,14 @@ test('capture dependencies run outside the repository-write publication job', as
   assert.notEqual(captureStart, -1);
   assert.ok(publishStart > captureStart);
   assert.ok(pushStart !== -1 && dispatchStart > pushStart);
-  assert.ok(pullRequestStart !== -1 && pushStart > pullRequestStart);
-  const pullRequestTrigger = workflow.slice(pullRequestStart, pushStart);
+  assert.equal(pullRequestStart, -1, 'public PR code must not execute on the isolated self-hosted runner');
   const pushTrigger = workflow.slice(pushStart, dispatchStart);
   const captureJob = workflow.slice(captureStart, publishStart);
   const publishJob = workflow.slice(publishStart);
-  assert.match(pullRequestTrigger, /docs\/screenshots\/current\/\*\*/);
+  assert.match(pushTrigger, /branches: \[main, feat\/impact-experience-evolution-20261101\]/);
+  assert.match(workflow, /accepted_revision=\$\(gh api .*git\/ref\/heads\/main/);
+  assert.match(workflow, /irespond-mac-isolated-20261102/);
+  assert.match(captureJob, /if: github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/);
   assert.doesNotMatch(pushTrigger, /\n\s+paths:/);
   assert.match(workflow, /github\.event\.pull_request\.base\.sha/);
   assert.match(workflow, /github\.event\.before/);

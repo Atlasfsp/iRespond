@@ -1,0 +1,65 @@
+FIELDWORK is a new design language for iRespond: warmer, more human, more visually distinctive, and designed to make community action easier to understand and complete. It keeps the iRespond brand and its core mission.
+Editorial storytelling meets trustworthy, functional software.
+V2 prototype
+Warm ivory · Deep forest · Action green · Human coral · Sun gold · Iris
+Interactive desktop and mobile prototype
+Open the interactive HTML design
+Download the complete FIELDWORK design kit
+The prototype includes responsive layouts, original artwork, functional search and opportunity filters, sample-detail interactions, a theme switch, and a typography and color gallery. Example needs are explicitly labeled as demonstration data.
+These are captures of the implemented responsive web interface. The native iOS and Android versions still require device-level visual testing.
+The previous design was dominated by dark panels and conventional dashboard cards. FIELDWORK introduces a warmer canvas, a more distinctive identity, original illustration, expressive yet readable typography, and a simpler decision hierarchy.
+Functionally, the design separates discovering needs, reporting observations, contributing abilities and reviewing verified activity. It makes trust states more understandable, preserves offline recovery and keeps the institutional workflows distinct from the consumer experience.
+The inspiration combines the accessible volunteer discovery of [COMON](https://www.behance.net/gallery/252753177/COMON-Case-Study-App-UXUI-Design?utm_source=chatgpt.com), proximity-based opportunities in [VoluNear](https://www.behance.net/gallery/245594757/VoluNear-Volunteering-Mobile-App-UIUX-Case-Study?utm_source=chatgpt.com), transparent progress presentation in [Fundio](https://www.behance.net/gallery/248432207/Donation-Mobile-App-UX-UI-Case-Study?utm_source=chatgpt.com), and editorial nonprofit design directions on [Dribbble](https://dribbble.com/shots/27330556-Nonprofit-Website-Design?utm_source=chatgpt.com). The resulting design and illustration are original. 
+UX/UI Design :: Behance+3
+
+FIELDWORK Design System V2
+Draft PR #75
+Separate feature branch · built on Horizon PR #71 · not merged to main
+[Review the FIELDWORK implementation](https://github.com/Atlasfsp/iRespond/pull/75?utm_source=chatgpt.com)[Read the full design specification](https://github.com/Atlasfsp/iRespond/blob/feat/fieldwork-design-system-v2-20261101/docs/design/FIELDWORK_DESIGN_SYSTEM_V2.md?utm_source=chatgpt.com)
+The new frontend contract checks, existing API coverage and authorization tests, and Expo mobile TypeScript typecheck passed. The feature branch also includes actual desktop and phone-width browser screenshots.
+Release boundary: This is a substantial first design-system implementation, not a claim that all 91 existing screen contracts have been visually migrated. Full native visual testing, accessibility certification, and external GA requirements remain outstanding.
+
+
+I found two open pull requests in Atlasfsp/iRespond:
+PR
+Scope
+Merge order
+[#71 — Horizon](https://github.com/Atlasfsp/iRespond/pull/71?utm_source=chatgpt.com)
+Web/mobile redesign and impact foundations
+First
+[#75 — FIELDWORK V2](https://github.com/Atlasfsp/iRespond/pull/75?utm_source=chatgpt.com)
+New design system, responsive layouts and mobile styling
+Second
+Both are currently draft PRs. GitHub reports no code merge conflicts in their present stacked configuration. However, their GitHub Actions checks are failing without usable test execution evidence, so a successful merge requires more than simply clearing the draft status.
+ PR #75 merged
+[FIELDWORK V2 — merged into the Horizon feature branch](https://github.com/Atlasfsp/iRespond/pull/75?utm_source=chatgpt.com)
+The FIELDWORK design system is now incorporated into the parent Horizon branch. GitHub created merge commit a3e97234.
+PR #71 is not merged into main. GitHub rejected that merge because six required checks are failing. The repository’s protected main branch remains unchanged.
+Combined source validated
+The following passed independently: frontend and API contract tests, mobile TypeScript, offline-demo tests, authorization checks, Go unit tests and go vet, Helm checks, and deployment configuration verification.
+GitHub required checks still blocking the final merge
+The mandatory checks include mobile, security, supply-chain, API, deployment and web-contract validation. The inspected failed mobile job contained no executed steps, so this is not evidence of an application test failure—but it is also not a passing CI run.
+I also opened [Issue #76](https://github.com/Atlasfsp/iRespond/issues/76?utm_source=chatgpt.com) to track the inherited dependency vulnerabilities.
+[PR #71 — Horizon + FIELDWORK V2](https://github.com/Atlasfsp/iRespond/pull/71?utm_source=chatgpt.com) is now the only open PR, is ready for review, and contains both design implementations.
+To complete the merge, GitHub Actions execution must be restored and all six required checks must pass. Review the repository’s Actions runs and account billing/usage settings, or establish a properly configured self-hosted runner with genuine test reporting.
+The source remains unmerged to main, and the existing GA certification baseline is preserved. I have not bypassed GitHub's protections or declared production readiness.
+
+The latest FIELDWORK code is consolidated in [PR #71 — Horizon + FIELDWORK V2](https://github.com/Atlasfsp/iRespond/pull/71?utm_source=chatgpt.com). I successfully reran the failed GitHub workflows, but they failed again before executing test steps. GitHub still blocks the merge because the required checks have not passed.
+The protected main branch remains unchanged. I haven't bypassed branch protection or marked the failed checks as successful.
+Desktop web frontend
+[Open full desktop screenshot](https://github.com/Atlasfsp/iRespond/blob/feat/impact-experience-evolution-20261101/docs/screenshots/fieldwork-v2-web-desktop.webp?utm_source=chatgpt.com)
+Expo mobile application — phone-sized web rendering
+[Open Expo mobile screenshot](https://github.com/Atlasfsp/iRespond/blob/feat/impact-experience-evolution-20261101/docs/screenshots/fieldwork-v2-expo-mobile-web.webp?utm_source=chatgpt.com)
+Responsive mobile website
+[View mobile web screenshot](https://github.com/Atlasfsp/iRespond/blob/feat/impact-experience-evolution-20261101/docs/screenshots/fieldwork-v2-web-phone.webp?utm_source=chatgpt.com)
+These screenshots are committed to the feature branch. The Expo image shows the actual mobile application code running on the web, not an iOS Simulator or Android emulator.
+I retried the merge after adding the new Expo screenshot. GitHub returned:
+6 of 6 required status checks are failing.
+This is a branch-protection restriction. The workflows are failing before running their test steps, so I cannot legitimately mark them as passed.
+PR #71 — Ready for checks
+Merge blocked
+Latest head: e1d9cb524164
+[Open PR #71](https://github.com/Atlasfsp/iRespond/pull/71?utm_source=chatgpt.com)[Inspect failing GitHub Actions](https://github.com/Atlasfsp/iRespond/actions?utm_source=chatgpt.com)
+The next action must happen in GitHub: check the AtlasFSP organization's Actions billing/usage and runner availability. If usage is restricted or payment is required, restore Actions access, then rerun the required workflows. If billing is fine, the failed runs need an organization administrator to investigate why runners are not starting.
+I also attempted to enable automatic merging, but auto-merge is disabled for this repository. A scheduled follow-up could not be created because the account has reached its five-task limit.
+Current result: FIELDWORK and Horizon are integrated and the screenshots are available above, but PR #71 has not merged into main. The existing GA baseline remains protected.

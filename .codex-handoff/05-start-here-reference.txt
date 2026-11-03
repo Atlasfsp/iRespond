@@ -1,0 +1,11 @@
+You are Codex working in the EXISTING local Atlasfsp/iRespond Git working tree on my MacBook. Do not create a second clone or assume my Mac's absolute folder path.
+
+First, open and read the accompanying file IRESPOND_CODEX_MAC_RUNNER_MERGE_HANDOFF_2026-11-01.md in full. Treat its source-of-truth references as last-known snapshots; refresh all live GitHub state before modifying anything.
+
+Execute Prompts 1 through 5 inside that file in dependency order, then the one-shot completion instructions (Prompt 6). Your mission is to mature and merge PR #71 safely, preserving the FIELDWORK V2 work from already-merged PR #75, and give me actual web and Expo/native screenshots.
+
+Do not use paid GitHub-hosted Actions. My preferred strategy is a properly secured, single-job Ubuntu Linux self-hosted GitHub Actions runner within a dedicated disposable VM on this Mac, using Docker Engine for the pinned YugabyteDB/RustFS integration tests. Do not install an unrestricted runner in my everyday macOS login or run untrusted public fork PR code. GitHub runner registration may require a short-lived token I must obtain from the GitHub Settings UI; ask only for that genuine user action.
+
+Resolve real conflicts and test regressions, fix inherited high-severity dependency advisories in issue #76 without breaking Expo or the Metro patch, and preserve the exact required six GitHub checks. Collect true check-run logs/evidence and merge PR #71 only once GitHub's protected branch permits it without bypass. GitHub account billing limitations may still block the scheduler even for self-hosted; if so, continue all available safe offline work and report the precise entitlement blocker without asserting a merge.
+
+Never set ga=true, reuse frozen GA #53 evidence, claim native iOS screenshots based solely on Expo Web, or deploy production. Provide exact before/after SHAs, all tests, check run URLs, screenshot paths, source-level changes, dependency audit evidence, and whether the final protected merge actually happened. Continue autonomously until completed or until the single unresolvable user-controlled external action remains.

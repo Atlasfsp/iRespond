@@ -3,21 +3,28 @@ import { useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { StitchBottomNav, StitchTopBar } from '../components/StitchChrome';
 import { formatCoordinate, parseInterventionCoordinates, type CoordinateSource } from '../lib/coordinates';
-import { saveNeedDraft } from '../lib/drafts';
+import { resolveCategory } from '../../web/field-report-policy.mjs';
+import { loadNeedDraft, saveNeedDraft } from '../lib/drafts';
 import { SDGS, toggleSdg } from '../lib/sdgs';
 import { Stitch } from '../lib/stitch-theme';
 import { confirmQueuedNeedLocation, flushNeedQueue, getNextNeedLocationReview, type QueuedNeed } from '../lib/sync';
 
-const categories = ['Infrastructure', 'Health', 'Environment', 'Education', 'Community'];
+const categories = ['Infrastructure', 'Health', 'Environment', 'Education', 'Community', 'Other'];
 
 export default function ReportNeed() {
   const route = useLocalSearchParams<{ reviewQueue?: string }>();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Infrastructure');
+  const [categoryDetail,setCategoryDetail]=useState('');
+  const [restoringDraft,setRestoringDraft]=useState(true);
+  const [draftError,setDraftError]=useState(false);
+  const [draftAttempt,setDraftAttempt]=useState(0);
+  const [formMessage,setFormMessage]=useState('');
+  function reportMessage(title:string,message:string,buttons?:Parameters<typeof Alert.alert>[2]){setFormMessage(`${title}: ${message}`);if(Platform.OS!=='web')Alert.alert(title,message,buttons);else if(buttons?.length===1&&buttons[0].text==='Done')buttons[0].onPress?.();}
   const [sdgTags, setSdgTags] = useState<number[]>([]);
   const [sdgOpen, setSdgOpen] = useState(false);
   const [latitudeText, setLatitudeText] = useState('');
@@ -34,6 +41,8 @@ export default function ReportNeed() {
   const captureInFlight = useRef(false);
   const coordinates = parseInterventionCoordinates(latitudeText, longitudeText);
 
+  useEffect(()=>{let active=true;if(route.reviewQueue==='1'){setRestoringDraft(false);return}setRestoringDraft(true);setDraftError(false);loadNeedDraft().then(draft=>{if(!active||!draft)return;setTitle(draft.title);setDescription(draft.description);const known=categories.find(value=>value.toLowerCase()===draft.category?.toLowerCase());setCategory(known||'Other');setCategoryDetail(draft.categoryDetail||(known?'':draft.category||''));setSdgTags(draft.sdgTags||[]);setLatitudeText(draft.latitude===undefined?'':String(draft.latitude));setLongitudeText(draft.longitude===undefined?'':String(draft.longitude));setLocationSource(draft.locationSource||null);setLocationAccuracyMeters(draft.locationAccuracyMeters);setLocationCapturedAt(draft.locationCapturedAt);setLocationConfirmed(Boolean(draft.locationConfirmedAt))}).catch(()=>{if(active)setDraftError(true)}).finally(()=>{if(active)setRestoringDraft(false)});return()=>{active=false}},[route.reviewQueue,draftAttempt]);
+
   useEffect(() => {
     if (route.reviewQueue !== '1') return;
     let active = true;
@@ -41,13 +50,14 @@ export default function ReportNeed() {
       if (!active) return;
       setQueuedReview(item);
       if (!item) {
-        Alert.alert('No location review needed', 'The preserved queue no longer contains an observation awaiting coordinate confirmation.', [{ text: 'Back to home', onPress: () => router.replace('/') }]);
+        reportMessage('No location review needed', 'The preserved queue no longer contains an observation awaiting coordinate confirmation.', [{ text: 'Back to home', onPress: () => router.replace('/') }]);
         return;
       }
       const savedCoordinates = parseInterventionCoordinates(item.draft.latitude, item.draft.longitude);
       setTitle(item.draft.title);
       setDescription(item.draft.description);
-      setCategory(categories.find(value => value.toLowerCase() === item.draft.category?.toLowerCase()) ?? 'Community');
+      setCategory(categories.find(value => value.toLowerCase() === item.draft.category?.toLowerCase()) ?? 'Other');
+      setCategoryDetail(item.draft.categoryDetail||'');
       setSdgTags(item.draft.sdgTags ?? []);
       setSdgOpen(false);
       setLatitudeText(savedCoordinates ? formatCoordinate(savedCoordinates.latitude) : '');
@@ -57,7 +67,7 @@ export default function ReportNeed() {
       setLocationCapturedAt(item.draft.locationCapturedAt);
       setLocationConfirmed(false);
     }).catch(error => {
-      if (active) Alert.alert('Unable to load pending report', error instanceof Error ? error.message : 'The preserved observation could not be loaded.');
+      if (active) reportMessage('Unable to load pending report', error instanceof Error ? error.message : 'The preserved observation could not be loaded.');
     }).finally(() => { if (active) setLoadingQueuedReview(false); });
     return () => { active = false; };
   }, [route.reviewQueue]);
@@ -79,7 +89,7 @@ export default function ReportNeed() {
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert('Location not granted', 'Enter the intervention coordinates manually, then confirm them before continuing.');
+        reportMessage('Location not granted', 'Enter the intervention coordinates manually, then confirm them before continuing.');
         return;
       }
       const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -90,7 +100,7 @@ export default function ReportNeed() {
       setLocationCapturedAt(new Date(position.timestamp).toISOString());
       setLocationConfirmed(false);
     } catch {
-      Alert.alert('Unable to capture location', 'Check that location services are on, or enter the intervention coordinates manually.');
+      reportMessage('Unable to capture location', 'Check that location services are on, or enter the intervention coordinates manually.');
     } finally {
       captureInFlight.current = false;
       setCapturingLocation(false);
@@ -103,27 +113,30 @@ export default function ReportNeed() {
       return;
     }
     if (!coordinates) {
-      Alert.alert('Valid coordinates required', 'Latitude must be between -90 and 90, and longitude between -180 and 180.');
+      reportMessage('Valid coordinates required', 'Latitude must be between -90 and 90, and longitude between -180 and 180.');
       return;
     }
     setLocationConfirmed(true);
   }
 
   async function continueReport() {
+    if(restoringDraft||draftError)return;
+    try {
+    const impact=resolveCategory(category,categoryDetail);
     if (captureInFlight.current) {
-      Alert.alert('Location capture in progress', 'Wait for the replacement coordinates or location error before confirming and continuing.');
+      reportMessage('Location capture in progress', 'Wait for the replacement coordinates or location error before confirming and continuing.');
       return;
     }
     if (!title.trim() || !description.trim()) {
-      Alert.alert('Add more detail', 'A short title and description help the community understand what needs attention.');
+      reportMessage('Add more detail', 'A short title and description help the community understand what needs attention.');
       return;
     }
     if (!coordinates) {
-      Alert.alert('Add the intervention location', 'Capture your current coordinates or enter valid latitude and longitude values manually.');
+      reportMessage('Add the intervention location', 'Capture your current coordinates or enter valid latitude and longitude values manually.');
       return;
     }
     if (!locationConfirmed) {
-      Alert.alert('Confirm the intervention location', 'Check both coordinates and confirm that they point to the place requiring intervention.');
+      reportMessage('Confirm the intervention location', 'Check both coordinates and confirm that they point to the place requiring intervention.');
       return;
     }
     const locationConfirmedAt = new Date().toISOString();
@@ -137,19 +150,20 @@ export default function ReportNeed() {
         await confirmQueuedNeedLocation(queuedReview.idempotencyKey, { ...coordinates, locationLabel, locationSource: source, locationAccuracyMeters, locationCapturedAt, locationConfirmedAt });
         const result = await flushNeedQueue();
         const synced = result.syncedKeys.includes(queuedReview.idempotencyKey);
-        Alert.alert('Intervention location confirmed', synced ? 'The preserved offline observation has now reached iRespond.' : 'The preserved observation now has confirmed coordinates and remains safely queued until connectivity and any evidence upload requirements are available.', [{ text: 'Done', onPress: () => router.replace('/') }]);
+        reportMessage('Intervention location confirmed', synced ? 'The preserved offline observation has now reached iRespond.' : 'The preserved observation now has confirmed coordinates and remains safely queued until connectivity and any evidence upload requirements are available.', [{ text: 'Done', onPress: () => router.replace('/') }]);
       } catch (error) {
-        Alert.alert('Unable to update pending report', error instanceof Error ? error.message : 'The preserved observation could not be updated.');
+        reportMessage('Unable to update pending report', error instanceof Error ? error.message : 'The preserved observation could not be updated.');
       } finally {
         queuedRetryInFlight.current = false;
         setRetryingQueuedReview(false);
       }
       return;
     }
+    const previous=await loadNeedDraft();
     await saveNeedDraft({
       title: title.trim(),
       description: description.trim(),
-      category: category.toLowerCase(),
+      ...impact,
       sdgTags,
       locationLabel,
       latitude: coordinates.latitude,
@@ -158,12 +172,16 @@ export default function ReportNeed() {
       locationAccuracyMeters,
       locationCapturedAt,
       locationConfirmedAt,
-      evidenceUris: [],
+      submissionKey: previous?.submissionKey,
+      evidenceUris: previous?.evidenceUris||[],
+      attachments: previous?.attachments,
       updatedAt: locationConfirmedAt,
     });
     router.push('/evidence');
+    }catch(error){reportMessage('Report not saved',error instanceof Error?error.message:'Device storage is unavailable. Retry before leaving.')}
   }
 
+  if(restoringDraft)return <SafeAreaView style={s.safe}><Text accessibilityLiveRegion="polite">Restoring saved report…</Text></SafeAreaView>;
   return <SafeAreaView style={s.safe} edges={['top', 'left', 'right']}><View style={s.screen}><StitchTopBar/><ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
     <View style={s.cameraPanel}><View style={s.cameraGrid}><View style={s.cameraLineV}/><View style={s.cameraLineH}/><View style={s.cameraFocus}><Ionicons name="camera-outline" size={34} color={Stitch.color.onPrimary}/></View></View><View style={s.cameraInfo}><Ionicons name="information-circle-outline" size={22} color={Stitch.color.primaryFixed}/><Text style={s.cameraText}>Describe the visible community need now. The next step captures safe evidence for the verification process.</Text></View></View>
     <View style={s.form}>
@@ -173,7 +191,7 @@ export default function ReportNeed() {
         {capturingLocation ? <ActivityIndicator color={Stitch.color.primary}/> : <Ionicons name="locate-outline" size={28} color={Stitch.color.primary}/>}<View style={{ flex: 1 }}><Text style={s.locationTitle}>{capturingLocation ? 'Capturing precise coordinates…' : 'Use my current coordinates'}</Text><Text style={s.locationMeta}>High-accuracy device location; nothing is submitted until you confirm.</Text></View><Ionicons name="navigate-outline" size={22} color={Stitch.color.primary}/>
       </Pressable>
       <View style={s.coordinateInputs}>
-        <View style={s.coordinateField}><FieldLabel required>Latitude of intervention</FieldLabel><TextInput style={[s.input, retryingQueuedReview && s.readOnly]} editable={!retryingQueuedReview} value={latitudeText} onChangeText={value => updateManualCoordinate('latitude', value)} keyboardType="numbers-and-punctuation" autoCorrect={false} accessibilityLabel="Latitude of intervention" accessibilityHint="Enter a value between minus 90 and 90 degrees" placeholder="-90 to 90" placeholderTextColor="#6D7580"/></View>
+        <View style={s.coordinateField}>{!!formMessage&&<Text accessibilityRole="alert" style={s.locationStatusBody}>{formMessage}</Text>}<FieldLabel required>Latitude of intervention</FieldLabel><TextInput style={[s.input, retryingQueuedReview && s.readOnly]} editable={!retryingQueuedReview} value={latitudeText} onChangeText={value => updateManualCoordinate('latitude', value)} keyboardType="numbers-and-punctuation" autoCorrect={false} accessibilityLabel="Latitude of intervention" accessibilityHint="Enter a value between minus 90 and 90 degrees" placeholder="-90 to 90" placeholderTextColor="#6D7580"/></View>
         <View style={s.coordinateField}><FieldLabel required>Longitude of intervention</FieldLabel><TextInput style={[s.input, retryingQueuedReview && s.readOnly]} editable={!retryingQueuedReview} value={longitudeText} onChangeText={value => updateManualCoordinate('longitude', value)} keyboardType="numbers-and-punctuation" autoCorrect={false} accessibilityLabel="Longitude of intervention" accessibilityHint="Enter a value between minus 180 and 180 degrees" placeholder="-180 to 180" placeholderTextColor="#6D7580"/></View>
       </View>
       <View style={[s.locationStatus, coordinates ? s.locationStatusReady : s.locationStatusPending]}>
@@ -183,9 +201,10 @@ export default function ReportNeed() {
       <Pressable style={[s.confirmRow, (!coordinates || retryingQueuedReview) && s.disabled]} disabled={!coordinates || retryingQueuedReview} onPress={toggleLocationConfirmation} accessibilityRole="checkbox" accessibilityState={{ checked: locationConfirmed, disabled: !coordinates || retryingQueuedReview }}>
         <Ionicons name={locationConfirmed ? 'checkbox' : 'square-outline'} size={26} color={locationConfirmed ? Stitch.color.secondary : Stitch.color.onSurfaceVariant}/><Text style={s.confirmText}>I confirm these coordinates point to the intervention location.</Text>
       </Pressable>
-      <FieldLabel required>Title of need</FieldLabel><TextInput style={[s.input, queuedReview && s.readOnly]} editable={!queuedReview && !loadingQueuedReview} value={title} onChangeText={setTitle} placeholder="e.g. Severe pothole on Main St" placeholderTextColor="#6D7580"/>
-      <FieldLabel>Description</FieldLabel><TextInput style={[s.input, s.textarea, queuedReview && s.readOnly]} editable={!queuedReview && !loadingQueuedReview} value={description} onChangeText={setDescription} multiline placeholder="Describe the issue and its impact…" placeholderTextColor="#6D7580"/>
-      <FieldLabel>Primary area of impact</FieldLabel><View accessibilityRole="radiogroup" accessibilityLabel="Primary area of impact"><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>{categories.map(item => <Pressable key={item} disabled={Boolean(queuedReview || loadingQueuedReview)} accessibilityRole="radio" accessibilityState={{ checked: item === category, disabled: Boolean(queuedReview || loadingQueuedReview) }} accessibilityLabel={item} onPress={() => setCategory(item)} style={[s.chip, item === category && s.chipOn, queuedReview && s.readOnly]}><Ionicons name={item === 'Infrastructure' ? 'construct-outline' : item === 'Health' ? 'shield-checkmark-outline' : item === 'Environment' ? 'leaf-outline' : item === 'Education' ? 'school-outline' : 'people-outline'} size={18} color={item === category ? Stitch.color.primaryFixed : Stitch.color.onSurface}/><Text style={[s.chipText, item === category && s.chipTextOn]}>{item}</Text></Pressable>)}</ScrollView></View>
+      <FieldLabel required>Title of need</FieldLabel><TextInput style={[s.input, queuedReview && s.readOnly]} editable={!queuedReview && !loadingQueuedReview} value={title} maxLength={200} onChangeText={setTitle} placeholder="e.g. Severe pothole on Main St" placeholderTextColor="#6D7580"/>
+      <FieldLabel>Description</FieldLabel><TextInput style={[s.input, s.textarea, queuedReview && s.readOnly]} editable={!queuedReview && !loadingQueuedReview} value={description} maxLength={8000} onChangeText={setDescription} multiline placeholder="Describe the issue and its impact…" placeholderTextColor="#6D7580"/>
+      {restoringDraft&&<Text>Restoring saved report…</Text>}{draftError&&<View><Text accessibilityRole="alert">Saved report could not be restored. Retry before making changes.</Text><Pressable accessibilityRole="button" onPress={()=>setDraftAttempt(n=>n+1)}><Text>Retry restoring report</Text></Pressable></View>}<Text style={s.locationStatusBody}>Step 1 of 2: describe the need. Next: add up to 4 photos and 1 short video.</Text><FieldLabel>Primary area of impact</FieldLabel><View accessibilityRole="radiogroup" accessibilityLabel="Primary area of impact"><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>{categories.map(item => <Pressable key={item} disabled={Boolean(queuedReview || loadingQueuedReview)} accessibilityRole="radio" accessibilityState={{ checked: item === category, disabled: Boolean(queuedReview || loadingQueuedReview) }} accessibilityLabel={item} onPress={() => setCategory(item)} style={[s.chip, item === category && s.chipOn, queuedReview && s.readOnly]}><Ionicons name={item === 'Infrastructure' ? 'construct-outline' : item === 'Health' ? 'shield-checkmark-outline' : item === 'Environment' ? 'leaf-outline' : item === 'Education' ? 'school-outline' : 'people-outline'} size={18} color={item === category ? Stitch.color.primaryFixed : Stitch.color.onSurface}/><Text style={[s.chipText, item === category && s.chipTextOn]}>{item}</Text></Pressable>)}</ScrollView></View>
+      {category==='Other'&&<View><FieldLabel required>Other area of impact</FieldLabel><TextInput accessibilityLabel="Other area of impact" value={categoryDetail} onChangeText={setCategoryDetail} maxLength={120} style={s.input} placeholder="Describe the area, for example wildlife rescue" placeholderTextColor="#6D7580" editable={!queuedReview}/></View>}
       <FieldLabel>Sustainable Development Goals</FieldLabel>
       <Pressable style={[s.sdgTrigger, (queuedReview || loadingQueuedReview) && s.readOnly]} disabled={Boolean(queuedReview || loadingQueuedReview)} onPress={() => setSdgOpen(open => !open)} accessibilityRole="button" accessibilityLabel="Select Sustainable Development Goals" accessibilityState={{ expanded: sdgOpen, disabled: Boolean(queuedReview || loadingQueuedReview) }}>
         <View style={s.flex}><Text style={s.sdgTriggerTitle}>{sdgTags.length ? `${sdgTags.length} SDG${sdgTags.length === 1 ? '' : 's'} selected` : 'Select one or more SDGs'}</Text><Text style={s.sdgTriggerMeta}>{sdgTags.length ? sdgTags.map(id => `SDG ${id}`).join(' · ') : 'Optional · all 17 goals are available in this dropdown'}</Text></View><Ionicons name={sdgOpen ? 'chevron-up' : 'chevron-down'} size={22} color={Stitch.color.primary}/>
