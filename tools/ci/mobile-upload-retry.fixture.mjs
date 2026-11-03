@@ -8,12 +8,12 @@ const source=stripTypeScriptTypes(await readFile(process.env.MOBILE_SYNC_SOURCE|
 const coordinates=stripTypeScriptTypes(await readFile('apps/mobile/lib/coordinates.ts','utf8'));
 const bytes=Buffer.from('synthetic JPEG fixture, no field evidence');const uri=`data:image/jpeg;base64,${bytes.toString('base64')}`;
 const captureContext={origin:'library',recordedAt:'2026-11-03T00:00:00Z',stage:'before',locationStatus:'unavailable'};
-for(const scenario of ['put-already-stored','transport-already-complete','quota-exceeded']){
- const storage=new Map(),requests=[];
- const item={idempotencyKey:'synthetic-upload-retry',attempts:0,queuedAt:'2026-11-03T00:00:00Z',serverNeedId:'synthetic-need',draft:{title:'Synthetic upload',description:'Not a real intervention',latitude:0,longitude:0,locationConfirmedAt:'2026-11-03T00:00:00Z',evidenceUris:[uri],attachments:[{id:'photo-1',uri,kind:'photo',captureContext}],updatedAt:'2026-11-03T00:00:00Z'}};
+for(const scenario of ['put-already-stored','transport-already-complete','quota-exceeded','mime-fallback']){
+ const storage=new Map(),requests=[];const selectedContext=scenario==='mime-fallback'?{...captureContext,durationSeconds:30}:captureContext;
+ const item={idempotencyKey:'synthetic-upload-retry',attempts:0,queuedAt:'2026-11-03T00:00:00Z',serverNeedId:'synthetic-need',draft:{title:'Synthetic upload',description:'Not a real intervention',latitude:0,longitude:0,locationConfirmedAt:'2026-11-03T00:00:00Z',evidenceUris:[uri],attachments:[{id:'photo-1',uri,kind:scenario==='mime-fallback'?'video':'photo',contentType:scenario==='mime-fallback'?'video/quicktime':undefined,captureContext:selectedContext}],updatedAt:'2026-11-03T00:00:00Z'}};
  storage.set('irespond.sync-queue.v1',JSON.stringify([item]));
  const respond=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});
- const mockFetch=async(url,init={})=>{if(url===uri)return fetch(uri);requests.push({url,...init});
+ const mockFetch=async(url,init={})=>{if(url===uri)return scenario==='mime-fallback'?new Response(bytes,{headers:{'Content-Type':'application/octet-stream'}}):fetch(uri);requests.push({url,...init});
   if(url.endsWith('/evidence/uploads'))return scenario==='quota-exceeded'?respond({error:'budget exceeded'},409):respond({evidenceId:'synthetic-evidence',uploadUrl:'https://storage.example.test/upload',headers:{},completed:scenario==='transport-already-complete'});
   if(url==='https://storage.example.test/upload')return respond({},412);
   if(url.endsWith('/complete'))return respond({status:'pending_review'});
@@ -35,7 +35,7 @@ for(const scenario of ['put-already-stored','transport-already-complete','quota-
  const module=new vm.SourceTextModule(source,{context});await module.link(name=>{if(!modules[name])throw Error('Unexpected dependency '+name);return modules[name]});await module.evaluate();const result=await module.namespace.flushNeedQueue();
  if(scenario==='quota-exceeded'){assert.equal(result.synced,0);const retained=JSON.parse(storage.get('irespond.sync-queue.v1'));assert.equal(retained[0].draft.evidenceUris[0],uri);assert.match(retained[0].lastError,/attachment limit/);continue}
  assert.equal(result.synced,1,scenario);assert.equal(JSON.parse(storage.get('irespond.sync-queue.v1')).length,0);
- const intent=JSON.parse(requests[0].body);assert.equal(intent.sha256Hex,createHash('sha256').update(bytes).digest('hex'));assert.equal(intent.clientAttachmentId,'synthetic-upload-retry-attachment-0');assert.deepEqual(intent.captureContext,captureContext);
+ const intent=JSON.parse(requests[0].body);assert.equal(intent.sha256Hex,createHash('sha256').update(bytes).digest('hex'));assert.equal(intent.clientAttachmentId,'synthetic-upload-retry-attachment-0');assert.deepEqual(intent.captureContext,selectedContext);assert.equal(intent.contentType,scenario==='mime-fallback'?'video/quicktime':'image/jpeg');
  assert.equal(requests.filter(r=>r.url==='https://storage.example.test/upload').length,scenario==='transport-already-complete'?0:1);
  assert.equal(requests.filter(r=>r.url.endsWith('/complete')).length,scenario==='transport-already-complete'?0:1);
 }
