@@ -3,6 +3,7 @@ import {Platform} from 'react-native';
 export type CaptureContext={origin:'camera'|'library'|'legacy';recordedAt:string;stage:'before'|'during'|'after';locationStatus:'captured'|'denied'|'unavailable';latitude?:number;longitude?:number;accuracyMeters?:number;durationSeconds?:number};
 export type EvidenceAttachment={id:string;uri:string;kind:'photo'|'video';contentType?:string;sizeBytes?:number;captureContext?:CaptureContext};
 export async function persistMedia(uri:string,id:string,video:boolean){
+ if(!/^attachment-[0-9]+-[a-z0-9]+$/.test(id))throw new Error('Invalid private attachment identifier.');
  if(Platform.OS==='web'){
   const blob=await(await fetch(uri)).blob();
   const data=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error('Photo could not be retained in this browser.'));reader.onload=()=>resolve(String(reader.result));reader.readAsDataURL(blob)});

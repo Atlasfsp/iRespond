@@ -7,9 +7,9 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {Alert,Image,PermissionsAndroid,Platform,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {StitchBottomNav,StitchTopBar} from '../components/StitchChrome';
 import {clearNeedDraft,loadNeedDraft,saveNeedDraft} from '../lib/drafts';
-import {persistMedia,type CaptureContext,type EvidenceAttachment} from '../lib/media';
+import {persistMedia,discardPrivateMedia,type CaptureContext,type EvidenceAttachment} from '../lib/media';
 import {validateMediaSelection} from '../../web/field-report-policy.mjs';
-import {flushNeedQueue,queueNeedForSync} from '../lib/sync';
+import {flushNeedQueue,queueNeedForSync,getPendingSubmissions} from '../lib/sync';
 import {Stitch} from '../lib/stitch-theme';
 
 export default function EvidenceCapture(){
@@ -30,7 +30,7 @@ export default function EvidenceCapture(){
    // Read permission before opening the camera; a denied fix is never replaced by report coordinates.
    const locationPermission=await Location.requestForegroundPermissionsAsync();
    const result=library?await ImagePicker.launchImageLibraryAsync({mediaTypes:video?['videos']:['images'],quality:.6,allowsMultipleSelection:false}):await ImagePicker.launchCameraAsync({mediaTypes:video?['videos']:['images'],quality:.6,videoMaxDuration:30,exif:false});
-   if(result.canceled)return;const asset=result.assets[0];if(!asset)return;
+   if(result.canceled)return;const asset=result.assets[0];if(!asset)return;if(asset.mimeType&&!['image/jpeg','image/png','image/webp','video/mp4','video/quicktime'].includes(asset.mimeType.toLowerCase()))throw new Error('Choose JPEG, PNG or WebP photos, or MP4/MOV video. This media format is not supported.');
    const context:CaptureContext={origin:library?'library':'camera',recordedAt:new Date().toISOString(),stage,locationStatus:locationPermission.granted?'unavailable':'denied'};
    if(video)context.durationSeconds=asset.duration==null?undefined:asset.duration/1000;
    if(locationPermission.granted){try{const fix=await Promise.race([Location.getCurrentPositionAsync({accuracy:Location.Accuracy.High}),new Promise<never>((_,reject)=>setTimeout(()=>reject(new Error('Location timed out')),15000))]);context.latitude=fix.coords.latitude;context.longitude=fix.coords.longitude;context.accuracyMeters=fix.coords.accuracy??undefined;context.locationStatus='captured'}catch{/* Explicit unavailable state is retained. */}}
@@ -38,11 +38,14 @@ export default function EvidenceCapture(){
    const preflight=validateMediaSelection([{kind:video?'video':'photo',sizeBytes:asset.fileSize,durationSeconds:context.durationSeconds}]);if(preflight)throw new Error(preflight);
    const copied=await persistMedia(asset.uri,id,video);
    const item:EvidenceAttachment={id,kind:video?'video':'photo',...copied,contentType:asset.mimeType||copied.contentType,captureContext:context};
-   const next=[...items,item];const invalid=validateMediaSelection(next.map(x=>({...x,durationSeconds:x.captureContext?.durationSeconds})));if(invalid)throw new Error(invalid);
+   const next=[...items,item];const invalid=validateMediaSelection(next.map(x=>({...x,durationSeconds:x.captureContext?.durationSeconds})));if(invalid){await discardPrivateMedia(copied.uri).catch(()=>{});throw new Error(invalid)}
    setItems(next);try{await persist(next);setMessage('Attachment saved. Review its capture details below.')}catch{setMessage('Attachment is on this screen but could not be saved. Keep this screen open and retry Save evidence to draft.');}
   }catch(error){setMessage(error instanceof Error?error.message:'Capture failed. Retry or continue without media.')}finally{inFlight.current=false;setBusy(false)}
  }
- async function remove(id:string){if(blocked)return;const next=items.filter(item=>item.id!==id);try{await persist(next);setItems(next);setMessage('Attachment removed from this draft.')}catch{setMessage('Could not save removal. The original attachment remains in the draft.')}}
+ async function remove(id:string){
+  if(blocked||inFlight.current)return;inFlight.current=true;setBusy(true);const removed=items.find(item=>item.id===id);const next=items.filter(item=>item.id!==id);
+  try{await persist(next);setItems(next);setMessage('Attachment removed from this draft.');try{const pending=await getPendingSubmissions();if(removed&&!next.some(item=>item.uri===removed.uri)&&!pending.some(item=>item.draft.evidenceUris.includes(removed.uri)))await discardPrivateMedia(removed.uri)}catch{setMessage('Attachment removed; private-file cleanup could not finish. The retained copy has not been uploaded.')}}catch{setMessage('Could not save removal. The original attachment remains in the draft.')}finally{inFlight.current=false;setBusy(false)}
+ }
  async function submit(){if(blocked||inFlight.current)return;const invalid=validateMediaSelection(items.map(x=>({...x,durationSeconds:x.captureContext?.durationSeconds})));if(invalid){setMessage(invalid);return}inFlight.current=true;setBusy(true);try{await persist(items);const draft=await loadNeedDraft();if(!draft)throw new Error('Report draft not found.');const queued=await queueNeedForSync(draft);await clearNeedDraft();const result=await flushNeedQueue();const synced=result.syncedKeys.includes(queued.idempotencyKey);if(Platform.OS==='web'){router.replace('/submissions');return}Alert.alert(synced?'Observation submitted':'Saved for secure sync',synced?'Your observation reached iRespond. Evidence still requires independent review.':'Your report and attachments are retained in the device queue. Sign in and retry from My submissions when connected.',[{text:'View submissions',onPress:()=>router.replace('/submissions')}]);}catch(error){setMessage(error instanceof Error?error.message:'Submission failed. Retry before leaving.')}finally{inFlight.current=false;setBusy(false)}}
  return <SafeAreaView style={s.safe} edges={['top','left','right']}><View style={s.screen}><StitchTopBar title="Evidence — step 2 of 2" showBack/><ScrollView contentContainerStyle={s.content}>
  <Text style={s.title}>Show the intervention clearly.</Text><Text style={s.body}>Up to 4 photos (10 MB each) and 1 video (30 seconds, 25 MB). Media is optional. Avoid identifiable vulnerable people and sensitive information; obtain appropriate consent.</Text>

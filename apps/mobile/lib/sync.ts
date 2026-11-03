@@ -99,7 +99,7 @@ async function flushNeedQueueUnlocked():Promise<SyncResult>{
 }
 
 async function uploadEvidence(baseUrl:string,needId:string,uri:string,token:string,clientAttachmentId:string,attachment?:EvidenceAttachment){
-  const local=await fetch(uri);if(!local.ok)throw new Error('local evidence unavailable');const blob=await local.blob();const contentType=allowedType(blob.type)||inferType(uri);if(!contentType)throw new Error('unsupported evidence type');
+  const local=await fetch(uri);if(!local.ok)throw new Error('local evidence unavailable');const blob=await local.blob();const contentType=allowedType(blob.type)||allowedType(attachment?.contentType||'')||inferType(uri);if(!contentType)throw new Error('unsupported evidence type');
   const buffer=typeof blob.arrayBuffer==='function'?await blob.arrayBuffer():await new Promise<ArrayBuffer>((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error('local evidence unavailable'));reader.onload=()=>resolve(reader.result as ArrayBuffer);reader.readAsArrayBuffer(blob)});
   const digest=await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256,new Uint8Array(buffer));const sha256Hex=Array.from(new Uint8Array(digest)).map(value=>value.toString(16).padStart(2,'0')).join('');
   const initiate=await fetch(`${baseUrl}/v1/needs/${encodeURIComponent(needId)}/evidence/uploads`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({contentType,sizeBytes:blob.size,sha256Hex,clientAttachmentId,captureContext:attachment?.captureContext})});if(!initiate.ok)throw new Error(`evidence initiate ${initiate.status}`);const upload=(await initiate.json()) as InitiatedUpload;if(upload.completed)return;
