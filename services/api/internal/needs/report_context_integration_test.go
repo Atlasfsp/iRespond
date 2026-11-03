@@ -62,7 +62,7 @@ func TestYSQLFieldReportContextRoundTrip(t *testing.T) {
 	if e != nil || !wasReplay || !replay.LocationKnown {
 		t.Fatalf("historical receipt lost known coordinates: %+v %v", replay, e)
 	}
-	if _, e := pool.Exec(ctx, `INSERT INTO needs(id,title,description,category,reporter_id,sdg_tags,latitude,longitude) VALUES('field-legacy-location','Synthetic legacy','No captured destination','community','','{}',NULL,NULL) ON CONFLICT (id) DO UPDATE SET latitude=NULL,longitude=NULL`); e != nil {
+	if _, e := pool.Exec(ctx, `INSERT INTO needs(id,title,description,category,reporter_id,verification_state,sdg_tags,latitude,longitude) VALUES('field-legacy-location','Synthetic legacy','No captured destination','community','','observed','{}',NULL,NULL) ON CONFLICT (id) DO UPDATE SET latitude=NULL,longitude=NULL`); e != nil {
 		t.Fatal(e)
 	}
 	legacy, e := repo.Get(ctx, "field-legacy-location")
