@@ -29,6 +29,7 @@ func NewMemoryRepository() *MemoryRepository {
 }
 
 func (m *MemoryRepository) Create(_ context.Context, n Need, key string) (Need, bool, error) {
+ if err:=ValidateReportContext(n.Category,n.CategoryDetail,n.LocationContext);err!=nil{return Need{},false,err}
 	if n.SDGTags == nil {
 		n.SDGTags = []int{}
 	}

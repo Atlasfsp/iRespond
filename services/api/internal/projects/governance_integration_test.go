@@ -20,7 +20,9 @@ func TestGovernedProjectLifecycle(t *testing.T){
 	invite,err:=m.InviteRole(ctx,"invite-manager",p.ID,"manager-1","project_manager","steward-1");if err!=nil{t.Fatal(err)};if invite.Status!="pending"{t.Fatalf("invite=%+v",invite)}
 	if _,err:=m.AcceptRole(ctx,invite.ID,"wrong-actor");!errors.Is(err,ErrRoleInviteNotFound){t.Fatalf("wrong actor accept err=%v",err)}
 	if _,err:=m.AcceptRole(ctx,invite.ID,"manager-1");err!=nil{t.Fatal(err)}
-	ms,err:=m.AddMilestone(ctx,"milestone-1",p.ID,"Repair and certify roof","",1,nil);if err!=nil{t.Fatal(err)}
+	roles,e:=m.ViewerRoles(ctx,p.ID,"manager-1");if e!=nil||len(roles)!=1||roles[0]!="project_manager"{t.Fatalf("missing own project role: %v %v",roles,e)}
+ other,e:=m.ViewerRoles(ctx,p.ID,"wrong-actor");if e!=nil||len(other)!=0{t.Fatalf("another actor's assignments leaked: %v %v",other,e)}
+ ms,err:=m.AddMilestone(ctx,"milestone-1",p.ID,"Repair and certify roof","",1,nil);if err!=nil{t.Fatal(err)}
 	if _,err:=m.TransitionProject(ctx,p.ID,"approved","steward-1");err!=nil{t.Fatal(err)}
 	if _,err:=m.TransitionProject(ctx,p.ID,"mobilising","manager-1");err!=nil{t.Fatal(err)}
 	if _,err:=m.TransitionProject(ctx,p.ID,"executing","manager-1");err!=nil{t.Fatal(err)}
