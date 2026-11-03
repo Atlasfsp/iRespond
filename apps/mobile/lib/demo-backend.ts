@@ -249,7 +249,7 @@ function allowedMilestoneTransition(from: string, to: string) {
 }
 function projectDetail(id: string) {
   const project = projectFor(id);
-  return project ? { project, milestones: milestonesByProject[id] ?? [], contributionNeeds: contributionNeedsByProject[id] ?? [], permissions } : null;
+  return project ? { project, milestones: milestonesByProject[id] ?? [], contributionNeeds: contributionNeedsByProject[id] ?? [], permissions,viewerRoles:Array.from(projectRolesByProject[id]??[]) } : null;
 }
 
 export function isDemoRequest(raw: string) {
@@ -284,6 +284,7 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
       title: String(input.title ?? 'Offline demo observation'),
       description: String(input.description ?? ''),
       category: String(input.category ?? 'community'),
+      categoryDetail:String(input.categoryDetail??''),
       latitude: Number(input.latitude ?? 0),
       longitude: Number(input.longitude ?? 0),
       reporterId: 'offline-demo-user',

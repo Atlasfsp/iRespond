@@ -1,3 +1,4 @@
+import {apiBaseUrl} from '../../lib/environment';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -12,7 +13,7 @@ type ProjectDetail={permissions?:{canManageFunding?:boolean}};
 const classes=[['external_donation','External donation'],['community_counterpart','Community counterpart'],['matching_commitment','Matching commitment']] as const;
 export default function ProjectFunding(){
  const{projectId}=useLocalSearchParams<{projectId:string}>();const[plan,setPlan]=useState<Plan|null>(null);const[canManage,setCanManage]=useState(false);const[loading,setLoading]=useState(true);const[error,setError]=useState('');const[amount,setAmount]=useState('');const[klass,setKlass]=useState<string>('external_donation');const[saving,setSaving]=useState(false);const[target,setTarget]=useState('');const[counterpart,setCounterpart]=useState('');const[currency,setCurrency]=useState('NGN');
- async function auth(){const base=process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/,'');const token=await getAccessToken();if(!base){setError('The funding API is not configured on this build.');return null}if(!token){router.replace('/signin');return null}return{base,token}}
+ async function auth(){const base=apiBaseUrl();const token=await getAccessToken();if(!base){setError('The funding API is not configured on this build.');return null}if(!token){router.replace('/signin');return null}return{base,token}}
  function resetProjectFundingState(){setPlan(null);setCanManage(false);setAmount('');setKlass('external_donation');setCurrency('NGN');setTarget('');setCounterpart('')}
  async function load(){const a=await auth();if(!a||!projectId){setLoading(false);return}setLoading(true);setError('');resetProjectFundingState();try{const headers={Authorization:`Bearer ${a.token}`};const[projectResponse,fundingResponse]=await Promise.all([fetch(`${a.base}/v1/projects/${encodeURIComponent(projectId)}`,{headers}),fetch(`${a.base}/v1/projects/${encodeURIComponent(projectId)}/funding`,{headers})]);if(projectResponse.ok){const detail=await projectResponse.json() as ProjectDetail;setCanManage(!!detail.permissions?.canManageFunding)}if(fundingResponse.status===404)return;if(fundingResponse.status===401){router.replace('/signin');return}if(!fundingResponse.ok)throw new Error('load');const p=await fundingResponse.json() as Plan;setPlan(p);setCurrency(p.currency);setTarget(String(p.targetMinor/100));setCounterpart(String(p.communityCounterpartMinor/100))}catch{setError('Funding information could not be loaded.')}finally{setLoading(false)}}
  useEffect(()=>{void load()},[projectId]);

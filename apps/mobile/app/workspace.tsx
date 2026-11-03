@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { router } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { APIError, getSession, type Session } from '../lib/api';
@@ -8,7 +8,7 @@ import { capabilitiesForRoles } from '../lib/capabilities';
 type WorkspaceItem = { title: string; description: string; route: string; tone?: 'default' | 'safety' };
 export default function Workspace(){
  const[session,setSession]=useState<Session|null>(null);const[loading,setLoading]=useState(true);const[refreshing,setRefreshing]=useState(false);const[error,setError]=useState('');
- const load=useCallback(async()=>{setError('');try{setSession(await getSession())}catch(err){if(err instanceof APIError&&err.status===401)setSession(null);else setError(err instanceof Error?err.message:'Unable to load your workspace.')}finally{setLoading(false);setRefreshing(false)}},[]);useEffect(()=>{void load()},[load]);const caps=useMemo(()=>capabilitiesForRoles(session?.roles??[]),[session?.roles]);
+ const load=useCallback(async()=>{setError('');try{setSession(await getSession())}catch(err){setSession(null);if(err instanceof APIError&&err.status===401)setSession(null);else setError(err instanceof Error?err.message:'Unable to load your workspace.')}finally{setLoading(false);setRefreshing(false)}},[]);useFocusEffect(useCallback(()=>{setSession(null);setLoading(true);void load()},[load]));const caps=useMemo(()=>capabilitiesForRoles(session?.roles??[]),[session?.roles]);
  const items=useMemo(()=>{const list:WorkspaceItem[]=[
   {title:'Project role workspace',description:'Open a Project Room and let the API reveal only the manager, steward, volunteer-lead or verifier controls assigned to you there.',route:'/project-admin'},
   {title:'Impact Passport',description:'See verified roles, fulfilled contributions and SDGs touched.',route:'/impact'},
