@@ -29,3 +29,5 @@ For USB testing, enable Developer options by tapping Build number seven times, t
 | Lifecycle and privacy | Background/foreground and permission changes refresh correctly; no unexpected production requests or public exposure of private capture context |
 
 Record phone model, Android version, APK SHA-256, source SHA, toolchain, install result and each observed result. Mark unperformed checks NOT RUN. Screenshots/logcat should cover only the test app; retain failed attempts and redact private data before publication. A demo pass cannot certify connected production identity, policy, upload scanning or offline synchronization against live services. Apple Maps/native iOS and VoiceOver require separate iOS device evidence.
+
+Android build/static inspection completed: see `../engineering/FIELD_REVIEW_EXECUTION_20261103.md` for the APK hash, exact source/toolchain and receipts. The package is `global.irespond.app.demo`. Physical-device rows above remain NOT RUN until an authorized phone is visible and the checks are actually executed.
