@@ -297,7 +297,8 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
     get:
       tags: [Projects]
-      operationId: getProjectByNeed
+      operationId: getProject
+      description: Public project data. Authenticated responses additionally include server permissions and viewerRoles containing only the caller's own accepted project assignments; profile position grants no authority.ByNeed
       parameters: [{ $ref: '#/components/parameters/NeedId' }]
       responses:
         '200': { description: Action project, content: { application/json: { schema: { $ref: '#/components/schemas/Project' } } } }
