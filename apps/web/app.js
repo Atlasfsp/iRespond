@@ -35,22 +35,42 @@ async function demoSignIn(){if(!config.demoMode)throw new Error('Demo sign-in is
 async function handleAuthCallback(){const params=new URLSearchParams(location.search),code=params.get('code');if(!code)return;const returned=params.get('state'),expected=sessionStorage.getItem('irespond.web.state'),verifier=sessionStorage.getItem('irespond.web.pkce');if(!returned||returned!==expected||!verifier)throw new Error('OIDC callback state validation failed.');const d=await discovery(),redirectUri=`${location.origin}${location.pathname}`;const response=await fetch(d.token_endpoint,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'authorization_code',client_id:config.oidcClientId,code,redirect_uri:redirectUri,code_verifier:verifier})});if(!response.ok)throw new Error('OIDC token exchange failed.');const token=await response.json();state.demo=false;state.token=token.access_token||'';sessionStorage.removeItem('irespond.web.demo-session');sessionStorage.setItem('irespond.web.access-token',state.token);const hash=sessionStorage.getItem('irespond.web.return-hash')||'#home';['irespond.web.pkce','irespond.web.state','irespond.web.return-hash'].forEach(k=>sessionStorage.removeItem(k));history.replaceState({},'',`${location.pathname}${hash}`)}
 async function refreshSession(){if(state.demo){state.session=webDemo.session;return}if(!state.token){state.session=null;return}try{state.session=await api('/v1/session')}catch(error){if(error.status===401){state.token='';state.session=null;sessionStorage.removeItem('irespond.web.access-token')}else throw error}}
 function signOut(){state.demo=false;state.token='';state.session=null;sessionStorage.removeItem('irespond.web.demo-session');sessionStorage.removeItem('irespond.web.access-token');renderChrome();location.hash='#home';notify('Signed out from this browser session.')}
-function renderChrome(){const items=[['home','Home'],['needs','Needs'],['project','Projects']];if(state.session){items.push(['contributions','Contributions'],['funding','Funding'],['impact','Impact'],['notifications','Notifications'],['privacy','Privacy'],['safety','Safety']);if([...capabilities()].some(v=>v.startsWith('verification.'))||has('evidence.review')||has('project.convert'))items.push(['verification','Verification']);if(has('safety.review'))items.push(['safety-ops','Safety ops'])}nav.innerHTML=items.map(([id,label])=>`<a href="#${id}" ${state.page===id?'aria-current="page"':''}>${label}</a>`).join('');identity.innerHTML=state.session?`<span class="subject">${esc(state.session.subject)}${state.demo?' · Demo':''}</span><button class="button ghost" id="sign-out">Sign out</button>`:signInActions('header');bindSignInActions('header');$('#sign-out')?.addEventListener('click',signOut)}
+function renderChrome(){const items=[['home','Home'],['needs','Discover'],['challenges','Challenges'],['project','Projects']];if(state.session){items.push(['contributions','My Activity'],['funding','Funding'],['impact','Impact'],['notifications','Notifications'],['privacy','Privacy'],['safety','Safety']);if([...capabilities()].some(v=>v.startsWith('verification.'))||has('evidence.review')||has('project.convert'))items.push(['verification','Verification']);if(has('safety.review'))items.push(['safety-ops','Safety ops'])}nav.innerHTML=items.map(([id,label])=>`<a href="#${id}" ${state.page===id?'aria-current="page"':''}>${label}</a>`).join('')+`<div class="if-sidebar-Promo" aria-label="Start a Challenge"><h4>Start a Challenge</h4><p>Mobilise your school, organisation or community around a verified problem.</p><a class="button primary-action" href="#challenges">Explore Challenges</a></div>`;identity.innerHTML=state.session?`<span class="subject">${esc(state.session.subject)}${state.demo?' · OFFLINE DEMO':''}</span><button class="button ghost" id="sign-out">Sign out</button>`:signInActions('header');bindSignInActions('header');$('#sign-out')?.addEventListener('click',signOut)}
 async function requireAuth(){if(state.session)return true;main.innerHTML=authNotice();bindSignInActions('page');return false}
-async function route(){state.page=(location.hash||'#home').slice(1).split('?')[0]||'home';renderChrome();main.innerHTML='<div class="empty"><span class="loading"></span> Loading…</div>';try{const fn={home:renderHome,needs:renderNeeds,verification:renderVerification,project:renderProject,contributions:renderContributions,funding:renderFunding,impact:renderImpact,notifications:renderNotifications,privacy:renderPrivacy,safety:renderSafety,'safety-ops':renderSafetyOps}[state.page]||renderHome;await fn();if(state.page==='needs')bindSdgDropdown();bindSignInActions('page')}catch(e){main.innerHTML=`<section class="panel"><h2>Unable to load</h2>${errorHTML(e.message||String(e))}</section>`}finally{renderChrome();main.focus({preventScroll:true})}}
+async function route(){state.page=(location.hash||'#home').slice(1).split('?')[0]||'home';renderChrome();main.innerHTML='<div class="empty"><span class="loading"></span> Loading…</div>';try{const fn={home:renderHome,needs:renderNeeds,challenges:renderChallenges,verification:renderVerification,project:renderProject,contributions:renderContributions,funding:renderFunding,impact:renderImpact,notifications:renderNotifications,privacy:renderPrivacy,safety:renderSafety,'safety-ops':renderSafetyOps}[state.page]||renderHome;await fn();if(state.page==='needs')bindSdgDropdown();bindSignInActions('page')}catch(e){main.innerHTML=`<section class="panel"><h2>Unable to load</h2>${errorHTML(e.message||String(e))}</section>`}finally{renderChrome();main.focus({preventScroll:true})}}
 async function renderHome(){
  let platform={lifecycle:['see','report','verify','diagnose','project','mobilise','execute','measure','maintain','replicate']};
  let platformReachable=false;
+ let liveNeeds=[];
+ let liveChallenges=[];
  try{platform=await api('/v1/platform',{},false);platformReachable=true}catch{}
+ try{liveNeeds=await api('/v1/needs?lat=6.52&lng=3.37&radiusKm=50',{},false)||[]}catch{}
+ try{const chRes=await api('/v1/challenges',{},false);liveChallenges=Array.isArray(chRes?.items)?chRes.items:[]}catch{}
  const stages=Array.isArray(platform.lifecycle)?platform.lifecycle.filter(stage=>typeof stage==='string').slice(0,10):[];
+ const verifiedNeedsCount=liveNeeds.filter(n=>['community_confirmed','institution_confirmed','expert_confirmed','independently_audited','government_confirmed'].includes(n.verificationState)).length;
+ const provenanceLabel=state.demo||platform?.demo?'OFFLINE DEMO FIXTURE — Not production metrics':platformReachable?'Live API count':'API offline (0 loaded)';
  main.innerHTML=`<div class="impact-home">
+  <div class="if-topbar-utility" role="region" aria-label="Workspace utility bar">
+   <form class="if-search-form" id="home-quick-search">
+    <label>Search opportunities
+     <input class="if-search-input" name="q" type="search" placeholder="Search challenges, projects, needs or organisations…">
+    </label>
+    <button class="button secondary" type="submit">Search</button>
+   </form>
+   <div class="if-utility-actions">
+    <span class="if-badge ${state.demo||platform?.demo?'if-badge-amber':'if-badge-emerald'}">${esc(provenanceLabel)}</span>
+    <a class="button secondary" href="#challenges">Challenges</a>
+    <a class="button secondary" href="#needs">NeedMap</a>
+   </div>
+  </div>
   <section class="impact-hero" aria-labelledby="impact-title">
    <div class="fw-hero-copy">
-    <div class="fw-kicker">SEE IT · OWN IT · SOLVE IT</div>
-    <h1 id="impact-title">Change begins with <em>someone.</em> Why not you?</h1>
-    <p>One small response can become something extraordinary. Discover community needs, contribute what you can, and follow real action through accountable results.</p>
-    <div class="hero-actions"><a class="button white-action" href="#needs">Explore community needs <span aria-hidden="true">↗</span></a>
-     <a class="button primary-action" href="#project">View action projects <span aria-hidden="true">↗</span></a></div>
+    <div class="fw-kicker">WELCOME TO IRESPOND · SEE IT · OWN IT · SOLVE IT</div>
+    <h1 id="impact-title">Make change happen, <em>together.</em></h1>
+    <p>Join a challenge, support a local project, or report a need in your community. Every action is backed by transparent verification and real evidence.</p>
+    <div class="hero-actions"><a class="button primary-action" href="#challenges">Explore challenges <span aria-hidden="true">→</span></a>
+     <a class="button white-action" href="#needs">Report a need <span aria-hidden="true">↗</span></a>
+     <a class="button white-action" href="#project">View action projects <span aria-hidden="true">↗</span></a></div>
     <div class="fw-hero-caption">Every ability matters. Verified records matter, too.</div>
    </div>
    <div class="fw-art" aria-hidden="true">
@@ -63,18 +83,50 @@ async function renderHome(){
   <section aria-labelledby="fw-actions-heading">
    <div class="impact-section-header"><div><span>YOUR NEXT SMALL STEP</span>
     <h2 id="fw-actions-heading">A place for <em>your kind of good.</em></h2>
-    <p>Choose a meaningful action. Find a need, share what you see, or follow the difference your contributions make.</p>
+    <p>Choose a meaningful action. Join a challenge, find a community need, or follow the difference your contributions make.</p>
    </div></div>
    <div class="impact-action-grid" style="margin-top:20px">
     <a class="impact-action" href="#needs"><span class="action-icon" aria-hidden="true">⌖</span>
      <div><h3>Discover a need</h3><p>Explore actual reports and see their evidence state before you get involved.</p></div>
      <span class="action-arrow">Open community discovery <span aria-hidden="true">↗</span></span></a>
-    <a class="impact-action amber-card" href="#needs"><span class="action-icon" aria-hidden="true">＋</span>
-     <div><h3>Report what you see</h3><p>Capture a community observation with confirmed coordinates and evidence.</p></div>
-     <span class="action-arrow">Start a need report <span aria-hidden="true">↗</span></span></a>
+    <a class="impact-action amber-card" href="#challenges"><span class="action-icon" aria-hidden="true">★</span>
+     <div><h3>Join a challenge</h3><p>Form a team, propose a grounded solution, and progress through independent human review.</p></div>
+     <span class="action-arrow">Browse published challenges <span aria-hidden="true">↗</span></span></a>
     <a class="impact-action blue-card" href="#impact"><span class="action-icon" aria-hidden="true">✦</span>
-     <div><h3>Follow your impact</h3><p>See the contributions and project activities supported by platform records.</p></div>
+     <div><h3>Follow your impact</h3><p>See the contributions, challenges and project activities supported by platform records.</p></div>
      <span class="action-arrow">View Impact Passport <span aria-hidden="true">↗</span></span></a>
+   </div>
+  </section>
+  <section class="section" aria-labelledby="if-opps-heading">
+   <div class="section-head">
+    <div>
+     <span class="eyebrow" style="color:var(--brand-2)">OPPORTUNITIES NEAR YOU</span>
+     <h2 id="if-opps-heading">Live community needs &amp; published challenges</h2>
+     <p>Every card reflects its server-authoritative verification or rule-approval status.</p>
+    </div>
+    <div class="actions">
+     <a class="button secondary" href="#challenges">All challenges</a>
+     <a class="button secondary" href="#needs">All needs</a>
+    </div>
+   </div>
+   <div class="grid">
+    ${liveChallenges.slice(0,1).map(c=>`<article class="card"><div class="role-row"><span class="badge warning">CHALLENGE · ${esc(human(c.status||'registration_open'))}</span><span class="badge">${c.demoOnly?'OFFLINE DEMO':'Rules v'+esc(c.currentRulesVersion||1)}</span></div><h3 style="margin-top:10px">${esc(c.title)}</h3><p>${esc(c.mission||c.description||'')}</p><small style="display:block;margin-top:8px;color:var(--muted)">Funding status: ${esc(human(c.fundingStatus||'unconfirmed'))}</small><div class="actions"><a class="button" href="#challenges">View challenge</a></div></article>`).join('')}
+    ${liveNeeds.slice(0,2).map(n=>`<article class="card"><div class="role-row"><span class="badge">${esc(human(n.category||'community'))}</span><span class="badge">${esc(human(n.verificationState||'observed'))}</span></div><h3 style="margin-top:10px">${esc(n.title)}</h3><p>${esc(n.description||'')}</p><div class="actions"><a class="button secondary" href="#needs">Inspect need</a></div></article>`).join('')}
+    ${!liveChallenges.length&&!liveNeeds.length?'<div class="empty" style="grid-column:1/-1">No live opportunities returned by the API right now. Use Discover or Challenges to create or inspect records.</div>':''}
+   </div>
+  </section>
+  <section class="section" aria-labelledby="if-impact-strip-heading">
+   <div class="section-head">
+    <div>
+     <span class="eyebrow" style="color:var(--brand-2)">OUR IMPACT · TRUTH-VERIFIED METRICS</span>
+     <h2 id="if-impact-strip-heading">Measured from loaded records (${esc(provenanceLabel)})</h2>
+    </div>
+   </div>
+   <div class="grid four">
+    <div class="metric"><span>Reported needs loaded</span><strong>${liveNeeds.length}</strong><small>${esc(provenanceLabel)}</small></div>
+    <div class="metric"><span>Verified needs loaded</span><strong>${verifiedNeedsCount}</strong><small>Excludes unverified observations</small></div>
+    <div class="metric"><span>Published challenges</span><strong>${liveChallenges.length}</strong><small>Dual-human approved rules</small></div>
+    <div class="metric"><span>Lifecycle stages</span><strong>${stages.length||10}</strong><small>See → Maintain → Replicate</small></div>
    </div>
   </section>
   <section class="impact-journey" aria-label="Accountable community action">
@@ -98,10 +150,11 @@ async function renderHome(){
   </section>
   <section class="impact-institution" aria-labelledby="institution-title">
    <div><h3 id="institution-title">Bring your organization into the work.</h3>
-    <p>Authorized project leaders can coordinate milestones, contributions and reviews in Project Rooms. Broader ImpactOS institutions and AI matching remain planned extensions, not live features.</p></div>
-   <a class="button" href="#project">Open Project Room <span aria-hidden="true">↗</span></a>
+    <p>Authorized project leaders and programme owners can coordinate milestones, challenges, contributions and reviews in Project Rooms and Challenge Workspaces.</p></div>
+   <div class="actions"><a class="button" href="#project">Open Project Room <span aria-hidden="true">↗</span></a><a class="button secondary" href="#challenges">Open Challenges <span aria-hidden="true">↗</span></a></div>
   </section>
  </div>`;
+ $('#home-quick-search')?.addEventListener('submit',e=>{e.preventDefault();location.hash='#challenges'});
 }
 function sdgDropdownHTML(){return`<div class="field full"><label id="sdg-dropdown-label">Sustainable Development Goals</label><details class="sdg-dropdown"><summary aria-labelledby="sdg-dropdown-label sdg-summary"><span id="sdg-summary">Select one or more SDGs</span><span aria-hidden="true">⌄</span></summary><input type="hidden" name="sdgTags" value=""><div class="sdg-options">${SDGS.map(goal=>`<label><input type="checkbox" name="sdgTagOption" value="${goal.id}"><strong>${goal.id}</strong><span>${esc(goal.name)}</span></label>`).join('')}</div></details><small class="field-help">Optional. Select any goals this observation may affect.</small></div>`}
 function bindSdgDropdown(){const legacy=$('#report-form input[name="sdgTags"]');if(legacy&&!legacy.closest('.sdg-dropdown'))legacy.closest('.field').outerHTML=sdgDropdownHTML();const summary=$('#sdg-summary'),hidden=$('#report-form input[name="sdgTags"]'),options=[...document.querySelectorAll('input[name="sdgTagOption"]')];if(!summary||!hidden)return;const update=()=>{const selected=options.filter(input=>input.checked).map(input=>input.value),value=selected.join(',');hidden.value=value;hidden.setAttribute('value',value);summary.textContent=selected.length?`${selected.length} selected · ${selected.map(item=>`SDG ${item}`).join(', ')}`:'Select one or more SDGs'};options.forEach(input=>input.addEventListener('change',update));update()}
@@ -127,10 +180,231 @@ function bindProjectActions(projectId,authority){const p=authority.permissions||
 async function renderContributions(){if(!await requireAuth())return;const items=await api('/v1/me/contribution-offers');main.innerHTML=`<section class="section-head"><div><span class="eyebrow" style="color:var(--brand-2)">CONTRIBUTIONS</span><h2>Time, skills, materials, access and care are first-class responses.</h2></div></section><section class="panel"><h3>My contribution offers</h3><div class="list">${items.length?items.map(o=>`<article class="list-item"><header><h3>${human(o.kind||'contribution')} · project ${esc(o.projectId)}</h3><span class="badge">${human(o.status||o.state)}</span></header><p>${esc(o.note||'')}</p>${['offered','pending'].includes(o.status||o.state)?`<button class="button secondary withdraw-offer" data-id="${esc(o.id)}">Withdraw open offer</button>`:''}</article>`).join(''):'<div class="empty">No contribution offers yet.</div>'}</div></section><section class="panel"><h3>Accept a project role invitation</h3><form id="role-accept" class="form-grid"><div class="field"><label>Invitation ID<input name="inviteId" value="${esc(state.inviteId)}" required></label></div><div class="field"><label>&nbsp;</label><button class="button" type="submit">Accept role</button></div></form></section>`;document.querySelectorAll('.withdraw-offer').forEach(button=>button.onclick=async()=>{try{await post(`/v1/contribution-offers/${encodeURIComponent(button.dataset.id)}/withdraw`,{});notify('Offer withdrawn.');await renderContributions()}catch(e){notify(e.message)}});$('#role-accept').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{const accepted=await post(`/v1/project-role-invites/${encodeURIComponent(f.get('inviteId'))}/accept`,{});state.projectId=accepted.projectId||state.projectId;state.inviteId='';state.inviteProjectId='';e.currentTarget.reset();notify('Project role accepted.')}catch(err){notify(err.message)}}}
 async function loadFundingPlan(projectId){try{return await api(`/v1/projects/${encodeURIComponent(projectId)}/funding`)}catch(error){if(error.status===404)return null;throw error}}
 async function renderFunding(){if(!await requireAuth())return;const mine=await api('/v1/me/funding/pledges');main.innerHTML=`<section class="section-head"><div><span class="eyebrow" style="color:var(--brand-2)">FUNDING</span><h2>Transparent commitments without overstating settlement.</h2></div></section><div class="grid two"><section class="panel"><h3>My pledges</h3><div class="list">${mine.length?mine.map(p=>`<article class="list-item"><header><h3>${money(p.amountMinor,p.currency)}</h3><span class="badge">${human(p.status)}</span></header><p>Project ${esc(p.projectId)}</p>${p.status==='pledged'?`<button class="button secondary cancel-pledge" data-id="${esc(p.id)}">Cancel open pledge</button>`:''}</article>`).join(''):'<div class="empty">No funding pledges yet.</div>'}</div></section><section class="panel"><h3>Project funding plan</h3><form id="funding-load" class="form-grid"><div class="field"><label>Project ID<input name="projectId" value="${esc(state.projectId)}" required></label></div><div class="field"><label>&nbsp;</label><button class="button" type="submit">Load plan</button></div></form><div id="funding-result"></div></section></div>`;document.querySelectorAll('.cancel-pledge').forEach(button=>button.onclick=async()=>{try{await post(`/v1/funding/pledges/${encodeURIComponent(button.dataset.id)}/cancel`,{});notify('Pledge cancelled.');await renderFunding()}catch(e){notify(e.message)}});$('#funding-load').onsubmit=async e=>{e.preventDefault();const id=String(new FormData(e.currentTarget).get('projectId')),box=$('#funding-result');state.projectId=id;try{const[plan,project]=await Promise.all([loadFundingPlan(id),api(`/v1/projects/${encodeURIComponent(id)}`)]);const p=project.permissions||emptyPermissions;const currency=plan?.currency||'CAD';let managerPledges=[];if(p.canManageFunding)managerPledges=await api(`/v1/projects/${encodeURIComponent(id)}/funding/pledges`);box.innerHTML=`${plan?`<div class="metric"><span>Target</span><strong>${money(plan.targetMinor,currency)}</strong><p>${money(plan.pledgedMinor,currency)} pledged · ${money(plan.confirmedMinor,currency)} externally confirmed</p></div><form id="make-pledge" class="form-grid"><div class="field"><label>Amount (${esc(currency)})<input name="amount" inputmode="decimal" required></label></div><div class="field"><label>Contribution class<select name="contributionClass"><option value="external_donation">External donation</option><option value="community_counterpart">Community counterpart</option><option value="matching_commitment">Matching commitment</option></select></label></div><div class="field full"><button class="button" type="submit">Record pledge</button></div></form>`:'<div class="empty">No funding plan has been published yet.</div>'}${p.canManageFunding?`<form id="funding-manage" class="form-grid"><div class="field"><label>Currency<input name="currency" value="${esc(currency)}" maxlength="3"></label></div><div class="field"><label>Total target<input name="target" value="${(plan?.targetMinor||0)/100}" inputmode="decimal"></label></div><div class="field"><label>Community counterpart<input name="counterpart" value="${(plan?.communityCounterpartMinor||0)/100}" inputmode="decimal"></label></div><div class="field"><label>&nbsp;</label><button class="button secondary" type="submit">Update plan</button></div></form><div class="list">${managerPledges.map(x=>`<div class="list-item"><strong>${esc(x.contributorId)}</strong> · ${money(x.amountMinor,x.currency)} · ${human(x.status)}</div>`).join('')}</div>`:''}`;$('#make-pledge')?.addEventListener('submit',async ev=>{ev.preventDefault();const data=new FormData(ev.currentTarget);try{await post(`/v1/projects/${encodeURIComponent(id)}/funding/pledges`,{contributionClass:data.get('contributionClass'),amountMinor:Math.round(Number(data.get('amount'))*100)});notify('Pledge recorded; no money has been moved.')}catch(err){notify(err.message)}});$('#funding-manage')?.addEventListener('submit',async ev=>{ev.preventDefault();const data=new FormData(ev.currentTarget);try{await put(`/v1/projects/${encodeURIComponent(id)}/funding`,{currency:String(data.get('currency')).toUpperCase(),targetMinor:Math.round(Number(data.get('target'))*100),communityCounterpartMinor:Math.round(Number(data.get('counterpart'))*100)});notify('Funding plan updated.');$('#verify-load')?.requestSubmit()}catch(err){notify(err.message)}})}catch(err){box.innerHTML=errorHTML(err.message)}};if(state.projectId)$('#funding-load').requestSubmit()}
-async function renderImpact(){if(!await requireAuth())return;const p=await api('/v1/me/impact-passport');main.innerHTML=`<section class="section-head"><div><span class="eyebrow" style="color:var(--brand-2)">IMPACT PASSPORT</span><h2>Your response, evidenced.</h2></div></section><div class="grid four"><div class="metric"><span>Projects led</span><strong>${p.projectsLed||0}</strong></div><div class="metric"><span>Completed</span><strong>${p.projectsCompleted||0}</strong></div><div class="metric"><span>Verifications</span><strong>${p.verifications||0}</strong></div><div class="metric"><span>Fulfilled responses</span><strong>${p.fulfilledContributions||0}</strong></div></div><section class="panel"><h3>SDGs touched</h3><div class="role-row">${(p.sdgs||[]).length?p.sdgs.map(n=>`<span class="badge">SDG ${n}</span>`).join(''):'No verified project SDGs yet.'}</div></section>`}
+async function renderImpact(){if(!await requireAuth())return;const[p,myEntries]=await Promise.all([api('/v1/me/impact-passport'),api('/v1/me/challenge-entries').catch(()=>[])]);main.innerHTML=`<section class="section-head"><div><span class="eyebrow" style="color:var(--brand-2)">IMPACT PASSPORT</span><h2>Your response, evidenced.</h2><p>Impact Passport entries distinguish challenge application, submitted proposal, judge shortlist, approved award, and fulfilled prize from verified community action projects.</p></div></section><div class="grid four"><div class="metric"><span>Projects led</span><strong>${p.projectsLed||0}</strong></div><div class="metric"><span>Completed</span><strong>${p.projectsCompleted||0}</strong></div><div class="metric"><span>Verifications</span><strong>${p.verifications||0}</strong></div><div class="metric"><span>Fulfilled responses</span><strong>${p.fulfilledContributions||0}</strong></div></div><section class="panel"><h3>SDGs touched</h3><div class="role-row">${(p.sdgs||[]).length?p.sdgs.map(n=>`<span class="badge">SDG ${n}</span>`).join(''):'No verified project SDGs yet.'}</div></section><section class="panel"><div class="section-head"><div><h3>Challenge entries &amp; verified outcomes</h3><p>Entries appear here with their exact server-authoritative stage.</p></div><a class="button secondary" href="#challenges">Open Challenges</a></div><div class="list">${(myEntries||[]).length?myEntries.map(e=>`<article class="list-item"><header><strong>${esc(e.projectTitle||e.id)}</strong><span class="badge">${esc(human(e.status||'applied'))}</span></header><p>Challenge ${esc(e.programId)} · Eligibility: ${esc(human(e.eligibilityStatus||'pending'))}${e.linkedProjectId?` · Linked Action Project: <code>${esc(e.linkedProjectId)}</code>`:''}</p></article>`).join(''):'<div class="empty">No challenge entries recorded yet.</div>'}</div></section>`}
 async function renderNotifications(){if(!await requireAuth())return;const[items,prefs]=await Promise.all([api('/v1/me/notifications'),api('/v1/me/notification-preferences')]);main.innerHTML=`<section class="section-head"><div><span class="eyebrow" style="color:var(--brand-2)">NOTIFICATIONS</span><h2>Updates with user-controlled delivery.</h2></div></section><div class="grid two"><section class="panel"><h3>Inbox</h3><div class="list">${items.length?items.map(n=>`<article class="list-item"><header><h3>${esc(n.title)}</h3>${n.readAt?'':'<span class="badge">New</span>'}</header><p>${esc(n.body||'')}</p>${n.readAt?'':`<button class="button secondary mark-read" data-id="${esc(n.id)}">Mark read</button>`}</article>`).join(''):'<div class="empty">No notifications.</div>'}</div></section><section class="panel"><h3>Preferences</h3><form id="notification-prefs" class="form-grid">${Object.entries(prefs||{}).filter(([,v])=>typeof v==='boolean').map(([key,value])=>`<label class="field"><span>${human(key)}</span><select name="${esc(key)}"><option value="true" ${value?'selected':''}>On</option><option value="false" ${!value?'selected':''}>Off</option></select></label>`).join('')}<div class="field full"><button class="button" type="submit">Save preferences</button></div></form></section></div>`;document.querySelectorAll('.mark-read').forEach(button=>button.onclick=async()=>{try{await post(`/v1/me/notifications/${encodeURIComponent(button.dataset.id)}/read`,{});await renderNotifications()}catch(e){notify(e.message)}});$('#notification-prefs').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget),body={...prefs};for(const[key]of f.entries())body[key]=f.get(key)==='true';try{await put('/v1/me/notification-preferences',body);notify('Notification preferences saved.')}catch(err){notify(err.message)}}}
-async function renderPrivacy(){if(!await requireAuth())return;const[consents,requests]=await Promise.all([api('/v1/me/privacy/consents'),api('/v1/me/privacy/requests')]),values=Object.fromEntries(consents.map(c=>[c.purpose,c]));main.innerHTML=`<section class="section-head"><div><span class="eyebrow" style="color:var(--brand-2)">PRIVACY & DIGNITY</span><h2>Your data, your choices.</h2></div></section><div class="grid two"><section class="panel"><h3>Optional data uses</h3>${['impact-research','product-improvement'].map(p=>`<form class="consent-form list-item" data-purpose="${p}"><header><label>${human(p)}<select name="granted"><option value="true" ${values[p]?.granted?'selected':''}>Allowed</option><option value="false" ${!values[p]?.granted?'selected':''}>Not allowed</option></select></label></header><button class="button secondary" type="submit">Save choice</button></form>`).join('')}</section><section class="panel"><h3>Exercise data rights</h3><div class="actions">${['access','export','correction','deletion'].map(type=>`<button class="button secondary privacy-request" data-type="${type}">${human(type)}</button>`).join('')}</div><h3>Request history</h3><div class="list">${requests.length?requests.map(r=>`<div class="list-item"><header><strong>${human(r.type)}</strong><span class="badge">${human(r.status)}</span></header></div>`).join(''):'<div class="empty">No privacy requests yet.</div>'}</div></section></div>`;document.querySelectorAll('.consent-form').forEach(form=>form.onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{await put(`/v1/me/privacy/consents/${encodeURIComponent(e.currentTarget.dataset.purpose)}`,{granted:f.get('granted')==='true',policyVersion:'2026-08'});notify('Privacy choice saved.')}catch(err){notify(err.message)}});document.querySelectorAll('.privacy-request').forEach(button=>button.onclick=async()=>{try{await post('/v1/me/privacy/requests',{type:button.dataset.type});notify('Privacy request recorded.');await renderPrivacy()}catch(e){notify(e.message)}})}
+async function renderPrivacy(){if(!await requireAuth())return;const[consents,requests]=await Promise.all([api('/v1/me/privacy/consents'),api('/v1/me/privacy/requests')]),values=Object.fromEntries(consents.map(c=>[c.purpose,c]));main.innerHTML=`<section class="section-head"><div><span class="eyebrow" style="color:var(--brand-2)">PRIVACY & DIGNITY</span><h2>Your data, your choices.</h2></div></section><div class="grid two"><section class="panel"><h3>Optional data uses</h3>${['impact-research','product-improvement'].map(p=>`<form class="consent-form list-item" data-purpose="${p}"><header><label>${human(p)}<select name="granted"><option value="true" ${values[p]?.granted?'selected':''}>Allowed</option><option value="false" ${!values[p]?.granted?'selected':''}>Not allowed</option></select></label></header><button class="button secondary" type="submit">Save choice</button></form>`).join('')}</section><section class="panel"><h3>Exercise data rights</h3><div class="actions">${['access','export','correction','deletion'].map(type=>`<button class="button secondary privacy-request" data-type="${type}">${human(type)}</button></form>`.replace('</form>','')).join('')}</div><h3>Request history</h3><div class="list">${requests.length?requests.map(r=>`<div class="list-item"><header><strong>${human(r.type)}</strong><span class="badge">${human(r.status)}</span></header></div>`).join(''):'<div class="empty">No privacy requests yet.</div>'}</div></section></div>`;document.querySelectorAll('.consent-form').forEach(form=>form.onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{await put(`/v1/me/privacy/consents/${encodeURIComponent(e.currentTarget.dataset.purpose)}`,{granted:f.get('granted')==='true',policyVersion:'2026-08'});notify('Privacy choice saved.')}catch(err){notify(err.message)}});document.querySelectorAll('.privacy-request').forEach(button=>button.onclick=async()=>{try{await post('/v1/me/privacy/requests',{type:button.dataset.type});notify('Privacy request recorded.');await renderPrivacy()}catch(e){notify(e.message)}})}
 async function renderSafety(){if(!await requireAuth())return;const items=await api('/v1/me/safety/reports');main.innerHTML=`<section class="section-head"><div><span class="eyebrow" style="color:var(--danger)">SAFETY & APPEALS</span><h2>Confidential reporting with a visible follow-up trail.</h2></div></section><div class="grid two"><section class="panel"><h3>Report a concern</h3><form id="safety-report" class="form-grid"><div class="field"><label>Subject type<input name="subjectType" value="platform" required></label></div><div class="field"><label>Subject ID<input name="subjectId" value="general" required></label></div><div class="field"><label>Reason<select name="reason"><option>fraud</option><option>privacy</option><option>harassment</option><option>unsafe_activity</option><option>child_safety</option><option>financial_abuse</option><option>other</option></select></label></div><div class="field full"><label>Details<textarea name="details"></textarea></label></div><div class="field full"><button class="button danger" type="submit">Submit confidential report</button></div></form></section><section class="panel"><h3>Your reports</h3><div class="list">${items.length?items.map(r=>`<article class="list-item"><header><h3>${human(r.reason)}</h3><span class="badge danger">${human(r.status)}</span></header><p>${esc(r.details||'')}</p><form class="appeal-form" data-id="${esc(r.id)}"><div class="field"><label>Appeal reason<textarea name="reason"></textarea></label></div><button class="button secondary" type="submit">Submit appeal</button></form></article>`).join(''):'<div class="empty">No safety reports submitted.</div>'}</div></section></div>`;$('#safety-report').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{await post('/v1/safety/reports',{subjectType:f.get('subjectType'),subjectId:f.get('subjectId'),reason:f.get('reason'),details:f.get('details')});notify('Safety report recorded confidentially.');await renderSafety()}catch(err){notify(err.message)}};document.querySelectorAll('.appeal-form').forEach(form=>form.onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{await post(`/v1/safety/reports/${encodeURIComponent(e.currentTarget.dataset.id)}/appeal`,{reason:f.get('reason')});notify('Appeal recorded.');await renderSafety()}catch(err){notify(err.message)}})}
 async function renderSafetyOps(){if(!await requireAuth())return;if(!has('safety.review')){main.innerHTML=errorHTML('Safety reviewer role required.');return}const items=await api('/v1/safety/review-queue');main.innerHTML=`<section class="section-head"><div><span class="eyebrow" style="color:var(--danger)">TRUST & SAFETY OPERATIONS</span><h2>Review confidential concerns with an auditable decision trail.</h2></div></section><section class="panel"><div class="list">${items.length?items.map(r=>`<article class="list-item"><header><h3>${human(r.reason)}</h3><span class="badge danger">${human(r.status)}</span></header><p>${esc(r.details||'')}</p><form class="safety-decision" data-id="${esc(r.id)}"><div class="field"><label>Reviewer note<textarea name="note"></textarea></label></div><div class="actions"><button class="button secondary" name="decision" value="triage">Triage</button><button class="button danger" name="decision" value="action">Action</button><button class="button secondary" name="decision" value="dismiss">Dismiss</button><button class="button secondary" name="decision" value="close">Close</button></div></form></article>`).join(''):'<div class="empty">Review queue clear.</div>'}</div></section>`;document.querySelectorAll('.safety-decision').forEach(form=>form.addEventListener('click',async e=>{if(!(e.target instanceof HTMLButtonElement)||e.target.name!=='decision')return;e.preventDefault();const data=new FormData(form);try{await post(`/v1/safety/reports/${encodeURIComponent(form.dataset.id)}/decision`,{decision:e.target.value,note:data.get('note')});notify('Safety decision recorded.');await renderSafetyOps()}catch(err){notify(err.message)}}))}
+async function renderChallenges(){
+  const [programs, myEntries, myJudgeAssignments] = await Promise.all([
+    api('/v1/challenges',{},false).catch(()=>[]),
+    state.session ? api('/v1/me/challenge-entries').catch(()=>[]) : Promise.resolve([]),
+    state.session ? api('/v1/me/challenge-judge-assignments').catch(()=>[]) : Promise.resolve([])
+  ]);
+  const selectedId = state.challengeId || (programs[0]?.id || 'chg-demo-1');
+  const detail = selectedId ? await api(`/v1/challenges/${encodeURIComponent(selectedId)}`,{},false).catch(()=>null) : null;
+  const prog = detail?.program || programs[0] || null;
+  const activeTab = state.challengeTab || 'overview';
+  const steps = [
+    ['1. Apply & declare age band', 'Submit your entry or team roster. Youth entrants under 18 require verified guardian consent before public visibility.'],
+    ['2. Independent eligibility review', 'Programme officers verify eligibility and safeguarding requirements before round scoring opens.'],
+    ['3. Immutable SHA-256 submission', 'Upload proposal artefacts and optionally link a verified NeedMap intervention or Action Project.'],
+    ['4. Conflict-cleared rubric judging', 'Assigned judges complete conflict-of-interest declarations and score criteria adding up to 10,000 basis points.'],
+    ['5. Appeal window & verified awards', 'Decisions respect appeal holds; sponsor pledges, approved awards, and fulfilled prizes are tracked separately.']
+  ];
+  main.innerHTML = `
+  <section class="section-head">
+    <div>
+      <span class="eyebrow" style="color:var(--brand-2)">CHALLENGES &amp; INNOVATION</span>
+      <h2>Time-bounded civic innovation challenges connected to real community action.</h2>
+      <p>Every challenge separates applicant entries, conflict-cleared judge scorecards, sponsor commitments, approved awards, and fulfilled prizes.</p>
+    </div>
+    <div class="actions">
+      <a class="button secondary" href="#needmap">Link NeedMap</a>
+      <a class="button secondary" href="#project">Action Projects</a>
+    </div>
+  </section>
+  <section class="panel" aria-label="Published challenges">
+    <div class="section-head">
+      <div><h3>Challenge Discovery</h3><p>${programs.length} published programme(s) available from <code>/v1/challenges</code>.</p></div>
+    </div>
+    <div class="if-card-grid">
+      ${programs.length ? programs.map(c=>`
+        <article class="if-opportunity-card">
+          <div class="if-opportunity-card__body">
+            <div class="role-row">
+              <span class="if-badge if-badge--verified">${esc(human(c.status||'published'))}</span>
+              <span class="if-chip">${esc(human(c.category||'innovation'))}</span>
+              ${c.youthSafeguardingRequired ? '<span class="if-badge if-badge--warning">Youth safeguarding active</span>' : ''}
+            </div>
+            <h3 class="if-opportunity-card__title">${esc(c.title)}</h3>
+            <p>${esc(c.summary||'')}</p>
+            <div class="if-opportunity-card__meta">
+              <span>Sponsor: <strong>${esc(c.sponsorName||'Community Coalition')}</strong></span>
+              <span>Prize pool: <strong>${esc(c.prizeSummary||'Non-cash recognition')}</strong></span>
+            </div>
+          </div>
+          <div class="if-opportunity-card__footer">
+            <span class="muted">ID: <code>${esc(c.id)}</code></span>
+            <button class="if-btn if-btn--primary select-challenge-btn" type="button" data-id="${esc(c.id)}">Inspect challenge →</button>
+          </div>
+        </article>
+      `).join('') : '<div class="empty">No published challenges yet.</div>'}
+    </div>
+  </section>
+  ${prog ? `
+  <section class="panel" aria-label="Selected challenge detail">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow" style="color:var(--brand-2)">CHALLENGE DETAIL · ${esc(prog.id)}</span>
+        <h3>${esc(prog.title)}</h3>
+        <p>${esc(prog.summary||'')}</p>
+      </div>
+      <div class="role-row">
+        <span class="if-badge if-badge--verified">Status: ${esc(human(prog.status))}</span>
+        <span class="if-badge if-badge--info">Rules v${esc(String(prog.rulesVersion||1))} (${esc(String(prog.ruleApprovalsCount||0))}/2 approvals)</span>
+      </div>
+    </div>
+    <div class="if-filter-row" role="tablist" aria-label="Challenge detail sections">
+      ${[['overview','Overview'],['requirements','Requirements'],['prizes','Prizes'],['timeline','Timeline']].map(([id,label])=>`<button type="button" role="tab" aria-selected="${activeTab===id?'true':'false'}" class="if-chip challenge-tab-btn ${activeTab===id?'is-active':''}" data-tab="${id}">${label}</button>`).join('')}
+    </div>
+    <div class="grid two" style="margin-top:16px">
+      <div class="card">
+        ${activeTab==='overview' ? `<h4>Programme overview</h4><p>${esc(prog.description||prog.summary||'')}</p><p class="muted">Sponsor: ${esc(prog.sponsorName||'Independent civic programme')} · Youth safeguarding: ${prog.youthSafeguardingRequired?'Mandatory guardian consent for under-18 entrants':'Standard'}</p>` : ''}
+        ${activeTab==='requirements' ? `<h4>Eligibility &amp; rubric requirements</h4><p>Rubric weights must total 10,000 basis points (100.00%). Dual human rule approval is required before publication.</p><div class="list">${(detail?.criteria||[]).map(cr=>`<div class="list-item"><header><strong>${esc(cr.label)}</strong><span class="badge">${esc(String(cr.weightBps))} bps</span></header><p>${esc(cr.description||'')}</p></div>`).join('')}</div>` : ''}
+        ${activeTab==='prizes' ? `<h4>Prizes &amp; sponsor settlement truth</h4><p>Declared pool: <strong>${esc(prog.prizeSummary||'Configured per award')}</strong></p><p class="muted">Sponsor pledges are distinguished from externally settled PayCore receipts; approved awards are distinguished from fulfilled prizes.</p><div class="list">${(detail?.sponsors||[]).map(sp=>`<div class="list-item"><header><strong>${esc(sp.sponsorName)}</strong><span class="badge">${esc(human(sp.settlementStatus))}</span></header><p>Pledged: ${money(sp.pledgedMinor||0,sp.currency||'CAD')} · Settled: ${money(sp.settledMinor||0,sp.currency||'CAD')}</p></div>`).join('')||'<div class="empty">No sponsor commitments recorded yet.</div>'}</div>` : ''}
+        ${activeTab==='timeline' ? `<h4>Rounds &amp; timeline</h4><div class="list">${(detail?.rounds||[]).map(r=>`<div class="list-item"><header><strong>Round ${esc(String(r.sequence))}: ${esc(r.title)}</strong><span class="badge">${esc(human(r.status))}</span></header><p>Round ID: <code>${esc(r.id)}</code> · Closes: ${esc(r.closesAt||'TBD')}</p></div>`).join('')}</div>` : ''}
+      </div>
+      <div class="card">
+        <h4>How it works</h4>
+        <div class="if-steps">
+          ${steps.map(([title,desc],idx)=>`<div class="if-step"><span class="if-step__num">${idx+1}</span><div><strong>${esc(title)}</strong><p class="muted" style="margin:4px 0 0">${esc(desc)}</p></div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </section>
+  ` : ''}
+  <div class="grid two">
+    <section class="panel">
+      <h3>1. Apply to Challenge &amp; Youth Safeguarding</h3>
+      <form id="challenge-apply-form" class="form-grid">
+        <div class="field"><label>Challenge ID<input name="challengeId" value="${esc(selectedId)}" required></label></div>
+        <div class="field"><label>Project / Proposal title<input name="projectTitle" placeholder="Clean Water Sensor Grid" required></label></div>
+        <div class="field"><label>Team name (optional)<input name="teamName" placeholder="Watershed Youth Builders"></label></div>
+        <div class="field"><label>Entrant age band<select name="entrantAgeBand"><option value="adult_18_plus">Adult (18+)</option><option value="youth_13_17">Youth (13–17 — requires guardian consent)</option><option value="child_under_13">Under 13 (requires guardian consent)</option></select></label></div>
+        <div class="field full"><label>Abstract<textarea name="abstract" placeholder="Describe the community problem, evidence base, and proposed field intervention." required></textarea></label></div>
+        <div class="field"><label>Linked Need ID (optional)<input name="linkedNeedId" value="${esc(state.needId||'')}"></label></div>
+        <div class="field"><label>&nbsp;</label><button class="if-btn if-btn--primary" type="submit">Apply to challenge →</button></div>
+      </form>
+      <hr style="margin:16px 0;border:0;border-top:1px solid var(--line)">
+      <h4>Team &amp; Guardian Consent</h4>
+      <form id="challenge-team-form" class="form-grid">
+        <div class="field"><label>Challenge ID<input name="challengeId" value="${esc(selectedId)}" required></label></div>
+        <div class="field"><label>Entry ID<input name="entryId" value="${esc(myEntries[0]?.id||'entry-demo-1')}" required></label></div>
+        <div class="field"><label>Member Subject ID<input name="memberSubjectId" placeholder="citizen-2" required></label></div>
+        <div class="field"><label>Member Role<input name="role" value="member" required></label></div>
+        <div class="field full"><button class="button secondary" type="submit">Invite team member</button></div>
+      </form>
+      <form id="challenge-guardian-form" class="form-grid" style="margin-top:12px">
+        <div class="field"><label>Challenge ID<input name="challengeId" value="${esc(selectedId)}" required></label></div>
+        <div class="field"><label>Entry ID<input name="entryId" value="${esc(myEntries[0]?.id||'entry-demo-1')}" required></label></div>
+        <div class="field"><label>Guardian Name<input name="guardianName" placeholder="Parent / Legal Guardian" required></label></div>
+        <div class="field"><label>Guardian ContactRef<input name="guardianContactRef" placeholder="guardian@example.org" required></label></div>
+        <div class="field"><label>Consent Action<select name="status"><option value="verified">Record verified guardian consent</option><option value="revoked">Revoke consent (redact minor public display)</option></select></label></div>
+        <div class="field"><label>Evidence Digest (SHA-256)<input name="evidenceDigestSha256" value="${'a'.repeat(64)}" required></label></div>
+        <div class="field full"><button class="button secondary" type="submit">Update guardian consent</button></div>
+      </form>
+    </section>
+    <section class="panel">
+      <h3>2. Proposal Submission &amp; Action Project Link</h3>
+      <form id="challenge-submission-form" class="form-grid">
+        <div class="field"><label>Challenge ID<input name="challengeId" value="${esc(selectedId)}" required></label></div>
+        <div class="field"><label>Entry ID<input name="entryId" value="${esc(myEntries[0]?.id||'entry-demo-1')}" required></label></div>
+        <div class="field"><label>Round ID<input name="roundId" value="${esc(detail?.rounds?.[0]?.id||'round-demo-1')}" required></label></div>
+        <div class="field"><label>Artifact SHA-256 Digest<input name="artifactDigestSha256" value="${'b'.repeat(64)}" required></label></div>
+        <div class="field full"><label>Submission Summary<textarea name="summary" placeholder="Field test protocol, bill of materials, and verification plan." required></textarea></label></div>
+        <div class="field full"><label>Evidence Object Key (optional)<input name="evidenceObjectKey" placeholder="evidence/challenges/proposal.pdf"></label></div>
+        <div class="field full"><button class="if-btn if-btn--primary" type="submit">Submit round proposal</button></div>
+      </form>
+      <hr style="margin:16px 0;border:0;border-top:1px solid var(--line)">
+      <h4>Convert / Link Entry to Action Project</h4>
+      <form id="challenge-project-link-form" class="form-grid">
+        <div class="field"><label>Challenge ID<input name="challengeId" value="${esc(selectedId)}" required></label></div>
+        <div class="field"><label>Entry ID<input name="entryId" value="${esc(myEntries[0]?.id||'entry-demo-1')}" required></label></div>
+        <div class="field"><label>Action Project ID<input name="projectId" value="${esc(state.projectId||'proj-demo-1')}" required></label></div>
+        <div class="field"><label>Linked Need ID (optional)<input name="needId" value="${esc(state.needId||'')}"></label></div>
+        <div class="field full"><button class="button secondary" type="submit">Link Action Project</button></div>
+      </form>
+      <h4 style="margin-top:16px">My Challenge Entries (${myEntries.length})</h4>
+      <div class="list">
+        ${myEntries.length ? myEntries.map(e=>`<div class="list-item"><header><strong>${esc(e.projectTitle)}</strong><span class="badge">${esc(human(e.status))}</span></header><p>Entry <code>${esc(e.id)}</code> · Eligibility: <strong>${esc(human(e.eligibilityStatus))}</strong> · Guardian consent: <strong>${esc(human(e.guardianConsentStatus||'not_required'))}</strong></p></div>`).join('') : '<div class="empty">Sign in and apply to see your challenge entries.</div>'}
+      </div>
+    </section>
+  </div>
+  <div class="grid two">
+    <section class="panel">
+      <h3>3. Judge Workspace (COI Declaration &amp; Rubric Scorecard)</h3>
+      <p class="muted">Judges must clear conflict-of-interest checks before submitting basis-point rubric scorecards. Assignments: ${myJudgeAssignments.length}</p>
+      <form id="challenge-coi-form" class="form-grid">
+        <div class="field"><label>Challenge ID<input name="challengeId" value="${esc(selectedId)}" required></label></div>
+        <div class="field"><label>Judge Assignment ID<input name="assignmentId" value="${esc(myJudgeAssignments[0]?.id||'ja-demo-1')}" required></label></div>
+        <div class="field"><label>Conflict Status<select name="coiStatus"><option value="cleared">Cleared — No conflict of interest</option><option value="conflict_declared">Conflict declared — Recuse me</option></select></label></div>
+        <div class="field"><label>Attestation Note<input name="note" value="No financial, personal, or organizational conflict."></label></div>
+        <div class="field full"><button class="button secondary" type="submit">Record COI attestation</button></div>
+      </form>
+      <form id="challenge-scorecard-form" class="form-grid" style="margin-top:12px">
+        <div class="field"><label>Challenge ID<input name="challengeId" value="${esc(selectedId)}" required></label></div>
+        <div class="field"><label>Judge Assignment ID<input name="assignmentId" value="${esc(myJudgeAssignments[0]?.id||'ja-demo-1')}" required></label></div>
+        <div class="field"><label>Impact Score (0–100)<input name="impactScore" type="number" min="0" max="100" value="88" required></label></div>
+        <div class="field"><label>Feasibility Score (0–100)<input name="feasibilityScore" type="number" min="0" max="100" value="84" required></label></div>
+        <div class="field full"><label>Overall Judge Rationale<textarea name="overallComment" required>Strong community co-design and verifiable milestone plan.</textarea></label></div>
+        <div class="field full"><button class="if-btn if-btn--primary" type="submit">Submit server-computed scorecard</button></div>
+      </form>
+    </section>
+    <section class="panel">
+      <h3>4. Programme Governance, Sponsors, Awards &amp; Appeals</h3>
+      <p class="muted">Institutional controls enforce dual human rule approval, eligibility review, appeal holds, and truth-separated sponsor/award settlement.</p>
+      <form id="challenge-create-form" class="form-grid">
+        <div class="field"><label>New Challenge Title<input name="title" placeholder="Resilient Micro-Watershed Challenge 2026" required></label></div>
+        <div class="field"><label>Category<input name="category" value="water" required></label></div>
+        <div class="field"><label>Sponsor Name<input name="sponsorName" value="Civic Climate Coalition"></label></div>
+        <div class="field"><label>Prize Summary<input name="prizeSummary" value="CAD 25,000 + Field Pilot"></label></div>
+        <div class="field full"><label>Summary<textarea name="summary" required>Community-verified watershed restoration and sensor monitoring.</textarea></label></div>
+        <div class="field full"><button class="button secondary" type="submit">Create draft challenge</button></div>
+      </form>
+      <div class="actions" style="margin-top:12px">
+        <button class="button secondary" type="button" id="btn-approve-rules">Approve rules (dual-control)</button>
+        <button class="button secondary" type="button" id="btn-publish-challenge">Publish challenge</button>
+      </div>
+      <form id="challenge-gov-ops-form" class="form-grid" style="margin-top:12px">
+        <div class="field"><label>Challenge ID<input name="challengeId" value="${esc(selectedId)}" required></label></div>
+        <div class="field"><label>Target Entry ID<input name="entryId" value="${esc(myEntries[0]?.id||'entry-demo-1')}" required></label></div>
+        <div class="field"><label>Round ID<input name="roundId" value="${esc(detail?.rounds?.[0]?.id||'round-demo-1')}" required></label></div>
+        <div class="field"><label>Judge Subject ID<input name="judgeSubjectId" value="verifier-1" required></label></div>
+        <div class="field"><label>Sponsor Amount (CAD minor)<input name="pledgedMinor" type="number" value="2500000" required></label></div>
+        <div class="field"><label>Award ID (for fulfillment)<input name="awardId" value="awd-demo-1" required></label></div>
+        <div class="field full actions">
+          <button class="button secondary" type="button" id="btn-decide-eligibility">Mark entry eligible</button>
+          <button class="button secondary" type="button" id="btn-assign-judge">Assign judge</button>
+          <button class="button secondary" type="button" id="btn-publish-decision">Publish round decision</button>
+          <button class="button secondary" type="button" id="btn-file-appeal">File / resolve appeal</button>
+          <button class="button secondary" type="button" id="btn-record-sponsor">Record sponsor pledge</button>
+          <button class="button secondary" type="button" id="btn-approve-award">Approve award</button>
+          <button class="button secondary" type="button" id="btn-fulfill-award">Record prize fulfillment</button>
+        </div>
+      </form>
+    </section>
+  </div>`;
+  document.querySelectorAll('.select-challenge-btn').forEach(btn=>btn.onclick=async()=>{state.challengeId=btn.dataset.id;await renderChallenges()});
+  document.querySelectorAll('.challenge-tab-btn').forEach(btn=>btn.onclick=async()=>{state.challengeTab=btn.dataset.tab;await renderChallenges()});
+  $('#challenge-apply-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!await requireAuth())return;const f=new FormData(e.currentTarget),cid=String(f.get('challengeId'));try{await post(`/v1/challenges/${encodeURIComponent(cid)}/entries`,{projectTitle:f.get('projectTitle'),teamName:f.get('teamName'),abstract:f.get('abstract'),entrantAgeBand:f.get('entrantAgeBand'),linkedNeedId:f.get('linkedNeedId')});notify('Challenge entry submitted.');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#challenge-team-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!await requireAuth())return;const f=new FormData(e.currentTarget),cid=String(f.get('challengeId')),eid=String(f.get('entryId'));try{await post(`/v1/challenges/${encodeURIComponent(cid)}/entries/${encodeURIComponent(eid)}/team-members`,{memberSubjectId:f.get('memberSubjectId'),role:f.get('role'),ageBand:'adult_18_plus'});notify('Team member invited.');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#challenge-guardian-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!await requireAuth())return;const f=new FormData(e.currentTarget),cid=String(f.get('challengeId')),eid=String(f.get('entryId'));try{await post(`/v1/challenges/${encodeURIComponent(cid)}/entries/${encodeURIComponent(eid)}/guardian-consents`,{minorSubjectId:state.session?.subject||'minor-1',guardianName:f.get('guardianName'),guardianContactRef:f.get('guardianContactRef'),status:f.get('status'),evidenceDigestSha256:f.get('evidenceDigestSha256')});notify('Guardian consent updated.');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#challenge-submission-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!await requireAuth())return;const f=new FormData(e.currentTarget),cid=String(f.get('challengeId')),eid=String(f.get('entryId'));try{await post(`/v1/challenges/${encodeURIComponent(cid)}/entries/${encodeURIComponent(eid)}/submissions`,{roundId:f.get('roundId'),summary:f.get('summary'),artifactDigestSha256:f.get('artifactDigestSha256'),evidenceObjectKey:f.get('evidenceObjectKey')});notify('Round submission recorded with SHA-256 receipt.');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#challenge-project-link-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!await requireAuth())return;const f=new FormData(e.currentTarget),cid=String(f.get('challengeId')),eid=String(f.get('entryId'));try{await post(`/v1/challenges/${encodeURIComponent(cid)}/entries/${encodeURIComponent(eid)}/project-link`,{projectId:f.get('projectId'),needId:f.get('needId')});notify('Challenge entry linked to Action Project.');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#challenge-coi-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!await requireAuth())return;const f=new FormData(e.currentTarget),cid=String(f.get('challengeId')),aid=String(f.get('assignmentId'));try{await post(`/v1/challenges/${encodeURIComponent(cid)}/judge-assignments/${encodeURIComponent(aid)}/conflict`,{coiStatus:f.get('coiStatus'),note:f.get('note')});notify('Judge conflict-of-interest attestation recorded.');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#challenge-scorecard-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!await requireAuth())return;const f=new FormData(e.currentTarget),cid=String(f.get('challengeId')),aid=String(f.get('assignmentId'));const criteria=(detail?.criteria?.length?detail.criteria:[{id:'crit-1'},{id:'crit-2'}]);try{await post(`/v1/challenges/${encodeURIComponent(cid)}/judge-assignments/${encodeURIComponent(aid)}/scorecards`,{overallComment:f.get('overallComment'),criteriaScores:[{criterionId:criteria[0].id,rawScore:Number(f.get('impactScore')),rationale:'Impact assessment'},{criterionId:(criteria[1]||criteria[0]).id,rawScore:Number(f.get('feasibilityScore')),rationale:'Feasibility assessment'}]});notify('Scorecard computed and stored by server.');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#challenge-create-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!await requireAuth())return;const f=new FormData(e.currentTarget);try{const created=await post('/v1/challenges',{title:f.get('title'),category:f.get('category'),sponsorName:f.get('sponsorName'),prizeSummary:f.get('prizeSummary'),summary:f.get('summary'),youthSafeguardingRequired:true,rounds:[{sequence:1,title:'Round 1 Proposal',startsAt:'2026-01-01T00:00:00Z',closesAt:'2027-12-31T23:59:59Z'}],criteria:[{code:'impact',label:'Community Impact',weightBps:5000,maxScore:100},{code:'feasibility',label:'Field Feasibility',weightBps:5000,maxScore:100}]});state.challengeId=created.id;notify('Draft challenge created.');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#btn-approve-rules')?.addEventListener('click',async()=>{if(!await requireAuth())return;try{await post(`/v1/challenges/${encodeURIComponent(selectedId)}/rule-approvals`,{note:'Approved rules v1'});notify('Rule approval recorded.');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#btn-publish-challenge')?.addEventListener('click',async()=>{if(!await requireAuth())return;try{await post(`/v1/challenges/${encodeURIComponent(selectedId)}/publish`,{});notify('Challenge published.');await renderChallenges()}catch(err){notify(err.message)}});
+  const govForm = $('#challenge-gov-ops-form');
+  $('#btn-decide-eligibility')?.addEventListener('click',async()=>{if(!await requireAuth()||!govForm)return;const f=new FormData(govForm),cid=String(f.get('challengeId')),eid=String(f.get('entryId'));try{await post(`/v1/challenges/${encodeURIComponent(cid)}/entries/${encodeURIComponent(eid)}/eligibility-decisions`,{status:'eligible',reason:'Verified civic eligibility'});notify('Eligibility decision recorded.');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#btn-assign-judge')?.addEventListener('click',async()=>{if(!await requireAuth()||!govForm)return;const f=new FormData(govForm),cid=String(f.get('challengeId'));try{await post(`/v1/challenges/${encodeURIComponent(cid)}/judge-assignments`,{roundId:f.get('roundId'),entryId:f.get('entryId'),judgeSubjectId:f.get('judgeSubjectId')});notify('Judge assigned.');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#btn-publish-decision')?.addEventListener('click',async()=>{if(!await requireAuth()||!govForm)return;const f=new FormData(govForm),cid=String(f.get('challengeId')),rid=String(f.get('roundId'));try{await post(`/v1/challenges/${encodeURIComponent(cid)}/rounds/${encodeURIComponent(rid)}/decisions`,{entryId:f.get('entryId'),decision:'winner',status:'published',rationale:'Selected by conflict-cleared judging panel'});notify('Round decision published.');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#btn-file-appeal')?.addEventListener('click',async()=>{if(!await requireAuth()||!govForm)return;const f=new FormData(govForm),cid=String(f.get('challengeId'));try{await post(`/v1/challenges/${encodeURIComponent(cid)}/appeals`,{entryId:f.get('entryId'),reason:'Requesting procedural scoring audit'});notify('Challenge appeal recorded.');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#btn-record-sponsor')?.addEventListener('click',async()=>{if(!await requireAuth()||!govForm)return;const f=new FormData(govForm),cid=String(f.get('challengeId'));try{await post(`/v1/challenges/${encodeURIComponent(cid)}/sponsors`,{sponsorName:'Civic Resilience Fund',contributionType:'cash_prize',currency:'CAD',pledgedMinor:Number(f.get('pledgedMinor')),settledMinor:0,settlementStatus:'pledged'});notify('Sponsor commitment recorded as pledged (not settled).');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#btn-approve-award')?.addEventListener('click',async()=>{if(!await requireAuth()||!govForm)return;const f=new FormData(govForm),cid=String(f.get('challengeId'));try{await post(`/v1/challenges/${encodeURIComponent(cid)}/awards`,{entryId:f.get('entryId'),title:'First Place Civic Innovation Award',awardType:'cash_grant',currency:'CAD',amountMinor:1500000});notify('Award approved (fulfillment tracked separately).');await renderChallenges()}catch(err){notify(err.message)}});
+  $('#btn-fulfill-award')?.addEventListener('click',async()=>{if(!await requireAuth()||!govForm)return;const f=new FormData(govForm),cid=String(f.get('challengeId')),awid=String(f.get('awardId'));try{await post(`/v1/challenges/${encodeURIComponent(cid)}/awards/${encodeURIComponent(awid)}/fulfillments`,{status:'fulfilled',providerReceiptRef:'paycore-rcpt-001',note:'Confirmed external settlement receipt'});notify('Prize fulfillment recorded.');await renderChallenges()}catch(err){notify(err.message)}});
+}
 window.addEventListener('hashchange',()=>void route());
 (async()=>{try{await handleAuthCallback();await refreshSession();renderChrome();await route()}catch(error){renderChrome();main.innerHTML=`<section class="panel"><h2>Startup error</h2>${errorHTML(error.message||String(error))}</section>`}})();

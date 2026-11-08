@@ -22,6 +22,49 @@ export function createWebDemoBackend(){
  const consents=[{purpose:'impact-research',granted:false,policyVersion:'2026-08'},{purpose:'product-improvement',granted:true,policyVersion:'2026-08'}];
  const privacyRequests=[{id:'privacy-1',type:'export',status:'received'}];
  const safetyReports=[{id:'safety-1',reason:'safeguarding',details:'Offline demonstration of the confidential follow-up workflow.',status:'triage'}];
+ const challenges=[{
+  id:'challenge-gauteng-demo-2027',
+  demoOnly:true,
+  tenantId:'demo-institution-gauteng',
+  slug:'community-innovation-challenge-2027-demo',
+  title:'Community Innovation Challenge 2027 (OFFLINE DEMO)',
+  description:'Identify community problems, propose responsible solutions, mobilise resources and show independently verified results.',
+  mission:'Identify community problems, propose responsible solutions, mobilise resources and show independently verified results.',
+  jurisdictionCode:'ZA-GP',
+  locale:'en-ZA',
+  timezone:'Africa/Johannesburg',
+  currencyCode:'ZAR',
+  visibility:'public',
+  status:'registration_open',
+  currentRulesVersion:1,
+  rulesSha256:'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+  ruleApprovalCount:2,
+  fundingStatus:'unconfirmed',
+  sponsorStatus:'not_confirmed',
+  guardianConsentRule:'required_per_jurisdiction_and_policy',
+  publicResultPolicy:'opt_in_redacted',
+  tracks:[
+   {id:'track-secondary',programId:'challenge-gauteng-demo-2027',title:'Secondary School Teams',levelCode:'secondary',participationMode:'team',minimumTeamMembers:2,maximumTeamMembers:5,requiresGuardianConsent:true},
+   {id:'track-tertiary',programId:'challenge-gauteng-demo-2027',title:'Tertiary & Youth Innovators',levelCode:'tertiary',participationMode:'both',minimumTeamMembers:1,maximumTeamMembers:5,requiresGuardianConsent:false}
+  ],
+  rounds:[
+   {id:'round-proposal-1',programId:'challenge-gauteng-demo-2027',sequence:1,title:'Round 1: Problem and solution proposal',kind:'proposal',status:'open',opensAt:'2027-04-05T09:00:00+02:00',closesAt:'2027-04-20T17:00:00+02:00',requiredJudges:3,scoringAlgorithm:'weighted_median_v1',rubricVersion:1,criteria:[
+    {id:'crit-problem',roundId:'round-proposal-1',rubricVersion:1,sequence:1,code:'problem',title:'Clarity of the problem',weightBasisPoints:2000,maximumScore:100},
+    {id:'crit-feasibility',roundId:'round-proposal-1',rubricVersion:1,sequence:2,code:'feasibility',title:'Solution feasibility',weightBasisPoints:2500,maximumScore:100},
+    {id:'crit-participation',roundId:'round-proposal-1',rubricVersion:1,sequence:3,code:'participation',title:'Community participation',weightBasisPoints:2000,maximumScore:100},
+    {id:'crit-evidence',roundId:'round-proposal-1',rubricVersion:1,sequence:4,code:'evidence',title:'Verifiable progress and outcomes',weightBasisPoints:2500,maximumScore:100},
+    {id:'crit-sustainability',roundId:'round-proposal-1',rubricVersion:1,sequence:5,code:'sustainability',title:'Maintenance and replication',weightBasisPoints:1000,maximumScore:100}
+   ]}
+  ],
+  prizes:[{id:'prize-demo-1',programId:'challenge-gauteng-demo-2027',title:'Illustrative R5,000 implementation grant — NOT funded or approved',prizeKind:'project_grant',currencyCode:'ZAR',amountMinor:500000,status:'announced',fundingStatus:'unconfirmed'}],
+  sponsors:[],
+  publishedResults:[],
+  awards:[],
+  appeals:[],
+  permissions:{canManageProgramme:true,canApproveRules:true,canReviewEligibility:true,canAssignJudges:true,canJudge:true,canReviewConflicts:true,canReviewAppeals:true,canManageSponsors:true,canManageAwards:true}
+ }];
+ const challengeEntries=[{id:'entry-demo-1',programId:'challenge-gauteng-demo-2027',trackId:'track-secondary',leadActorId:'offline-demo-user',entryCode:'IRC-DEMO01',teamDisplayName:'Soweto Water Stewards (Demo)',participationMode:'team',status:'screening',eligibilityStatus:'pending',guardianConsentStatus:'required',agreedRulesVersion:1,teamMembers:[{entryId:'entry-demo-1',actorId:'offline-demo-user',memberRole:'lead',invitationState:'accepted',guardianConsentStatus:'required'}]}];
+ const challengeAssignments=[{id:'asg-demo-1',programId:'challenge-gauteng-demo-2027',submissionId:'sub-demo-1',entryId:'entry-demo-1',roundId:'round-proposal-1',judgeActorId:'offline-demo-user',assignmentStatus:'accepted',conflictStatus:'no_conflict_declared'}];
 
  function error(status,message){throw Object.assign(new Error(message),{status,body:{error:message}})}
  function body(init){try{return init?.body?JSON.parse(init.body):{}}catch{return{}}}
@@ -77,6 +120,27 @@ export function createWebDemoBackend(){
   if(path==='/v1/safety/review-queue'&&method==='GET')return safetyReports;
   if(path==='/v1/safety/reports'&&method==='POST'){const report={id:id('demo-safety'),reason:String(input.reason||'other'),details:String(input.details||''),status:'received'};safetyReports.push(report);return report}
   match=path.match(/^\/v1\/safety\/reports\/([^/]+)\/(appeal|decision)$/);if(match&&method==='POST'){const report=safetyReports.find(item=>item.id===decodeURIComponent(match[1]));if(!report)error(404,'Safety report was not found.');report.status=match[2]==='appeal'?'appealed':String(input.decision||'triage');return report}
+  if(path==='/v1/challenges'&&method==='GET')return{items:challenges,demo:true};
+  if(path==='/v1/challenges'&&method==='POST'){const created={...challenges[0],id:id('demo-challenge'),title:String(input.title||'Demo Challenge'),description:String(input.description||''),mission:String(input.mission||''),status:'draft',currentRulesVersion:0,ruleApprovalCount:0,fundingStatus:'unconfirmed'};challenges.unshift(created);return created}
+  match=path.match(/^\/v1\/challenges\/([^/]+)$/);if(match&&method==='GET'){const c=challenges.find(item=>item.id===decodeURIComponent(match[1]))||challenges[0];return c}
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/rule-approvals$/);if(match&&method==='POST'){const c=challenges.find(item=>item.id===decodeURIComponent(match[1]))||challenges[0];c.ruleApprovalCount=(c.ruleApprovalCount||0)+1;if(c.status==='draft')c.status='review';return c}
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/publish$/);if(match&&method==='POST'){const c=challenges.find(item=>item.id===decodeURIComponent(match[1]))||challenges[0];c.currentRulesVersion=(c.currentRulesVersion||0)+1;c.status='registration_open';return c}
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/entries$/);if(match&&method==='POST'){const entry={id:id('demo-entry'),programId:decodeURIComponent(match[1]),trackId:String(input.trackId||'track-secondary'),leadActorId:'offline-demo-user',entryCode:'IRC-DEMO',teamDisplayName:String(input.teamDisplayName||'Demo Team'),participationMode:String(input.participationMode||'team'),status:'screening',eligibilityStatus:'pending',guardianConsentStatus:input.requiresGuardianConsent===false?'not_applicable':'required',agreedRulesVersion:1,teamMembers:[{actorId:'offline-demo-user',memberRole:'lead',invitationState:'accepted'}]};challengeEntries.unshift(entry);return entry}
+  if(path==='/v1/me/challenge-entries'&&method==='GET')return challengeEntries;
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/entries\/([^/]+)\/team-members$/);if(match&&method==='POST'){const entry=challengeEntries.find(item=>item.id===decodeURIComponent(match[2]))||challengeEntries[0];if(input.actorId)entry.teamMembers.push({actorId:String(input.actorId),memberRole:String(input.role||'member'),invitationState:'invited'});return entry}
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/entries\/([^/]+)\/guardian-consents$/);if(match&&method==='POST'){const entry=challengeEntries.find(item=>item.id===decodeURIComponent(match[2]))||challengeEntries[0];entry.guardianConsentStatus=String(input.status||'verified');if(entry.guardianConsentStatus==='verified'&&entry.status==='screening')entry.status='applied';return entry}
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/entries\/([^/]+)\/eligibility-decisions$/);if(match&&method==='POST'){const entry=challengeEntries.find(item=>item.id===decodeURIComponent(match[2]))||challengeEntries[0];entry.eligibilityStatus=String(input.decision||'eligible');entry.status=entry.eligibilityStatus;return entry}
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/entries\/([^/]+)\/submissions$/);if(match&&method==='POST')return{id:id('demo-sub'),programId:decodeURIComponent(match[1]),entryId:decodeURIComponent(match[2]),roundId:String(input.roundId||'round-proposal-1'),status:'submitted',problemStatement:String(input.problemStatement||''),solutionProposal:String(input.solutionProposal||''),submissionSha256:'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'};
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/judge-assignments$/);if(match&&method==='POST'){const asg={id:id('demo-asg'),programId:decodeURIComponent(match[1]),submissionId:String(input.submissionId||'sub-demo-1'),judgeActorId:String(input.judgeActorId||'offline-demo-user'),assignmentStatus:'accepted',conflictStatus:'undisclosed'};challengeAssignments.unshift(asg);return asg}
+  if(path==='/v1/me/challenge-judge-assignments'&&method==='GET')return challengeAssignments;
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/judge-assignments\/([^/]+)\/conflict$/);if(match&&method==='POST'){const asg=challengeAssignments.find(item=>item.id===decodeURIComponent(match[2]))||challengeAssignments[0];asg.conflictStatus=String(input.status||'no_conflict_declared');return asg}
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/judge-assignments\/([^/]+)\/scorecards$/);if(match&&method==='POST')return{id:id('demo-scorecard'),assignmentId:decodeURIComponent(match[2]),status:'sealed',totalBasisPoints:8500};
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/rounds\/([^/]+)\/decisions$/);if(match&&method==='POST'){const dec={id:id('demo-decision'),programId:decodeURIComponent(match[1]),roundId:decodeURIComponent(match[2]),entryId:String(input.entryId||'entry-demo-1'),decision:String(input.decision||'finalist'),state:String(input.action||'approve')==='publish'?'published':'approved',scoreBasisPoints:8500,rank:1};challenges[0].publishedResults.push(dec);return dec}
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/appeals$/);if(match&&method==='POST'){const ap={id:id('demo-appeal'),programId:decodeURIComponent(match[1]),entryId:String(input.entryId||'entry-demo-1'),status:input.action==='resolve'?String(input.status||'denied'):'submitted',reason:String(input.reason||'')};challenges[0].appeals.push(ap);return ap}
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/sponsors$/);if(match&&method==='POST'){const sp={id:id('demo-sponsor'),programId:decodeURIComponent(match[1]),sponsorDisplayName:String(input.sponsorDisplayName||'Demo Sponsor'),commitmentKind:String(input.commitmentKind||'cash'),status:String(input.status||'pledged'),truthNotice:'Sponsor pledge is intent only, not settled funds.'};challenges[0].sponsors.push(sp);return sp}
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/awards$/);if(match&&method==='POST'){const aw={id:id('demo-award'),programId:decodeURIComponent(match[1]),entryId:String(input.entryId||'entry-demo-1'),prizeId:String(input.prizeId||'prize-demo-1'),status:'approved',fulfillmentStatus:'pending',truthStateLabel:'Award approved — NOT yet fulfilled or paid'};challenges[0].awards.push(aw);return aw}
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/awards\/([^/]+)\/fulfillments$/);if(match&&method==='POST')return{id:id('demo-fulfillment'),awardId:decodeURIComponent(match[2]),fulfillmentKind:String(input.fulfillmentKind||'in_kind_delivery'),status:String(input.status||'pending'),truthNotice:'Prize fulfilment requires verified delivery evidence or PayCore proof.'};
+  match=path.match(/^\/v1\/challenges\/([^/]+)\/entries\/([^/]+)\/project-link$/);if(match&&method==='POST')return{id:id('demo-project-link'),entryId:decodeURIComponent(match[2]),actionProjectId:String(input.actionProjectId||'project-water-1'),relationship:String(input.relationship||'challenge_delivery')};
   error(404,'This browser demo action is not implemented.');
  }});
 }

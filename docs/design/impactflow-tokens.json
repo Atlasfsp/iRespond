@@ -1,0 +1,145 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "name": "iRespond ImpactFlow",
+  "version": "1.0.0",
+  "status": "implemented-in-candidate",
+  "color": {
+    "brand": {
+      "forest": "#123E34",
+      "action": "#24A27B",
+      "amber": "#F2B84B",
+      "canvas": "#F7F6F0",
+      "ink": "#1E293B"
+    },
+    "surface": {
+      "base": "#FFFFFF",
+      "canvas": "#F7F6F0",
+      "soft": "#EEF3EF",
+      "softest": "#F9FBF8",
+      "inverse": "#123E34"
+    },
+    "text": {
+      "primary": "#1E293B",
+      "secondary": "#44625A",
+      "tertiary": "#586F67",
+      "inverse": "#FFFFFF",
+      "link": "#0A6C50"
+    },
+    "action": {
+      "primary": "#0A6C50",
+      "hover": "#08573F",
+      "pressed": "#06442F",
+      "disabled": "#B4C6BD",
+      "onPrimary": "#FFFFFF",
+      "focus": "#0B7454"
+    },
+    "border": {
+      "default": "#DDE7E1",
+      "strong": "#9AAFA4",
+      "focus": "#0B7454"
+    },
+    "status": {
+      "success": "#0A6C50",
+      "successSurface": "#E4F5EB",
+      "warning": "#7B5200",
+      "warningSurface": "#FFF5DE",
+      "danger": "#B23B3B",
+      "dangerSurface": "#FFF0EB",
+      "info": "#165C87",
+      "infoSurface": "#E9F4FA"
+    }
+  },
+  "space": {
+    "0": 0,
+    "1": 4,
+    "2": 8,
+    "3": 12,
+    "4": 16,
+    "5": 20,
+    "6": 24,
+    "8": 32,
+    "10": 40,
+    "12": 48,
+    "16": 64,
+    "20": 80
+  },
+  "radius": {
+    "sm": 8,
+    "control": 12,
+    "card": 18,
+    "hero": 24,
+    "modal": 20,
+    "pill": 999
+  },
+  "font": {
+    "heading": [
+      "Manrope",
+      "Inter",
+      "system-ui",
+      "sans-serif"
+    ],
+    "body": [
+      "Inter",
+      "system-ui",
+      "sans-serif"
+    ],
+    "weight": {
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700,
+      "extrabold": 800
+    }
+  },
+  "fontSize": {
+    "caption": 12,
+    "label": 14,
+    "body": 16,
+    "bodyLg": 17,
+    "cardTitle": 20,
+    "section": 28,
+    "page": 36,
+    "hero": 48
+  },
+  "lineHeight": {
+    "caption": 18,
+    "label": 20,
+    "body": 25,
+    "bodyLg": 27,
+    "cardTitle": 28,
+    "section": 36,
+    "page": 44,
+    "hero": 54
+  },
+  "control": {
+    "touchMin": 44,
+    "primaryHeight": 52,
+    "fieldHeight": 48
+  },
+  "layout": {
+    "webMaxWidth": 1280,
+    "institutionalMaxWidth": 1440,
+    "desktopSidebarWidth": 252,
+    "desktopSidebarCollapsedWidth": 76,
+    "mobileGutter": 16,
+    "tabletGutter": 20,
+    "desktopGutter": 32
+  },
+  "breakpoint": {
+    "xs": 360,
+    "sm": 768,
+    "md": 1024,
+    "lg": 1440
+  },
+  "motion": {
+    "fastMs": 120,
+    "normalMs": 180,
+    "slowMs": 240
+  },
+  "flags": {
+    "impactflow_web_enabled": true,
+    "impactflow_mobile_enabled": true,
+    "impactflow_challenges_enabled": true,
+    "impactflow_institution_enabled": true
+  }
+}

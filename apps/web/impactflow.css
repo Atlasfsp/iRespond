@@ -1,0 +1,728 @@
+/* iRespond ImpactFlow v1 — Approved Design Direction 01 Stylesheet
+ * Implements foundation and domain component families IF-01 .. IF-46.
+ * Strictly preserves WCAG 2.2 AA contrast, 44px touch targets, 200% text zoom,
+ * keyboard focus visibility, and prefers-reduced-motion.
+ */
+
+:root {
+  /* Bridge legacy --fw-* variables to ImpactFlow tokens so legacy selectors remain harmonious */
+  --fw-canvas: var(--if-color-surface-canvas, #F7F6F0);
+  --fw-paper: var(--if-color-surface-base, #FFFFFF);
+  --fw-ink: var(--if-color-text-primary, #1E293B);
+  --fw-strong: var(--if-color-brand-forest, #123E34);
+  --fw-muted: var(--if-color-text-secondary, #44625A);
+  --fw-line: var(--if-color-border-default, #DDE7E1);
+  --fw-leaf: var(--if-color-action-primary, #0A6C50);
+  --fw-leaf-dark: var(--if-color-action-hover, #08573F);
+  --fw-leaf-soft: var(--if-color-status-success-surface, #E4F5EB);
+  --fw-coral: #EF7656;
+  --fw-coral-text: #A3432B;
+  --fw-coral-soft: #FCE7DF;
+  --fw-gold: var(--if-color-brand-amber, #F2B84B);
+  --fw-iris: var(--if-color-status-info-surface, #E9F4FA);
+  --fw-display: var(--if-font-heading);
+  --fw-ui: var(--if-font-body);
+  --fw-focus: var(--if-color-action-focus, #0B7454);
+  --fw-shadow: var(--if-shadow-card);
+}
+
+html, body {
+  background: var(--if-color-surface-canvas);
+  color: var(--if-color-text-primary);
+  font-family: var(--if-font-body);
+  font-size: var(--if-font-size-body);
+  line-height: var(--if-line-height-body);
+}
+
+/* Skip link (IF-01) */
+.if-skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 999;
+  padding: 10px 16px;
+  background: var(--if-color-brand-forest);
+  color: var(--if-color-text-inverse);
+  border-radius: var(--if-radius-control);
+  font-weight: 700;
+  text-decoration: none;
+}
+.if-skip-link:focus {
+  left: 12px;
+  outline: 3px solid var(--if-color-brand-amber);
+  outline-offset: 2px;
+}
+
+/* Universal keyboard focus ring */
+:where(button, a, input, textarea, select, summary, [tabindex="0"]):focus-visible {
+  outline: 3px solid var(--if-color-action-focus);
+  outline-offset: 2px;
+}
+
+/* Forest sidebar & dark surfaces use high-contrast Amber focus ring (8.17:1) */
+:where(.topbar, .if-sidebar, .impact-institution) :where(button, a, input, select, summary):focus-visible {
+  outline-color: var(--if-color-brand-amber);
+}
+
+/* Brand mark (iRespond logo with red 'i', forest/white 'Respond', gold arc) */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  min-height: 44px;
+}
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--if-color-action-primary);
+  color: var(--if-color-text-inverse);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--if-font-heading);
+  font-weight: 800;
+  font-size: 16px;
+  position: relative;
+  border: 2px solid var(--if-color-brand-amber);
+}
+.brand-mark::before {
+  content: "⊕";
+  color: var(--if-color-brand-amber);
+  font-size: 22px;
+  line-height: 1;
+}
+
+/* Desktop Sidebar (IF-01, IF-03) — Forest #123E34 rail */
+@media (min-width: 901px) {
+  .app-shell {
+    padding-left: var(--if-layout-sidebar-width, 252px);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--if-layout-sidebar-width, 252px);
+    background: var(--if-color-brand-forest);
+    color: var(--if-color-text-inverse);
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 22px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    z-index: 30;
+  }
+  .topbar .brand strong {
+    color: var(--if-color-text-inverse);
+    font-family: var(--if-font-heading);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+  .topbar .brand small {
+    color: #CFE6DD;
+    font-size: 11px;
+    display: block;
+  }
+  .topbar .primary-nav {
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    padding-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+  }
+  .topbar .primary-nav .if-nav-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #B8D8CC;
+    margin: 12px 10px 4px;
+  }
+  .topbar .primary-nav a {
+    min-height: 44px;
+    padding: 8px 12px;
+    border-radius: var(--if-radius-control);
+    color: #E6F2EE;
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .topbar .primary-nav a:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--if-color-text-inverse);
+  }
+  .topbar .primary-nav a[aria-current="page"] {
+    background: var(--if-color-action-primary);
+    color: var(--if-color-text-inverse);
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  }
+  .topbar .if-sidebar-Promo {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 16px;
+    padding: 14px;
+    color: var(--if-color-text-inverse);
+    margin-top: auto;
+  }
+  .topbar .if-sidebar-Promo h4 {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--if-color-text-inverse);
+  }
+  .topbar .if-sidebar-Promo p {
+    margin: 0 0 10px;
+    font-size: 12px;
+    color: #D2E7DF;
+    line-height: 1.4;
+  }
+  .topbar .identity-actions {
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    padding-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .topbar .identity-actions .subject {
+    color: #E6F2EE;
+    font-size: 12px;
+    font-weight: 600;
+    word-break: break-word;
+  }
+  .topbar .identity-actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+  .topbar .identity-actions .button.secondary,
+  .topbar .identity-actions .button.ghost {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--if-color-text-inverse);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+  }
+  .topbar .identity-actions .button.secondary:hover,
+  .topbar .identity-actions .button.ghost:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  .topbar #stitch-surface-launcher {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--if-color-text-inverse);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    min-height: 44px;
+    border-radius: var(--if-radius-control);
+    font-weight: 700;
+  }
+  main {
+    width: min(var(--if-layout-institutional-max-width, 1440px), calc(100% - 56px));
+    margin: 0 auto;
+    padding: 24px 0 64px;
+    flex: 1;
+  }
+}
+
+/* Tablet & Mobile topbar (<=900px) */
+@media (max-width: 900px) {
+  .topbar {
+    background: var(--if-color-brand-forest);
+    color: var(--if-color-text-inverse);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 12px 16px;
+  }
+  .topbar .brand strong {
+    color: var(--if-color-text-inverse);
+  }
+  .topbar .brand small {
+    color: #CFE6DD;
+  }
+  .topbar .primary-nav a {
+    color: #E6F2EE;
+    min-height: 44px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .topbar .primary-nav a[aria-current="page"] {
+    background: var(--if-color-action-primary);
+    color: var(--if-color-text-inverse);
+  }
+  .topbar .identity-actions .subject {
+    color: var(--if-color-text-inverse);
+  }
+  .topbar .identity-actions .button.secondary,
+  .topbar .identity-actions .button.ghost,
+  .topbar #stitch-surface-launcher {
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--if-color-text-inverse);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* Top utility & search bar (IF-02, IF-06) */
+.if-topbar-utility {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--if-color-surface-base);
+  border: 1px solid var(--if-color-border-default);
+  border-radius: var(--if-radius-card);
+  padding: 10px 16px;
+  margin-bottom: 24px;
+  box-shadow: var(--if-shadow-card);
+  flex-wrap: wrap;
+}
+.if-search-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.if-search-form label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--if-color-text-secondary);
+}
+.if-search-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--if-color-border-default);
+  border-radius: var(--if-radius-control);
+  padding: 8px 14px;
+  font-size: 15px;
+  color: var(--if-color-text-primary);
+  background: var(--if-color-surface-softest);
+}
+.if-utility-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.if-icon-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: var(--if-radius-control);
+  border: 1px solid var(--if-color-border-default);
+  background: var(--if-color-surface-base);
+  color: var(--if-color-text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.if-icon-btn:hover {
+  background: var(--if-color-surface-soft);
+}
+
+/* Buttons (IF-08) */
+.button {
+  background: var(--if-color-action-primary);
+  color: var(--if-color-action-on-primary);
+  border: 1px solid transparent;
+  border-radius: var(--if-radius-control);
+  min-height: 48px;
+  padding: 10px 18px;
+  font-family: var(--if-font-body);
+  font-size: 15px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.button:hover:not(:disabled) {
+  background: var(--if-color-action-hover);
+}
+.button:active:not(:disabled) {
+  background: var(--if-color-action-pressed);
+}
+.button:disabled {
+  background: var(--if-color-action-disabled);
+  color: var(--if-color-text-primary);
+  cursor: not-allowed;
+}
+.button.secondary {
+  background: var(--if-color-surface-base);
+  color: var(--if-color-text-primary);
+  border-color: var(--if-color-border-default);
+}
+.button.secondary:hover:not(:disabled) {
+  background: var(--if-color-surface-soft);
+}
+.button.gold {
+  background: var(--if-color-brand-amber);
+  color: var(--if-color-brand-ink);
+}
+.button.danger {
+  background: var(--if-color-status-danger);
+  color: var(--if-color-text-inverse);
+}
+
+/* Hero Banner (ImpactFlow Direction 01) */
+.impact-hero {
+  background: linear-gradient(135deg, #FFFFFF 0%, #EEF3EF 100%);
+  border: 1px solid var(--if-color-border-default);
+  border-radius: var(--if-radius-hero);
+  box-shadow: var(--if-shadow-card);
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+  gap: 24px;
+  overflow: hidden;
+  min-height: 360px;
+}
+.impact-hero .fw-kicker {
+  color: var(--if-color-action-primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.impact-hero h1 {
+  font-family: var(--if-font-heading);
+  font-size: clamp(32px, 3.8vw, 48px);
+  line-height: 1.12;
+  color: var(--if-color-text-primary);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 12px 0;
+}
+.impact-hero h1 em,
+.impact-hero h1 .if-hero-accent {
+  font-family: var(--if-font-heading);
+  font-style: normal;
+  font-weight: 800;
+  color: var(--if-color-action-primary);
+}
+.impact-hero p {
+  color: var(--if-color-text-secondary);
+  font-size: 16px;
+  line-height: 1.6;
+  max-width: 540px;
+}
+.impact-hero .button.white-action {
+  background: var(--if-color-action-primary);
+  color: var(--if-color-action-on-primary);
+  border-radius: var(--if-radius-pill);
+  padding: 12px 22px;
+}
+.impact-hero .button.white-action:hover {
+  background: var(--if-color-action-hover);
+}
+.impact-hero .button.primary-action {
+  background: var(--if-color-surface-base);
+  color: var(--if-color-text-primary);
+  border: 1px solid var(--if-color-border-default);
+  border-radius: var(--if-radius-pill);
+  padding: 12px 22px;
+}
+
+/* Status Pills & Category Badges (IF-13) */
+.badge,
+.if-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--if-radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  background: var(--if-color-status-success-surface);
+  color: var(--if-color-status-success);
+}
+.if-status-pill.warning,
+.badge.warning {
+  background: var(--if-color-status-warning-surface);
+  color: var(--if-color-status-warning);
+}
+.if-status-pill.amber {
+  background: var(--if-color-brand-amber);
+  color: var(--if-color-brand-ink);
+}
+.if-status-pill.danger,
+.badge.danger {
+  background: var(--if-color-status-danger-surface);
+  color: var(--if-color-status-danger);
+}
+.if-status-pill.info,
+.badge.info {
+  background: var(--if-color-status-info-surface);
+  color: var(--if-color-status-info);
+}
+.if-status-pill.solid-green {
+  background: var(--if-color-action-primary);
+  color: var(--if-color-text-inverse);
+}
+
+/* Opportunity Cards Grid (IF-14, IF-15, IF-25) */
+.if-opportunity-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.if-opportunity-card {
+  background: var(--if-color-surface-base);
+  border: 1px solid var(--if-color-border-default);
+  border-radius: var(--if-radius-card);
+  box-shadow: var(--if-shadow-card);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: transform var(--if-motion-normal) ease, box-shadow var(--if-motion-normal) ease;
+}
+.if-opportunity-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--if-shadow-float);
+}
+.if-opportunity-banner {
+  min-height: 112px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #123E34 0%, #0A6C50 100%);
+  color: var(--if-color-text-inverse);
+  position: relative;
+}
+.if-opportunity-banner.project {
+  background: linear-gradient(135deg, #165C87 0%, #123E34 100%);
+}
+.if-opportunity-banner.need {
+  background: linear-gradient(135deg, #44625A 0%, #123E34 100%);
+}
+.if-opportunity-body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+.if-opportunity-body h3 {
+  margin: 0;
+  font-family: var(--if-font-heading);
+  font-size: 19px;
+  line-height: 1.35;
+  color: var(--if-color-text-primary);
+  font-weight: 800;
+}
+.if-opportunity-body p {
+  margin: 0;
+  color: var(--if-color-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  flex: 1;
+}
+.if-opportunity-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--if-color-border-default);
+  font-size: 13px;
+  color: var(--if-color-text-secondary);
+  flex-wrap: wrap;
+}
+.if-card-cta {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: var(--if-radius-pill);
+  background: var(--if-color-surface-soft);
+  color: var(--if-color-action-primary);
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.if-card-cta:hover {
+  background: var(--if-color-status-success-surface);
+}
+
+/* Impact Metrics Strip (IF-17) */
+.if-impact-strip {
+  background: var(--if-color-surface-base);
+  border: 1px solid var(--if-color-border-default);
+  border-radius: var(--if-radius-card);
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) repeat(4, minmax(120px, 1fr));
+  gap: 16px;
+  align-items: center;
+  box-shadow: var(--if-shadow-card);
+}
+.if-impact-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 1px solid var(--if-color-border-default);
+  padding-left: 16px;
+}
+.if-impact-metric strong {
+  font-family: var(--if-font-heading);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--if-color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.if-impact-metric span {
+  font-size: 13px;
+  color: var(--if-color-text-secondary);
+}
+.if-impact-metric small {
+  font-size: 11px;
+  color: var(--if-color-text-tertiary);
+}
+
+/* Filter Chip Bar (IF-07) & Detail Tabs (IF-26) */
+.if-chip-bar,
+.if-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.if-chip,
+.if-tab {
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: var(--if-radius-pill);
+  border: 1px solid var(--if-color-border-default);
+  background: var(--if-color-surface-base);
+  color: var(--if-color-text-secondary);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.if-chip[aria-pressed="true"],
+.if-chip.active,
+.if-tab[aria-selected="true"],
+.if-tab.active {
+  background: var(--if-color-action-primary);
+  color: var(--if-color-action-on-primary);
+  border-color: var(--if-color-action-primary);
+}
+
+/* Data Table (IF-24) */
+.if-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--if-color-border-default);
+  border-radius: var(--if-radius-card);
+  background: var(--if-color-surface-base);
+}
+.if-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+.if-table th {
+  background: var(--if-color-surface-soft);
+  color: var(--if-color-text-primary);
+  font-weight: 700;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--if-color-border-default);
+}
+.if-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--if-color-border-default);
+  color: var(--if-color-text-primary);
+  vertical-align: top;
+}
+.if-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Stepper / Numbered Steps (IF-12) */
+.if-steps {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  display: grid;
+  gap: 10px;
+}
+.if-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--if-color-surface-softest);
+  border: 1px solid var(--if-color-border-default);
+  border-radius: var(--if-radius-control);
+}
+.if-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--if-color-action-primary);
+  color: var(--if-color-text-inverse);
+  font-weight: 800;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Responsive Breakpoints (1024px, 768px, 390px, 320px) */
+@media (max-width: 1024px) {
+  .if-opportunity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .if-impact-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .if-impact-metric {
+    border-left: none;
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 680px) {
+  .if-opportunity-grid {
+    grid-template-columns: 1fr;
+  }
+  .if-impact-strip {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  .if-topbar-utility {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .if-search-form {
+    flex: 1 1 100%;
+  }
+}
