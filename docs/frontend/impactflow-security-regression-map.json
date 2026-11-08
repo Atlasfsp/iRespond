@@ -1,0 +1,105 @@
+{
+  "schema": "irespond.impactflow.security-regression-map.v1",
+  "baseSha": "6298e9380da19d648d4b31500d820ade5d98b255",
+  "invariants": [
+    {
+      "id": "SEC-01",
+      "domain": "auth",
+      "rule": "StratoID/OIDC Authorization Code + PKCE in browser sessionStorage and mobile session; server JWT/JWKS verification; fail-closed when unconfigured",
+      "files": [
+        "apps/web/app.js",
+        "apps/mobile/lib/session.ts",
+        "services/api/cmd/server/main.go",
+        "services/api/internal/auth/"
+      ]
+    },
+    {
+      "id": "SEC-02",
+      "domain": "need-reporting",
+      "rule": "High-accuracy geolocation capture, manual coordinate correction, explicit locationConfirmed checkbox/toggle, range validation, idempotency key per intent, offline queue serialization without 0,0 fallback",
+      "files": [
+        "apps/web/location-capture.js",
+        "apps/mobile/app/report.tsx",
+        "apps/mobile/lib/coordinates.ts",
+        "apps/mobile/lib/sync.ts"
+      ]
+    },
+    {
+      "id": "SEC-03",
+      "domain": "verification",
+      "rule": "Observation != verified; server-authoritative transition graph; anti-self-verification (ErrIndependentVerifierRequired); role capability enforcement",
+      "files": [
+        "services/api/internal/needs/",
+        "apps/web/app.js",
+        "apps/mobile/app/verify.tsx",
+        "apps/mobile/lib/capabilities.ts"
+      ]
+    },
+    {
+      "id": "SEC-04",
+      "domain": "evidence",
+      "rule": "RustFS S3 create-only presigned PUT, SHA-256 byte integrity verification on completion, SS-13 resource policy receipt on review/access, human-only review (ErrReviewForbidden), moderation before signed download",
+      "files": [
+        "services/api/internal/evidence/",
+        "services/api/cmd/server/evidence_policy.go",
+        "apps/web/app.js",
+        "apps/mobile/app/evidence.tsx"
+      ]
+    },
+    {
+      "id": "SEC-05",
+      "domain": "project-governance",
+      "rule": "Server-returned permission envelope (canManageProject, canManageMilestones, canValidateMilestones, canManageRoles, canManageContributions, canPublishContributionNeeds, canManageFunding); no client ownership inference",
+      "files": [
+        "services/api/cmd/server/project_routes.go",
+        "apps/web/app.js",
+        "apps/mobile/app/project/[id].tsx",
+        "apps/mobile/app/project-admin.tsx"
+      ]
+    },
+    {
+      "id": "SEC-06",
+      "domain": "funding",
+      "rule": "Pledges are commitments, never represented as settled funds; no client paid=true authority",
+      "files": [
+        "services/api/internal/funding/",
+        "apps/web/app.js",
+        "apps/mobile/app/project/funding.tsx",
+        "apps/mobile/app/pledges.tsx"
+      ]
+    },
+    {
+      "id": "SEC-07",
+      "domain": "impact-passport",
+      "rule": "Server-evidenced Impact Passport bound to server subject; local Ability Profile fields explicitly separated; no invented ratings",
+      "files": [
+        "services/api/internal/impact/",
+        "apps/web/app.js",
+        "apps/mobile/app/impact.tsx"
+      ]
+    },
+    {
+      "id": "SEC-08",
+      "domain": "privacy-safety",
+      "rule": "Purpose-specific consent & DSAR case workflow; confidential safety reporting, appeal & role-gated safety review queue; minor/location safeguarding",
+      "files": [
+        "services/api/internal/privacy/",
+        "services/api/internal/safety/",
+        "apps/web/app.js",
+        "apps/mobile/app/privacy.tsx",
+        "apps/mobile/app/safety.tsx",
+        "apps/mobile/app/safety-ops.tsx"
+      ]
+    },
+    {
+      "id": "SEC-09",
+      "domain": "challenges",
+      "rule": "Dual-human rule approval, immutable published rules, guardian consent receipt for minors, COI declaration & non-self-clearance for judges, deterministic 10,000 bps rubric scoring, appeal hold before publication, award != prize fulfilment, PayCore settlement boundary",
+      "files": [
+        "services/api/internal/challenges/",
+        "services/api/cmd/server/challenge_routes.go",
+        "services/api/migrations/0014_challenges_domain.sql"
+      ]
+    }
+  ]
+}
