@@ -1,0 +1,84 @@
+{
+  "$schema": "irespond.challenge-demo-fixture.v1",
+  "demoOnly": true,
+  "status": "fictional_unapproved",
+  "name": "Community Innovation Challenge 2027 — Demonstration",
+  "tenantId": "demo-institution-gauteng",
+  "title": "Community Innovation Challenge",
+  "jurisdictionCode": "ZA-GP",
+  "locale": "en-ZA",
+  "timezone": "Africa/Johannesburg",
+  "currencyCode": "ZAR",
+  "registrationOpensAt": "2027-03-01T00:00:00+02:00",
+  "registrationClosesAt": "2027-04-01T00:00:00+02:00",
+  "startsAt": "2027-04-05T00:00:00+02:00",
+  "endsAt": "2027-06-30T18:00:00+02:00",
+  "mission": "Identify community problems, propose responsible solutions, mobilise resources and show independently verified results.",
+  "tracks": [
+    {
+      "levelCode": "primary",
+      "participationMode": "team",
+      "minimumTeamMembers": 2,
+      "maximumTeamMembers": 5
+    },
+    {
+      "levelCode": "secondary",
+      "participationMode": "team",
+      "minimumTeamMembers": 2,
+      "maximumTeamMembers": 5
+    },
+    {
+      "levelCode": "tertiary",
+      "participationMode": "both",
+      "minimumTeamMembers": 1,
+      "maximumTeamMembers": 5
+    }
+  ],
+  "rounds": [
+    {
+      "sequence": 1,
+      "kind": "proposal",
+      "title": "Problem and solution proposal",
+      "opensAt": "2027-04-05T09:00:00+02:00",
+      "closesAt": "2027-04-20T17:00:00+02:00",
+      "requiredJudges": 3
+    },
+    {
+      "sequence": 2,
+      "kind": "implementation",
+      "title": "Mentored project and evidence",
+      "opensAt": "2027-04-27T09:00:00+02:00",
+      "closesAt": "2027-06-10T17:00:00+02:00",
+      "requiredJudges": 3
+    },
+    {
+      "sequence": 3,
+      "kind": "finale",
+      "title": "Final showcase and impact review",
+      "opensAt": "2027-06-15T09:00:00+02:00",
+      "closesAt": "2027-06-25T17:00:00+02:00",
+      "requiredJudges": 3
+    }
+  ],
+  "rubricExample": {
+    "weightsMustSumToBasisPoints": 10000,
+    "criteria": [
+      { "code": "problem", "title": "Clarity of the problem", "weightBasisPoints": 2000 },
+      { "code": "feasibility", "title": "Solution feasibility", "weightBasisPoints": 2500 },
+      { "code": "participation", "title": "Community participation", "weightBasisPoints": 2000 },
+      { "code": "evidence", "title": "Verifiable progress and outcomes", "weightBasisPoints": 2500 },
+      { "code": "sustainability", "title": "Maintenance and replication", "weightBasisPoints": 1000 }
+    ]
+  },
+  "prizeExample": {
+    "type": "cash",
+    "amountMinor": 500000,
+    "currencyCode": "ZAR",
+    "label": "Illustrative R5,000 prize — NOT funded or approved"
+  },
+  "sponsorStatus": "not_confirmed",
+  "guardianConsent": "required_per_jurisdiction_and_policy",
+  "publicResultPolicy": "opt_in_redacted",
+  "fundingStatus": "unconfirmed",
+  "note": "Fictional template influenced by historical 2021 poster; does NOT resurrect its dates, actors, partnerships or prizes."
+}

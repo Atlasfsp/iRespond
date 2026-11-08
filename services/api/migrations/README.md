@@ -28,3 +28,16 @@ atomically. Run migrations before deploying the new service; actorless Go caller
 now fail closed. No historical approvals are invented or backfilled. Retain this
 additive table on application rollback; pause moderation and roll forward rather
 than dropping evidence history. See ADR-003 for remaining SS-13/42/43/24 contracts.
+
+## 0014_challenges_domain.sql
+
+Adds the 25-table additive schema for the iRespond Challenges domain (`challenge_programs`,
+`challenge_program_versions`, `challenge_rule_approvals`, `challenge_tracks`,
+`challenge_rounds`, `challenge_rubric_criteria`, `challenge_entries`,
+`challenge_team_members`, `challenge_guardian_consents`, `challenge_eligibility_decisions`,
+`challenge_submissions`, `challenge_submission_evidence`, `challenge_judge_assignments`,
+`challenge_judge_conflicts`, `challenge_scorecards`, `challenge_score_lines`,
+`challenge_decisions`, `challenge_appeals`, `challenge_prizes`, `challenge_awards`,
+`challenge_prize_fulfillments`, `challenge_sponsors`, `challenge_mentorships`,
+`challenge_project_links`, and `challenge_audit_events`) with composite `(tenant_id, program_id)`
+foreign keys and append-only audit history.

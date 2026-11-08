@@ -21,6 +21,7 @@ tags:
   - { name: Notifications }
   - { name: Privacy }
   - { name: Safety }
+  - { name: Challenges }
 
 paths:
   /healthz:
@@ -765,6 +766,475 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /v1/challenges:
+    get:
+      tags: [Challenges]
+      operationId: listPublishedChallenges
+      summary: Discover published challenge programmes
+      responses:
+        '200': { description: Published challenges list, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeProgrammeList' } } } }
+    post:
+      tags: [Challenges]
+      operationId: createChallenge
+      security: [{ bearerAuth: [] }]
+      summary: Create draft challenge programme
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChallengeCreateRequest' }
+      responses:
+        '201': { description: Draft challenge created, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeProgramme' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/challenges/{challengeId}:
+    get:
+      tags: [Challenges]
+      operationId: getChallenge
+      parameters: [{ $ref: '#/components/parameters/ChallengeId' }]
+      summary: Get public or role-scoped challenge programme detail
+      responses:
+        '200': { description: Challenge programme detail, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeProgramme' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/challenges/{challengeId}/rule-approvals:
+    post:
+      tags: [Challenges]
+      operationId: approveChallengeRules
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ChallengeId' }]
+      summary: Record distinct human rule approval
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rulesSha256: { type: string }
+                decision: { type: string, enum: [approve, reject] }
+      responses:
+        '201': { description: Rule approval recorded, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeProgramme' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/challenges/{challengeId}/publish:
+    post:
+      tags: [Challenges]
+      operationId: publishChallenge
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ChallengeId' }]
+      summary: Publish immutable rules version after two distinct human approvals
+      responses:
+        '201': { description: Challenge published, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeProgramme' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/challenges/{challengeId}/entries:
+    post:
+      tags: [Challenges]
+      operationId: applyToChallenge
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ChallengeId' }]
+      summary: Apply to a published challenge track
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                trackId: { type: string }
+                teamDisplayName: { type: string }
+                participationMode: { type: string, enum: [individual, team] }
+                agreedRulesVersion: { type: integer }
+                requiresGuardianConsent: { type: boolean }
+      responses:
+        '201': { description: Challenge entry created, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeEntry' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/me/challenge-entries:
+    get:
+      tags: [Challenges]
+      operationId: listMyChallengeEntries
+      security: [{ bearerAuth: [] }]
+      summary: List authenticated participant challenge entries
+      responses:
+        '200': { description: Participant entries, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ChallengeEntry' } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /v1/challenges/{challengeId}/entries/{entryId}/team-members:
+    post:
+      tags: [Challenges]
+      operationId: inviteChallengeTeamMember
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ChallengeId' }
+        - { $ref: '#/components/parameters/ChallengeEntryId' }
+      summary: Invite or respond to challenge team membership
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action: { type: string, enum: [invite, accept, decline] }
+                actorId: { type: string }
+                role: { type: string }
+      responses:
+        '200': { description: Team roster updated, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeEntry' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/challenges/{challengeId}/entries/{entryId}/guardian-consents:
+    post:
+      tags: [Challenges]
+      operationId: recordChallengeGuardianConsent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ChallengeId' }
+        - { $ref: '#/components/parameters/ChallengeEntryId' }
+      summary: Record or revoke verified SS-24 guardian consent receipt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                participantActorId: { type: string }
+                guardianSubjectRef: { type: string }
+                ss24ConsentReceiptRef: { type: string }
+                purposeCode: { type: string }
+                status: { type: string, enum: [verified, revoked] }
+      responses:
+        '201': { description: Guardian consent state updated, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeEntry' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/challenges/{challengeId}/entries/{entryId}/eligibility-decisions:
+    post:
+      tags: [Challenges]
+      operationId: decideChallengeEligibility
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ChallengeId' }
+        - { $ref: '#/components/parameters/ChallengeEntryId' }
+      summary: Record independent human eligibility decision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [eligible, ineligible, needs_information] }
+                ruleCode: { type: string }
+                rationale: { type: string }
+      responses:
+        '201': { description: Eligibility decision recorded, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeEntry' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/challenges/{challengeId}/entries/{entryId}/submissions:
+    post:
+      tags: [Challenges]
+      operationId: submitChallengeRoundEntry
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ChallengeId' }
+        - { $ref: '#/components/parameters/ChallengeEntryId' }
+      summary: Submit round proposal with SHA-256 content receipt before deadline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [problemStatement, solutionProposal]
+              properties:
+                roundId: { type: string }
+                problemStatement: { type: string }
+                solutionProposal: { type: string }
+                publicAbstract: { type: string }
+                evidenceAssetRef: { type: string }
+                submissionSha256: { type: string }
+      responses:
+        '201': { description: Submission recorded, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeSubmission' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/challenges/{challengeId}/judge-assignments:
+    post:
+      tags: [Challenges]
+      operationId: assignChallengeJudge
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ChallengeId' }]
+      summary: Assign an independent human judge to a submitted revision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [submissionId, judgeActorId]
+              properties:
+                submissionId: { type: string }
+                judgeActorId: { type: string }
+      responses:
+        '201': { description: Judge assigned, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeJudgeAssignment' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/me/challenge-judge-assignments:
+    get:
+      tags: [Challenges]
+      operationId: listMyJudgeAssignments
+      security: [{ bearerAuth: [] }]
+      summary: List judge assignments for authenticated judge
+      responses:
+        '200': { description: Judge assignments, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ChallengeJudgeAssignment' } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /v1/challenges/{challengeId}/judge-assignments/{assignmentId}/conflict:
+    post:
+      tags: [Challenges]
+      operationId: declareOrResolveJudgeConflict
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ChallengeId' }
+        - { $ref: '#/components/parameters/ChallengeAssignmentId' }
+      summary: Declare judge COI or independently resolve conflict
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action: { type: string, enum: [declare, resolve] }
+                status: { type: string, enum: [no_conflict_declared, conflict_declared, cleared, recused] }
+                reasonCode: { type: string }
+                rationale: { type: string }
+      responses:
+        '200': { description: Conflict status updated, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeJudgeAssignment' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/challenges/{challengeId}/judge-assignments/{assignmentId}/scorecards:
+    post:
+      tags: [Challenges]
+      operationId: submitJudgeScorecard
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ChallengeId' }
+        - { $ref: '#/components/parameters/ChallengeAssignmentId' }
+      summary: Submit and seal rubric scorecard with deterministic basis-point calculation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lines]
+              properties:
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    required: [criterionId, score, rationale]
+                    properties:
+                      criterionId: { type: string }
+                      score: { type: number }
+                      rationale: { type: string }
+                privateOverallComment: { type: string }
+                supersedesScorecardId: { type: string }
+      responses:
+        '201': { description: Scorecard sealed, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeScorecard' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/challenges/{challengeId}/rounds/{roundId}/decisions:
+    post:
+      tags: [Challenges]
+      operationId: recordOrPublishChallengeDecision
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ChallengeId' }
+        - { $ref: '#/components/parameters/ChallengeRoundId' }
+      summary: Approve or publish round decision after quorum and appeal-hold verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entryId, decision]
+              properties:
+                entryId: { type: string }
+                decision: { type: string, enum: [qualified, not_qualified, finalist, winner, runner_up, no_award] }
+                action: { type: string, enum: [approve, publish] }
+                rank: { type: integer }
+                reason: { type: string }
+      responses:
+        '201': { description: Round decision recorded, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeDecision' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/challenges/{challengeId}/appeals:
+    post:
+      tags: [Challenges]
+      operationId: createOrResolveChallengeAppeal
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ChallengeId' }]
+      summary: File a participant appeal or record an independent appeal resolution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action: { type: string, enum: [file, resolve] }
+                appealId: { type: string }
+                entryId: { type: string }
+                roundId: { type: string }
+                subjectType: { type: string }
+                reason: { type: string }
+                status: { type: string, enum: [upheld, denied, remanded] }
+      responses:
+        '201': { description: Appeal recorded or resolved, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeAppeal' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/challenges/{challengeId}/sponsors:
+    post:
+      tags: [Challenges]
+      operationId: recordChallengeSponsorCommitment
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ChallengeId' }]
+      summary: Record sponsor interest or commitment (distinct from settled funds)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sponsorDisplayName]
+              properties:
+                sponsorDisplayName: { type: string }
+                organisationRef: { type: string }
+                commitmentKind: { type: string, enum: [cash, in_kind, matching, service] }
+                commitmentCurrency: { type: string }
+                commitmentAmountMinor: { type: integer, format: int64 }
+                commitmentDescription: { type: string }
+                status: { type: string, enum: [interest, pledged, provider_confirmed] }
+                ss22PaymentReference: { type: string }
+      responses:
+        '201': { description: Sponsor commitment recorded, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeSponsor' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/challenges/{challengeId}/awards:
+    post:
+      tags: [Challenges]
+      operationId: createOrPublishChallengeAward
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ChallengeId' }]
+      summary: Approve or publish challenge award (distinct from prize fulfilment)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action: { type: string, enum: [nominate, approve, publish] }
+                awardId: { type: string }
+                entryId: { type: string }
+                decisionId: { type: string }
+                prizeId: { type: string }
+      responses:
+        '201': { description: Award recorded, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeAward' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/challenges/{challengeId}/awards/{awardId}/fulfillments:
+    post:
+      tags: [Challenges]
+      operationId: recordChallengePrizeFulfillment
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ChallengeId' }
+        - { $ref: '#/components/parameters/ChallengeAwardId' }
+      summary: Record prize fulfilment with verified delivery evidence or PayCore proof
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fulfillmentKind: { type: string, enum: [cash_provider, in_kind_delivery, mentorship, scholarship, experience] }
+                status: { type: string, enum: [pending, provider_initiated, confirmed_delivered] }
+                providerReference: { type: string }
+                deliveryEvidenceRef: { type: string }
+      responses:
+        '201': { description: Prize fulfilment recorded, content: { application/json: { schema: { $ref: '#/components/schemas/ChallengeFulfillment' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/challenges/{challengeId}/entries/{entryId}/project-link:
+    post:
+      tags: [Challenges]
+      operationId: linkChallengeEntryProject
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ChallengeId' }
+        - { $ref: '#/components/parameters/ChallengeEntryId' }
+      summary: Link a challenge entry to a governed Action Project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actionProjectId]
+              properties:
+                actionProjectId: { type: string }
+                relationship: { type: string, enum: [challenge_delivery, follow_up, replication] }
+      responses:
+        '201': { description: Project linked, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
 components:
   securitySchemes:
@@ -790,6 +1260,11 @@ components:
     NotificationId: { name: id, in: path, required: true, schema: { type: string } }
     Purpose: { name: purpose, in: path, required: true, schema: { type: string } }
     SafetyReportId: { name: id, in: path, required: true, schema: { type: string } }
+    ChallengeId: { name: challengeId, in: path, required: true, schema: { type: string } }
+    ChallengeEntryId: { name: entryId, in: path, required: true, schema: { type: string } }
+    ChallengeAssignmentId: { name: assignmentId, in: path, required: true, schema: { type: string } }
+    ChallengeRoundId: { name: roundId, in: path, required: true, schema: { type: string } }
+    ChallengeAwardId: { name: awardId, in: path, required: true, schema: { type: string } }
 
   responses:
     BadRequest:
@@ -1093,3 +1568,111 @@ components:
         subjectId: { type: string }
         reason: { type: string }
         status: { type: string }
+    ChallengeCreateRequest:
+      type: object
+      required: [title]
+      properties:
+        slug: { type: string }
+        title: { type: string }
+        description: { type: string }
+        mission: { type: string }
+        jurisdictionCode: { type: string }
+        currencyCode: { type: string }
+    ChallengeProgramme:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        tenantId: { type: string }
+        slug: { type: string }
+        title: { type: string }
+        status: { type: string }
+        currentRulesVersion: { type: integer }
+        fundingStatus: { type: string }
+    ChallengeProgrammeList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ChallengeProgramme' }
+    ChallengeEntry:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        programId: { type: string }
+        status: { type: string }
+        eligibilityStatus: { type: string }
+        guardianConsentStatus: { type: string }
+    ChallengeSubmission:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        programId: { type: string }
+        entryId: { type: string }
+        roundId: { type: string }
+        status: { type: string }
+        submissionSha256: { type: string }
+    ChallengeJudgeAssignment:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        programId: { type: string }
+        submissionId: { type: string }
+        judgeActorId: { type: string }
+        conflictStatus: { type: string }
+    ChallengeScorecard:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        assignmentId: { type: string }
+        status: { type: string }
+        totalBasisPoints: { type: integer }
+    ChallengeDecision:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        roundId: { type: string }
+        entryId: { type: string }
+        decision: { type: string }
+        state: { type: string }
+        scoreBasisPoints: { type: integer }
+    ChallengeAppeal:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        entryId: { type: string }
+        status: { type: string }
+    ChallengeSponsor:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        sponsorDisplayName: { type: string }
+        status: { type: string }
+        truthNotice: { type: string }
+    ChallengeAward:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        entryId: { type: string }
+        prizeId: { type: string }
+        status: { type: string }
+        fulfillmentStatus: { type: string }
+        truthStateLabel: { type: string }
+    ChallengeFulfillment:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: string }
+        awardId: { type: string }
+        fulfillmentKind: { type: string }
+        status: { type: string }
+        truthNotice: { type: string }
