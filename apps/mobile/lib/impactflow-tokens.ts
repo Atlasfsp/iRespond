@@ -160,3 +160,19 @@ export const ImpactFlow = {
 } as const;
 
 export type ImpactFlowTokens = typeof ImpactFlow;
+
+export const IMPACTFLOW_NATIVE_CATALOG = [
+  'IF-01:AppShell', 'IF-02:BrandHeader', 'IF-03:DesktopSidebar', 'IF-04:MobileBottomNav',
+  'IF-05:PageHeader', 'IF-06:SearchField', 'IF-07:FilterChipBar', 'IF-08:Button',
+  'IF-09:IconButton', 'IF-10:TextField', 'IF-11:SelectAutocomplete', 'IF-12:StepperFormWizard',
+  'IF-13:StatusPill', 'IF-14:CardSectionPanel', 'IF-15:OpportunityCard', 'IF-16:ProjectProgress',
+  'IF-17:ImpactMetric', 'IF-18:TrustNotice', 'IF-19:EvidenceUploader', 'IF-20:ModalDrawer',
+  'IF-21:ToastAlert', 'IF-22:SkeletonProgress', 'IF-23:EmptyErrorState', 'IF-24:DataTableResponsiveList',
+  'IF-25:ChallengeCard', 'IF-26:ChallengeDetailTabs', 'IF-27:EligibilitySummary', 'IF-28:TeamRoster',
+  'IF-29:SubmissionComposer', 'IF-30:ReviewQueue', 'IF-31:RubricScorecard', 'IF-32:ConflictOfInterestPanel',
+  'IF-33:ResultTimeline', 'IF-34:AwardCard', 'IF-35:SponsorProfile', 'IF-36:MentorWorkspace',
+  'IF-37:VolunteerOffer', 'IF-38:NeedLocationCapture', 'IF-39:NeedVerificationPanel', 'IF-40:ProjectRoom',
+  'IF-41:FundingLedgerSummary', 'IF-42:ImpactPassportCard', 'IF-43:SafeguardingCase', 'IF-44:PrivacyControl',
+  'IF-45:NotificationCenter', 'IF-46:OfflineSyncStatus',
+] as const;
+
