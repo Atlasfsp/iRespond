@@ -11,6 +11,14 @@ import { Stitch } from '../lib/stitch-theme';
 
 type Contribution = { kind: string; fulfilled: number; accepted: number };
 type Role = { role: string; projects: number };
+type ChallengeEntryRecord = {
+  id: string;
+  programId: string;
+  projectTitle: string;
+  status: string;
+  eligibilityStatus?: string;
+  linkedProjectId?: string;
+};
 type Passport = {
   subject: string;
   projectsLed: number;
@@ -27,6 +35,7 @@ type Passport = {
 export default function ImpactPassport() {
   const [data, setData] = useState<Passport | null>(null);
   const [profile, setProfile] = useState<AbilityProfile | null>(null);
+  const [challengeEntries, setChallengeEntries] = useState<ChallengeEntryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -34,12 +43,14 @@ export default function ImpactPassport() {
     setLoading(true);
     setError('');
     try {
-      const [passport, ability] = await Promise.all([
+      const [passport, ability, entries] = await Promise.all([
         apiFetch<Passport>('/v1/me/impact-passport'),
         loadAbilityProfile(),
+        apiFetch<ChallengeEntryRecord[]>('/v1/me/challenge-entries').catch(() => []),
       ]);
       setData(passport);
       setProfile(ability);
+      setChallengeEntries(Array.isArray(entries) ? entries : []);
     } catch (cause) {
       if (cause instanceof APIError && cause.status === 401) {
         router.replace('/signin');
@@ -177,6 +188,38 @@ export default function ImpactPassport() {
                   ))
                 ) : (
                   <Text style={s.muted}>Verified project roles will appear here.</Text>
+                )}
+              </View>
+
+              <View style={s.card}>
+                <Text style={s.section}>Challenge entries & verified stages</Text>
+                <Text style={s.muted}>
+                  Challenge applications, submitted proposals, approved awards, and fulfilled prizes are tracked with separate truth states.
+                </Text>
+                {challengeEntries.length ? (
+                  challengeEntries.map((entry) => (
+                    <Pressable
+                      key={entry.id}
+                      style={s.roleRow}
+                      accessibilityRole="button"
+                      onPress={() => router.push({ pathname: '/challenges/[id]', params: { id: entry.programId } })}
+                    >
+                      <View style={s.flex}>
+                        <Text style={s.roleName}>{entry.projectTitle || entry.id}</Text>
+                        <Text style={s.muted}>
+                          Eligibility: {human(entry.eligibilityStatus || 'pending')}
+                          {entry.linkedProjectId ? ` · Project ${entry.linkedProjectId}` : ''}
+                        </Text>
+                      </View>
+                      <View style={s.roleCount}>
+                        <Text style={s.roleCountText}>{human(entry.status || 'applied')}</Text>
+                      </View>
+                    </Pressable>
+                  ))
+                ) : (
+                  <Pressable onPress={() => router.push('/challenges')} accessibilityRole="button">
+                    <Text style={s.link}>Explore published Challenges →</Text>
+                  </Pressable>
                 )}
               </View>
 

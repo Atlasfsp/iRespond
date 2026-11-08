@@ -7,13 +7,17 @@ import { StitchBottomNav, StitchTopBar } from '../components/StitchChrome';
 import { apiFetch } from '../lib/api';
 import { Stitch } from '../lib/stitch-theme';
 import { Fieldwork } from '../lib/fieldwork-theme';
+import { ImpactFlowPalette } from '../lib/impactflow-tokens';
 import { flushNeedQueue, pendingNeedCount, pendingNeedLocationReviewCount } from '../lib/sync';
 
 type PlatformDescription={lifecycle?:string[];doctrine?:string;[key:string]:unknown};
+type ChallengeSummary={id:string;title:string;category?:string;summary?:string;prizeSummary?:string;sponsorName?:string;status?:string};
 const fallbackLifecycle=['see','report','verify','diagnose','project','mobilise','execute','measure','maintain','replicate'];
+const categories=['All','Education','Health','Environment','Water'] as const;
 const pathways=[
  {title:'Discover needs',desc:'Explore reports in your community and see which have been verified.',icon:'navigate-outline' as const,path:'/needmap' as const,color:Fieldwork.color.leafSoft},
  {title:'Report a need',desc:'Share an observation with the right location and supporting evidence.',icon:'add-circle-outline' as const,path:'/report' as const,color:Fieldwork.color.goldSoft},
+ {title:'Join a Challenge',desc:'Participate in time-bounded civic innovation challenges and submit proposals.',icon:'trophy-outline' as const,path:'/challenges' as const,color:Fieldwork.color.leafSoft},
  {title:'Take action',desc:'Open the role-aware workspace for your projects and contributions.',icon:'hand-left-outline' as const,path:'/workspace' as const,color:Fieldwork.color.coralSoft},
  {title:'Your impact',desc:'See the contributions and outcomes supported by real records.',icon:'ribbon-outline' as const,path:'/impact' as const,color:Fieldwork.color.iris},
 ];
@@ -24,9 +28,13 @@ export default function ImpactFeed(){
  const[refreshing,setRefreshing]=useState(false);
  const[platform,setPlatform]=useState<PlatformDescription>({lifecycle:fallbackLifecycle});
  const[platformReachable,setPlatformReachable]=useState(false);
+ const[challenges,setChallenges]=useState<ChallengeSummary[]>([]);
+ const[activeCategory,setActiveCategory]=useState<string>('All');
  async function load(){
   try{const description=await apiFetch<PlatformDescription>('/v1/platform',{},false);setPlatform(description);setPlatformReachable(true)}
   catch{setPlatformReachable(false)}
+  try{const list=await apiFetch<ChallengeSummary[]>('/v1/challenges',{},false);setChallenges(Array.isArray(list)?list:[])}
+  catch{setChallenges([])}
   try{await flushNeedQueue()}catch{/* Preserve queued reports and retry on refresh. */}
   finally{
    try{const[pending,locationReview]=await Promise.all([pendingNeedCount(),pendingNeedLocationReviewCount()]);
@@ -37,6 +45,8 @@ export default function ImpactFeed(){
  useEffect(()=>{void load()},[]);
  async function refresh(){setRefreshing(true);try{await load()}finally{setRefreshing(false)}}
  const lifecycle=Array.isArray(platform.lifecycle)&&platform.lifecycle.length?platform.lifecycle:fallbackLifecycle;
+ const featured=challenges[0]||null;
+ const filteredChallenges=activeCategory==='All'?challenges:challenges.filter(c=>String(c.category||'').toLowerCase()===activeCategory.toLowerCase());
  return <SafeAreaView style={s.safe} edges={['top','left','right']}><View style={s.screen}>
   <StitchTopBar/>
   <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}
@@ -47,6 +57,16 @@ export default function ImpactFeed(){
      <Text style={s.syncText}>{pendingLocationReview>0?'Confirm the intervention coordinates. The preserved report will be updated, not duplicated.':'Tap to retry safely. Your offline reports remain queued until the real API confirms them.'}</Text>
     </View><Ionicons name="chevron-forward" size={19} color={Stitch.color.tertiary}/>
    </Pressable>}
+   <View style={s.greetingRow}>
+    <View style={s.flex}>
+     <Text style={s.greetingEyebrow}>GOOD MORNING · IMPACTFLOW</Text>
+     <Text style={s.greetingTitle}>Ready to make an impact today?</Text>
+    </View>
+    <Pressable accessibilityRole="button" accessibilityLabel="Open Challenges" style={s.challengePill} onPress={()=>router.push('/challenges')}>
+     <Ionicons name="trophy-outline" size={16} color={ImpactFlowPalette.brandPrimary}/>
+     <Text style={s.challengePillText}>Challenges</Text>
+    </Pressable>
+   </View>
    <View style={s.hero}>
     <View style={s.heroOrb} pointerEvents="none"/>
     <View style={s.heroOrbSmall} pointerEvents="none"/>
@@ -60,10 +80,35 @@ export default function ImpactFeed(){
     <View style={s.heroDivider}/>
     <View style={s.heroFoot}><Ionicons name="shield-checkmark-outline" size={18} color={Fieldwork.color.leaf}/><Text style={s.heroFootText}>Reporting is not verification. Every action has a clear evidence trail.</Text></View>
    </View>
+   {featured&&<Pressable accessibilityRole="button" style={s.featuredChallenge} onPress={()=>router.push({pathname:'/challenges/[id]',params:{id:featured.id}})}>
+    <View style={s.featuredHeader}>
+     <Text style={s.featuredBadge}>FEATURED CHALLENGE</Text>
+     <Text style={s.featuredPrize}>{featured.prizeSummary||'Civic Recognition'}</Text>
+    </View>
+    <Text style={s.featuredTitle}>{featured.title}</Text>
+    <Text style={s.featuredSummary}>{featured.summary||'Submit an evidence-backed community innovation proposal.'}</Text>
+    <View style={s.featuredFooter}>
+     <Text style={s.featuredSponsor}>{featured.sponsorName||'Civic Innovation Coalition'}</Text>
+     <Text style={s.featuredCta}>Inspect challenge →</Text>
+    </View>
+   </Pressable>}
    <View style={s.sectionHeader}><View><Text style={s.eyebrow}>START HERE</Text><Text style={s.sectionTitle}>How will you respond?</Text></View><Text style={s.sectionHint}>Choose your next step</Text></View>
    <View style={s.pathways}>{pathways.map((entry)=><Pressable key={entry.title} accessibilityRole="button" accessibilityLabel={entry.title} style={s.pathway}
     onPress={()=>router.push(entry.path)}><View style={[s.pathwayIcon,{backgroundColor:entry.color}]}><Ionicons name={entry.icon} color={Stitch.color.primary} size={24}/></View>
      <View style={s.flex}><Text style={s.pathwayTitle}>{entry.title}</Text><Text style={s.pathwayText}>{entry.desc}</Text></View><Ionicons name="arrow-forward" color={Stitch.color.secondary} size={19}/></Pressable>)}</View>
+   <View style={s.sectionHeader}><View><Text style={s.eyebrow}>DISCOVER OPPORTUNITIES</Text><Text style={s.sectionTitle}>Filter by focus area</Text></View></View>
+   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipRow}>
+    {categories.map(cat=><Pressable key={cat} accessibilityRole="button" accessibilityState={{selected:activeCategory===cat}} style={[s.filterChip,activeCategory===cat&&s.filterChipActive]} onPress={()=>setActiveCategory(cat)}>
+     <Text style={[s.filterChipText,activeCategory===cat&&s.filterChipTextActive]}>{cat}</Text>
+    </Pressable>)}
+   </ScrollView>
+   {filteredChallenges.length>0&&<View style={s.pathways}>
+    {filteredChallenges.slice(0,2).map(ch=><Pressable key={ch.id} accessibilityRole="button" style={s.pathway} onPress={()=>router.push({pathname:'/challenges/[id]',params:{id:ch.id}})}>
+     <View style={[s.pathwayIcon,{backgroundColor:Fieldwork.color.leafSoft}]}><Ionicons name="trophy-outline" color={Stitch.color.primary} size={22}/></View>
+     <View style={s.flex}><Text style={s.pathwayTitle}>{ch.title}</Text><Text style={s.pathwayText}>{ch.summary||'Published challenge opportunity'}</Text></View>
+     <Ionicons name="arrow-forward" color={Stitch.color.secondary} size={19}/>
+    </Pressable>)}
+   </View>}
    <View style={s.sectionHeader}><View><Text style={s.eyebrow}>THE IRESPOND WAY</Text><Text style={s.sectionTitle}>From need to impact</Text></View></View>
    <View style={s.journey}>
     <Text style={s.journeyText}>The work follows a clear journey. Observation, verification, contribution and outcome are not the same thing.</Text>
@@ -78,6 +123,7 @@ export default function ImpactFeed(){
     </View>
    </View>
    <View style={s.lowerLinks}>
+    <Pressable style={s.lowerLink} accessibilityRole="button" onPress={()=>router.push('/challenges')}><Ionicons name="trophy-outline" size={20} color={Stitch.color.primary}/><Text style={s.lowerLinkText}>Explore Civic Challenges</Text><Ionicons name="chevron-forward" size={16} color={Stitch.color.onSurfaceVariant}/></Pressable>
     <Pressable style={s.lowerLink} accessibilityRole="button" onPress={()=>router.push('/catalog')}><Ionicons name="grid-outline" size={20} color={Stitch.color.primary}/><Text style={s.lowerLinkText}>Browse all surfaces</Text><Ionicons name="chevron-forward" size={16} color={Stitch.color.onSurfaceVariant}/></Pressable>
     <Pressable style={s.lowerLink} accessibilityRole="button" onPress={()=>router.push('/workspace')}><Ionicons name="business-outline" size={20} color={Stitch.color.primary}/><Text style={s.lowerLinkText}>Organization & project workspace</Text><Ionicons name="chevron-forward" size={16} color={Stitch.color.onSurfaceVariant}/></Pressable>
    </View>
@@ -88,12 +134,17 @@ function human(value:string){return value.replaceAll('_',' ').replace(/\b\w/g,c=
 const s=StyleSheet.create({
  safe:{flex:1,backgroundColor:Fieldwork.color.canvas},screen:{flex:1},
  content:{padding:Fieldwork.space.screen,gap:Fieldwork.space.section,paddingBottom:36},flex:{flex:1},
+ greetingRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},
+ greetingEyebrow:{...Stitch.type.eyebrow,color:ImpactFlowPalette.brandPrimary,fontSize:11},
+ greetingTitle:{...Stitch.type.card,color:ImpactFlowPalette.inkPrimary,fontSize:18,marginTop:2},
+ challengePill:{minHeight:44,paddingHorizontal:14,borderRadius:999,backgroundColor:ImpactFlowPalette.surfaceMuted,borderWidth:1,borderColor:ImpactFlowPalette.borderDefault,flexDirection:'row',alignItems:'center',gap:6},
+ challengePillText:{...Stitch.type.bodyBold,color:ImpactFlowPalette.brandPrimary,fontSize:13},
  hero:{position:'relative',overflow:'hidden',backgroundColor:'#EDF1E2',borderRadius:Fieldwork.radius.hero,padding:25,paddingTop:30,gap:14},
  heroOrb:{position:'absolute',width:260,height:260,borderRadius:130,borderWidth:55,borderColor:'rgba(255,255,255,0.63)',right:-110,top:-140},
  heroOrbSmall:{position:'absolute',width:135,height:135,borderRadius:68,backgroundColor:'rgba(238,190,95,0.18)',right:-50,bottom:-52},
  heroBadge:{flexDirection:'row',alignItems:'center',gap:8},heroBadgeDot:{width:7,height:7,borderRadius:4,backgroundColor:Fieldwork.color.coral},
  heroBadgeText:{...Stitch.type.eyebrow,color:Fieldwork.color.leaf,fontSize:10,letterSpacing:1.1},
- heroTitle:{...Fieldwork.type.display,color:Fieldwork.color.inkStrong,maxWidth:330} ,
+ heroTitle:{...Fieldwork.type.display,color:Fieldwork.color.inkStrong,maxWidth:330},
  heroAccent:{color:Fieldwork.color.coralText,fontStyle:'italic',fontWeight:'700'},
  heroLead:{fontSize:15,lineHeight:23,color:Fieldwork.color.muted,maxWidth:320},
  heroActions:{flexDirection:'row',flexWrap:'wrap',gap:8,marginTop:6},
@@ -103,10 +154,24 @@ const s=StyleSheet.create({
  heroSecondaryText:{...Stitch.type.bodyBold,color:Fieldwork.color.leaf},
  heroDivider:{height:1,backgroundColor:'#D3DFD0',marginTop:5},
  heroFoot:{flexDirection:'row',alignItems:'flex-start',gap:9},heroFootText:{...Stitch.type.footnote,flex:1,color:Fieldwork.color.muted,fontSize:12,lineHeight:18},
+ featuredChallenge:{backgroundColor:ImpactFlowPalette.brandForest,borderRadius:20,padding:18,gap:8},
+ featuredHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},
+ featuredBadge:{fontSize:11,fontWeight:'800',letterSpacing:0.9,color:ImpactFlowPalette.accentAmber},
+ featuredPrize:{fontSize:12,fontWeight:'700',color:'#FFFFFF'},
+ featuredTitle:{fontSize:18,fontWeight:'800',color:'#FFFFFF'},
+ featuredSummary:{fontSize:13,lineHeight:19,color:'#DCEAE3'},
+ featuredFooter:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginTop:4},
+ featuredSponsor:{fontSize:12,color:'#B8D4C8'},
+ featuredCta:{fontSize:13,fontWeight:'800',color:ImpactFlowPalette.accentAmber},
  sectionHeader:{flexDirection:'row',alignItems:'flex-end',justifyContent:'space-between',gap:9},
  eyebrow:{...Stitch.type.eyebrow,color:Fieldwork.color.leaf,marginBottom:5},
  sectionTitle:{...Stitch.type.headline,color:Fieldwork.color.inkStrong,fontSize:25},
  sectionHint:{...Stitch.type.footnote,color:Stitch.color.onSurfaceVariant,marginBottom:3},
+ chipRow:{gap:8,paddingVertical:2},
+ filterChip:{minHeight:44,paddingHorizontal:16,borderRadius:999,backgroundColor:ImpactFlowPalette.surfaceCard,borderWidth:1,borderColor:ImpactFlowPalette.borderDefault,justifyContent:'center',alignItems:'center'},
+ filterChipActive:{backgroundColor:ImpactFlowPalette.brandPrimary,borderColor:ImpactFlowPalette.brandPrimary},
+ filterChipText:{fontSize:13,fontWeight:'700',color:ImpactFlowPalette.inkPrimary},
+ filterChipTextActive:{color:'#FFFFFF'},
  pathways:{gap:11},
  pathway:{flexDirection:'row',alignItems:'center',gap:13,padding:14,minHeight:102,borderRadius:Fieldwork.radius.card,borderWidth:1,borderColor:Fieldwork.color.border,backgroundColor:Fieldwork.color.paper},
  pathwayIcon:{height:52,width:52,borderRadius:16,justifyContent:'center',alignItems:'center'},

@@ -22,7 +22,7 @@ Mobile uses `apps/mobile/lib/stitch-theme.ts`, `apps/mobile/components/StitchChr
 
 `docs/frontend/frontend-api-map.json` maps every user-facing OpenAPI operation to a canonical screen, mobile route, web route and access category. `tools/verify_frontend_api_coverage.mjs` makes this executable CI policy.
 
-For this candidate the OpenAPI has 51 operations: 45 are user-facing and must have frontend owners; five runtime probes/build endpoints plus the internal notification creation endpoint are explicitly excluded from untrusted frontend exposure. Any API change that breaks this count or leaves a user-facing operation unmapped fails `web-verify` until the decision is updated deliberately.
+For this candidate the OpenAPI has 72 operations: 66 are user-facing (45 core community-action operations plus 21 Challenges domain operations) and must have frontend owners; five runtime probes/build endpoints plus the internal notification creation endpoint are explicitly excluded from untrusted frontend exposure. Any API change that breaks this count or leaves a user-facing operation unmapped fails `web-verify` until the decision is updated deliberately.
 
 ## Design-system extension rule
 

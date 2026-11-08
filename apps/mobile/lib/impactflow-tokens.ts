@@ -161,6 +161,27 @@ export const ImpactFlow = {
 
 export type ImpactFlowTokens = typeof ImpactFlow;
 
+export const ImpactFlowPalette = {
+  brandForest: ImpactFlow.color.brand.forest,
+  brandPrimary: ImpactFlow.color.action.primary,
+  brandAction: ImpactFlow.color.brand.action,
+  accentAmber: ImpactFlow.color.brand.amber,
+  accentAmberSoft: ImpactFlow.color.status.warningSurface,
+  accentAmberInk: '#4A3100',
+  bgCanvas: ImpactFlow.color.surface.canvas,
+  surfaceCard: ImpactFlow.color.surface.base,
+  surfaceMuted: ImpactFlow.color.surface.soft,
+  inkPrimary: ImpactFlow.color.text.primary,
+  inkSecondary: ImpactFlow.color.text.secondary,
+  inkMuted: ImpactFlow.color.text.tertiary,
+  borderDefault: ImpactFlow.color.border.default,
+  borderStrong: ImpactFlow.color.border.strong,
+  statusVerifiedBg: ImpactFlow.color.status.successSurface,
+  statusVerifiedText: ImpactFlow.color.status.success,
+  statusInfoBg: ImpactFlow.color.status.infoSurface,
+  statusInfoText: ImpactFlow.color.status.info,
+} as const;
+
 export const IMPACTFLOW_NATIVE_CATALOG = [
   'IF-01:AppShell', 'IF-02:BrandHeader', 'IF-03:DesktopSidebar', 'IF-04:MobileBottomNav',
   'IF-05:PageHeader', 'IF-06:SearchField', 'IF-07:FilterChipBar', 'IF-08:Button',

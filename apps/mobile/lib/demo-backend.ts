@@ -215,6 +215,105 @@ const privacyRequests = [
   { id: 'privacy-1', type: 'export', status: 'received', requestedAt: '2026-08-29T09:00:00.000Z' },
 ];
 
+const demoChallenges = [
+  {
+    id: 'challenge-gauteng-demo-2027',
+    demoOnly: true,
+    tenantId: 'demo-institution-gauteng',
+    slug: 'community-innovation-challenge-2027-demo',
+    title: 'Community Innovation Challenge 2027 (OFFLINE DEMO)',
+    description: 'Identify community problems, propose responsible solutions, mobilise resources and show independently verified results.',
+    mission: 'Identify community problems, propose responsible solutions, mobilise resources and show independently verified results.',
+    jurisdictionCode: 'ZA-GP',
+    locale: 'en-ZA',
+    timezone: 'Africa/Johannesburg',
+    currencyCode: 'ZAR',
+    visibility: 'public',
+    status: 'registration_open',
+    currentRulesVersion: 1,
+    rulesSha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    ruleApprovalCount: 2,
+    fundingStatus: 'unconfirmed',
+    sponsorStatus: 'not_confirmed',
+    guardianConsentRule: 'required_per_jurisdiction_and_policy',
+    publicResultPolicy: 'opt_in_redacted',
+    tracks: [
+      { id: 'track-secondary', programId: 'challenge-gauteng-demo-2027', title: 'Secondary School Teams', levelCode: 'secondary', participationMode: 'team', minimumTeamMembers: 2, maximumTeamMembers: 5, requiresGuardianConsent: true },
+      { id: 'track-tertiary', programId: 'challenge-gauteng-demo-2027', title: 'Tertiary & Youth Innovators', levelCode: 'tertiary', participationMode: 'both', minimumTeamMembers: 1, maximumTeamMembers: 5, requiresGuardianConsent: false },
+    ],
+    rounds: [
+      {
+        id: 'round-proposal-1',
+        programId: 'challenge-gauteng-demo-2027',
+        sequence: 1,
+        title: 'Round 1: Problem and solution proposal',
+        kind: 'proposal',
+        status: 'open',
+        opensAt: '2027-04-05T09:00:00+02:00',
+        closesAt: '2027-04-20T17:00:00+02:00',
+        requiredJudges: 3,
+        scoringAlgorithm: 'weighted_median_v1',
+        rubricVersion: 1,
+        criteria: [
+          { id: 'crit-problem', roundId: 'round-proposal-1', rubricVersion: 1, sequence: 1, code: 'problem', title: 'Clarity of the problem', weightBasisPoints: 2000, maximumScore: 100 },
+          { id: 'crit-feasibility', roundId: 'round-proposal-1', rubricVersion: 1, sequence: 2, code: 'feasibility', title: 'Solution feasibility', weightBasisPoints: 2500, maximumScore: 100 },
+          { id: 'crit-participation', roundId: 'round-proposal-1', rubricVersion: 1, sequence: 3, code: 'participation', title: 'Community participation', weightBasisPoints: 2000, maximumScore: 100 },
+          { id: 'crit-evidence', roundId: 'round-proposal-1', rubricVersion: 1, sequence: 4, code: 'evidence', title: 'Verifiable progress and outcomes', weightBasisPoints: 2500, maximumScore: 100 },
+          { id: 'crit-sustainability', roundId: 'round-proposal-1', rubricVersion: 1, sequence: 5, code: 'sustainability', title: 'Maintenance and replication', weightBasisPoints: 1000, maximumScore: 100 },
+        ],
+      },
+    ],
+    prizes: [
+      { id: 'prize-demo-1', programId: 'challenge-gauteng-demo-2027', title: 'Illustrative R5,000 implementation grant — NOT funded or approved', prizeKind: 'project_grant', currencyCode: 'ZAR', amountMinor: 500000, status: 'announced', fundingStatus: 'unconfirmed' },
+    ],
+    sponsors: [] as Array<Record<string, unknown>>,
+    publishedResults: [] as Array<Record<string, unknown>>,
+    awards: [] as Array<Record<string, unknown>>,
+    appeals: [] as Array<Record<string, unknown>>,
+    permissions: {
+      canManageProgramme: true,
+      canApproveRules: true,
+      canReviewEligibility: true,
+      canAssignJudges: true,
+      canJudge: true,
+      canReviewConflicts: true,
+      canReviewAppeals: true,
+      canManageSponsors: true,
+      canManageAwards: true,
+    },
+  },
+];
+
+const demoChallengeEntries = [
+  {
+    id: 'entry-demo-1',
+    programId: 'challenge-gauteng-demo-2027',
+    trackId: 'track-secondary',
+    leadActorId: 'offline-demo-user',
+    entryCode: 'IRC-DEMO01',
+    teamDisplayName: 'Soweto Water Stewards (Demo)',
+    participationMode: 'team',
+    status: 'screening',
+    eligibilityStatus: 'pending',
+    guardianConsentStatus: 'required',
+    agreedRulesVersion: 1,
+    teamMembers: [{ entryId: 'entry-demo-1', actorId: 'offline-demo-user', memberRole: 'lead', invitationState: 'accepted', guardianConsentStatus: 'required' }],
+  },
+];
+
+const demoJudgeAssignments = [
+  {
+    id: 'asg-demo-1',
+    programId: 'challenge-gauteng-demo-2027',
+    submissionId: 'sub-demo-1',
+    entryId: 'entry-demo-1',
+    roundId: 'round-proposal-1',
+    judgeActorId: 'offline-demo-user',
+    assignmentStatus: 'accepted',
+    conflictStatus: 'no_conflict_declared',
+  },
+];
+
 function ok(body: unknown): DemoResult { return { status: 200, body }; }
 function badRequest(message: string): DemoResult { return { status: 400, body: { error: message } }; }
 function missing(message = 'Offline demo record was not found.'): DemoResult { return { status: 404, body: { error: message } }; }
@@ -599,6 +698,97 @@ export function createDemoPayload(url: URL, method = 'GET', requestBody?: unknow
     return ok(accepted);
   }
   if (verb === 'POST' && /^\/v1\/evidence\/[^/]+\/review$/.test(path)) return ok({ id: path.split('/')[3], status: String(input.decision ?? 'available') });
+
+  if (verb === 'GET' && path === '/v1/challenges') return ok({ items: demoChallenges, demo: true });
+  if (verb === 'POST' && path === '/v1/challenges') {
+    const created = {
+      ...demoChallenges[0],
+      id: `demo-challenge-${now.getTime()}`,
+      title: String(input.title ?? 'Offline Demo Challenge'),
+      description: String(input.description ?? ''),
+      mission: String(input.mission ?? ''),
+      status: 'draft',
+      currentRulesVersion: 0,
+      ruleApprovalCount: 0,
+      fundingStatus: 'unconfirmed',
+    };
+    demoChallenges.unshift(created);
+    return { status: 201, body: created };
+  }
+  const challengeGet = path.match(/^\/v1\/challenges\/([^/]+)$/);
+  if (verb === 'GET' && challengeGet) {
+    const found = demoChallenges.find((item) => item.id === decodeURIComponent(challengeGet[1])) ?? demoChallenges[0];
+    return ok(found);
+  }
+  const challengeApprove = path.match(/^\/v1\/challenges\/([^/]+)\/rule-approvals$/);
+  if (verb === 'POST' && challengeApprove) {
+    const found = demoChallenges.find((item) => item.id === decodeURIComponent(challengeApprove[1])) ?? demoChallenges[0];
+    found.ruleApprovalCount = (found.ruleApprovalCount || 0) + 1;
+    if (found.status === 'draft') found.status = 'review';
+    return { status: 201, body: found };
+  }
+  const challengePublish = path.match(/^\/v1\/challenges\/([^/]+)\/publish$/);
+  if (verb === 'POST' && challengePublish) {
+    const found = demoChallenges.find((item) => item.id === decodeURIComponent(challengePublish[1])) ?? demoChallenges[0];
+    found.currentRulesVersion = (found.currentRulesVersion || 0) + 1;
+    found.status = 'registration_open';
+    return { status: 201, body: found };
+  }
+  const challengeApply = path.match(/^\/v1\/challenges\/([^/]+)\/entries$/);
+  if (verb === 'POST' && challengeApply) {
+    const entry = {
+      ...demoChallengeEntries[0],
+      id: `demo-entry-${now.getTime()}`,
+      programId: decodeURIComponent(challengeApply[1]),
+      trackId: String(input.trackId ?? 'track-secondary'),
+      teamDisplayName: String(input.teamDisplayName ?? 'Demo Team'),
+      participationMode: String(input.participationMode ?? 'team'),
+      guardianConsentStatus: input.requiresGuardianConsent === false ? 'not_applicable' : 'required',
+    };
+    demoChallengeEntries.unshift(entry);
+    return { status: 201, body: entry };
+  }
+  if (verb === 'GET' && path === '/v1/me/challenge-entries') return ok(demoChallengeEntries);
+  if (verb === 'POST' && /^\/v1\/challenges\/[^/]+\/entries\/[^/]+\/team-members$/.test(path)) return ok(demoChallengeEntries[0]);
+  if (verb === 'POST' && /^\/v1\/challenges\/[^/]+\/entries\/[^/]+\/guardian-consents$/.test(path)) {
+    demoChallengeEntries[0].guardianConsentStatus = String(input.status ?? 'verified');
+    return { status: 201, body: demoChallengeEntries[0] };
+  }
+  if (verb === 'POST' && /^\/v1\/challenges\/[^/]+\/entries\/[^/]+\/eligibility-decisions$/.test(path)) {
+    demoChallengeEntries[0].eligibilityStatus = String(input.decision ?? 'eligible');
+    demoChallengeEntries[0].status = demoChallengeEntries[0].eligibilityStatus;
+    return { status: 201, body: demoChallengeEntries[0] };
+  }
+  if (verb === 'POST' && /^\/v1\/challenges\/[^/]+\/entries\/[^/]+\/submissions$/.test(path)) {
+    return { status: 201, body: { id: `demo-sub-${now.getTime()}`, programId: 'challenge-gauteng-demo-2027', entryId: 'entry-demo-1', roundId: 'round-proposal-1', status: 'submitted', submissionSha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' } };
+  }
+  if (verb === 'POST' && /^\/v1\/challenges\/[^/]+\/judge-assignments$/.test(path)) return { status: 201, body: demoJudgeAssignments[0] };
+  if (verb === 'GET' && path === '/v1/me/challenge-judge-assignments') return ok(demoJudgeAssignments);
+  if (verb === 'POST' && /^\/v1\/challenges\/[^/]+\/judge-assignments\/[^/]+\/conflict$/.test(path)) {
+    demoJudgeAssignments[0].conflictStatus = String(input.status ?? 'no_conflict_declared');
+    return ok(demoJudgeAssignments[0]);
+  }
+  if (verb === 'POST' && /^\/v1\/challenges\/[^/]+\/judge-assignments\/[^/]+\/scorecards$/.test(path)) {
+    return { status: 201, body: { id: `demo-sc-${now.getTime()}`, assignmentId: 'asg-demo-1', status: 'sealed', totalBasisPoints: 8500 } };
+  }
+  if (verb === 'POST' && /^\/v1\/challenges\/[^/]+\/rounds\/[^/]+\/decisions$/.test(path)) {
+    return { status: 201, body: { id: `demo-dec-${now.getTime()}`, roundId: 'round-proposal-1', entryId: 'entry-demo-1', decision: String(input.decision ?? 'finalist'), state: 'published', scoreBasisPoints: 8500 } };
+  }
+  if (verb === 'POST' && /^\/v1\/challenges\/[^/]+\/appeals$/.test(path)) {
+    return { status: 201, body: { id: `demo-appeal-${now.getTime()}`, entryId: 'entry-demo-1', status: 'submitted' } };
+  }
+  if (verb === 'POST' && /^\/v1\/challenges\/[^/]+\/sponsors$/.test(path)) {
+    return { status: 201, body: { id: `demo-sponsor-${now.getTime()}`, sponsorDisplayName: String(input.sponsorDisplayName ?? 'Demo Sponsor'), status: String(input.status ?? 'pledged'), truthNotice: 'Sponsor commitment is intent only, not settled funds.' } };
+  }
+  if (verb === 'POST' && /^\/v1\/challenges\/[^/]+\/awards$/.test(path)) {
+    return { status: 201, body: { id: `demo-award-${now.getTime()}`, entryId: 'entry-demo-1', prizeId: 'prize-demo-1', status: 'approved', fulfillmentStatus: 'pending', truthStateLabel: 'Award approved — NOT yet fulfilled or paid' } };
+  }
+  if (verb === 'POST' && /^\/v1\/challenges\/[^/]+\/awards\/[^/]+\/fulfillments$/.test(path)) {
+    return { status: 201, body: { id: `demo-fulfillment-${now.getTime()}`, awardId: 'demo-award-1', fulfillmentKind: String(input.fulfillmentKind ?? 'in_kind_delivery'), status: String(input.status ?? 'pending'), truthNotice: 'Prize fulfilment requires verified delivery evidence or PayCore proof.' } };
+  }
+  if (verb === 'POST' && /^\/v1\/challenges\/[^/]+\/entries\/[^/]+\/project-link$/.test(path)) {
+    return { status: 201, body: { id: `demo-link-${now.getTime()}`, entryId: 'entry-demo-1', actionProjectId: String(input.actionProjectId ?? 'project-water-1'), relationship: 'challenge_delivery' } };
+  }
 
   return { status: 404, body: { error: 'Offline demo route is not implemented.' } };
 }

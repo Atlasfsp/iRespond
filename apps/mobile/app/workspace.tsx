@@ -10,6 +10,7 @@ export default function Workspace(){
  const[session,setSession]=useState<Session|null>(null);const[loading,setLoading]=useState(true);const[refreshing,setRefreshing]=useState(false);const[error,setError]=useState('');
  const load=useCallback(async()=>{setError('');try{setSession(await getSession())}catch(err){setSession(null);if(err instanceof APIError&&err.status===401)setSession(null);else setError(err instanceof Error?err.message:'Unable to load your workspace.')}finally{setLoading(false);setRefreshing(false)}},[]);useFocusEffect(useCallback(()=>{setSession(null);setLoading(true);void load()},[load]));const caps=useMemo(()=>capabilitiesForRoles(session?.roles??[]),[session?.roles]);
  const items=useMemo(()=>{const list:WorkspaceItem[]=[
+  {title:'Challenges & innovation',description:'Browse civic innovation challenges, submit proposals, complete conflict-cleared judge scorecards, and review awards.',route:'/challenges'},
   {title:'Project role workspace',description:'Open a Project Room and let the API reveal only the manager, steward, volunteer-lead or verifier controls assigned to you there.',route:'/project-admin'},
   {title:'Impact Passport',description:'See verified roles, fulfilled contributions and SDGs touched.',route:'/impact'},
   {title:'My contribution offers',description:'Track, withdraw and follow offers of time, skills and resources.',route:'/contributions'},
