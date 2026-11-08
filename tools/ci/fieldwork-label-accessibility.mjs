@@ -12,7 +12,7 @@ try {
  const runtimeErrors=[];page.on('pageerror',e=>runtimeErrors.push(e.message));
  await page.goto(process.env.WEB_URL||'http://127.0.0.1:4173',{waitUntil:'networkidle'});
  await page.locator('#header-demo-signin').click();
- for(const route of ['home','needs','verification','project','contributions','funding','impact','notifications','privacy','safety','safety-ops']) {
+ for(const route of ['home','needs','challenges','verification','project','contributions','funding','impact','notifications','privacy','safety','safety-ops']) {
   await page.evaluate(route=>{location.hash=route},route);
   await page.waitForTimeout(350);
   await page.locator('main h1, main h2, main h3').first().waitFor();
